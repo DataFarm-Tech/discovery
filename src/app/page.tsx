@@ -1,16 +1,31 @@
 'use client';
 
 import { useState } from 'react';
+import { loginUser } from '@/lib/auth/login';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log('Login submitted:', { email, password });
-    // TODO: Add authentication API call here
-  };
+    const handleLogin = async (e: React.FormEvent) => {
+  e.preventDefault();
+  try {
+    const data = await loginUser(email, password);
+    
+    // Log token to console for development
+    console.log("Access Token:", data.access_token);
+
+    // Save token in localStorage
+    localStorage.setItem('token', data.access_token);
+
+    // Redirect to dashboard
+    window.location.href = '/dashboard';
+  } catch (error: any) {
+    console.error("Login Error:", error);
+    alert(error.message);
+  }
+};
+
 
   return (
     <main
@@ -28,7 +43,7 @@ export default function LoginPage() {
         }}
       >
         <h1 className="text-3xl font-bold text-center mb-6 text-white">
-          DataFarm
+            Let’s Get Farming!
         </h1>
 
         <form onSubmit={handleLogin} className="space-y-5">
