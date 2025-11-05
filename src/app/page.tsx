@@ -14,26 +14,28 @@ export default function LoginPage() {
 
   return (
     <main
-      className="flex h-screen items-center justify-center"
-      style={{ backgroundColor: '#0c1220' }} // Solid dark background
+      className="flex items-center justify-center min-h-screen bg-cover bg-center px-4"
+      style={{
+        backgroundImage: "url('/background.jpg')",
+        backgroundRepeat: 'no-repeat',
+        backgroundSize: 'cover',
+      }}
     >
       <div
-        className="w-full max-w-md rounded-xl shadow-xl p-8"
-        style={{ backgroundColor: '#ffffff' }} // Form background is white
+        className="w-full max-w-md rounded-xl shadow-xl p-6 sm:p-8"
+        style={{
+          backgroundColor: 'rgba(20, 20, 20, 0.9)', // Dark translucent form
+        }}
       >
-        <h1
-          className="text-3xl font-bold text-center mb-6"
-          style={{ color: '#0c1220' }}
-        >
+        <h1 className="text-3xl font-bold text-center mb-6 text-white">
           DataFarm
         </h1>
 
         <form onSubmit={handleLogin} className="space-y-5">
           <div>
             <label
-              className="block font-semibold mb-2"
               htmlFor="email"
-              style={{ color: '#0c1220' }}
+              className="block font-semibold mb-2 text-white"
             >
               Email
             </label>
@@ -44,24 +46,14 @@ export default function LoginPage() {
               onChange={(e) => setEmail(e.target.value)}
               required
               placeholder="you@example.com"
-              style={{
-                width: '100%',
-                border: '1px solid #00be64',
-                borderRadius: '0.5rem',
-                padding: '0.5rem',
-                outline: 'none',
-                color: '#0c1220',
-              }}
-              onFocus={(e) => (e.target.style.boxShadow = '0 0 0 2px #00be64')}
-              onBlur={(e) => (e.target.style.boxShadow = 'none')}
+              className="w-full p-3 rounded-md border border-green-500 bg-gray-800 text-white outline-none focus:ring-2 focus:ring-green-500"
             />
           </div>
 
           <div>
             <label
-              className="block font-semibold mb-2"
               htmlFor="password"
-              style={{ color: '#0c1220' }}
+              className="block font-semibold mb-2 text-white"
             >
               Password
             </label>
@@ -72,49 +64,23 @@ export default function LoginPage() {
               onChange={(e) => setPassword(e.target.value)}
               required
               placeholder="••••••••"
-              style={{
-                width: '100%',
-                border: '1px solid #00be64',
-                borderRadius: '0.5rem',
-                padding: '0.5rem',
-                outline: 'none',
-                color: '#0c1220',
-              }}
-              onFocus={(e) => (e.target.style.boxShadow = '0 0 0 2px #00be64')}
-              onBlur={(e) => (e.target.style.boxShadow = 'none')}
+              className="w-full p-3 rounded-md border border-green-500 bg-gray-800 text-white outline-none focus:ring-2 focus:ring-green-500"
             />
           </div>
 
           <button
             type="submit"
-            style={{
-              width: '100%',
-              backgroundColor: '#00be64', // Green button
-              color: '#ffffff', // White text
-              fontWeight: 600,
-              padding: '0.5rem',
-              borderRadius: '0.5rem',
-              transition: 'background-color 0.2s',
-            }}
-            onMouseEnter={(e) =>
-              (e.currentTarget.style.backgroundColor = '#00a852') // Slightly darker green on hover
-            }
-            onMouseLeave={(e) =>
-              (e.currentTarget.style.backgroundColor = '#00be64')
-            }
+            className="w-full py-3 rounded-md bg-green-500 font-semibold text-white transition-colors hover:bg-green-600"
           >
             Login
           </button>
         </form>
 
-        <p
-          className="text-center text-sm mt-6"
-          style={{ color: '#0c1220' }}
-        >
+        <p className="text-center text-sm mt-6 text-white">
           Don’t have an account?{' '}
           <a
             href="/signup"
-            style={{ color: '#00be64', fontWeight: 600, textDecoration: 'underline' }}
+            className="text-green-500 font-semibold underline"
           >
             Sign up
           </a>
