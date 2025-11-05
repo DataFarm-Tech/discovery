@@ -4,12 +4,10 @@ name: Build App
 on:
   push:
     branches:
-      - main
-      - master
+      - '*'    # Run on all branches
   pull_request:
     branches:
-      - main
-      - master
+      - '*'    # Run on PRs to any branch
 
 jobs:
   build:
@@ -28,6 +26,5 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
-      # 6. Build the Next.js app
       - name: Build App
         run: npm run build
