@@ -23,14 +23,14 @@ export async function loginUser(email: string, password: string): Promise<LoginR
     if (!response.ok) {
       return {
         success: false,
-        message: data.detail || 'Hmm… we couldn’t log you in. Please check your email and password and try again..',
+        message: data.message || data.detail || 'Login failed',
       };
     }
 
     return {
       success: true,
-      message: 'Login successful.',
-      data,
+      message: data.message,
+      data: data.data, // <- flatten here
     };
   } catch (err) {
     console.error('Network error:', err);

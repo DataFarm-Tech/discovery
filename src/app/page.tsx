@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { loginUser } from '@/lib/auth/login';
+import { loginUser, LoginResponse } from '@/lib/auth/login';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
 
@@ -14,7 +14,7 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
 
-    const result = await loginUser(email, password);
+    const result: LoginResponse = await loginUser(email, password);
     setLoading(false);
 
     if (!result.success) {
@@ -22,7 +22,12 @@ export default function LoginPage() {
       return;
     }
 
-    localStorage.setItem('token', result.data?.access_token || '');
+    // ✅ Save token correctly
+    const token = result.data?.access_token;
+    if (token) {
+      localStorage.setItem('token', token);
+    }
+
     toast.success('Login successful! Redirecting...');
 
     setTimeout(() => {
