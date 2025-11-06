@@ -2,31 +2,33 @@
 
 import { useState } from 'react';
 import { loginUser } from '@/lib/auth/login';
-import Link from 'next/link'; // <- import Link at the top
+import toast from 'react-hot-toast';
+import Link from 'next/link';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
 
-    const handleLogin = async (e: React.FormEvent) => {
-  e.preventDefault();
-  try {
-    const data = await loginUser(email, password);
-    
-    // Log token to console for development
-    console.log("Access Token:", data.access_token);
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
 
-    // Save token in localStorage
-    localStorage.setItem('token', data.access_token);
+    const result = await loginUser(email, password);
+    setLoading(false);
 
-    // Redirect to dashboard
-    window.location.href = '/dashboard';
-  } catch (error: any) {
-    console.error("Login Error:", error);
-    alert(error.message);
-  }
-};
+    if (!result.success) {
+      toast.error(result.message);
+      return;
+    }
 
+    localStorage.setItem('token', result.data?.access_token || '');
+    toast.success('Login successful! Redirecting...');
+
+    setTimeout(() => {
+      window.location.href = '/dashboard';
+    }, 1500);
+  };
 
   return (
     <main
@@ -39,20 +41,15 @@ export default function LoginPage() {
     >
       <div
         className="w-full max-w-md rounded-xl shadow-xl p-6 sm:p-8"
-        style={{
-          backgroundColor: 'rgba(20, 20, 20, 0.9)', // Dark translucent form
-        }}
+        style={{ backgroundColor: 'rgba(20, 20, 20, 0.9)' }}
       >
         <h1 className="text-3xl font-bold text-center mb-6 text-white">
-            Let’s Get Farming!
+          Let’s Get Farming!
         </h1>
 
         <form onSubmit={handleLogin} className="space-y-5">
           <div>
-            <label
-              htmlFor="email"
-              className="block font-semibold mb-2 text-white"
-            >
+            <label htmlFor="email" className="block font-semibold mb-2 text-white">
               Email
             </label>
             <input
@@ -67,10 +64,7 @@ export default function LoginPage() {
           </div>
 
           <div>
-            <label
-              htmlFor="password"
-              className="block font-semibold mb-2 text-white"
-            >
+            <label htmlFor="password" className="block font-semibold mb-2 text-white">
               Password
             </label>
             <input
@@ -86,20 +80,20 @@ export default function LoginPage() {
 
           <button
             type="submit"
-            className="w-full py-3 rounded-md bg-green-500 font-semibold text-white transition-colors hover:bg-green-600"
+            disabled={loading}
+            className={`w-full py-3 rounded-md font-semibold text-white transition-colors ${
+              loading ? 'bg-green-700 cursor-not-allowed' : 'bg-green-500 hover:bg-green-600'
+            }`}
           >
-            Login
+            {loading ? 'Logging in...' : 'Login'}
           </button>
         </form>
 
         <p className="text-center text-sm mt-6 text-white">
           Don’t have an account?{' '}
-          <a
-            href="/signup"
-            className="text-green-500 font-semibold underline"
-          >
+          <Link href="/signup" className="text-green-500 font-semibold underline">
             Sign up
-          </a>
+          </Link>
         </p>
       </div>
     </main>

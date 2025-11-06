@@ -1,8 +1,9 @@
-// src/app/signup/page.tsx
 'use client';
 
 import { useState } from 'react';
+import toast from 'react-hot-toast';
 import { signupUser } from '@/lib/auth/signup';
+import Link from 'next/link';
 
 export default function SignupPage() {
   const [firstName, setFirstName] = useState('');
@@ -10,22 +11,35 @@ export default function SignupPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (password !== confirmPassword) {
-      alert("Passwords do not match!");
+    if (!firstName || !lastName || !email || !password) {
+      toast.error('Please fill in all fields.');
       return;
     }
 
-    try {
-      const data = await signupUser(firstName, lastName, email, password);
-      window.location.href = '/';
-    } catch (error: any) {
-      console.error("Signup Error:", error);
-      alert(error.message);
+    if (password !== confirmPassword) {
+      toast.error('Passwords do not match!');
+      return;
     }
+
+    setLoading(true);
+    const result = await signupUser(firstName, lastName, email, password);
+    setLoading(false);
+
+    if (!result.success) {
+      toast.error(result.message);
+      return;
+    }
+
+    toast.success('Signup successful! Redirecting...');
+
+    setTimeout(() => {
+      window.location.href = '/';
+    }, 1500);
   };
 
   return (
@@ -61,7 +75,6 @@ export default function SignupPage() {
                 className="w-full p-3 rounded-md border border-green-500 bg-gray-800 text-white outline-none focus:ring-2 focus:ring-green-500"
               />
             </div>
-
             <div>
               <label htmlFor="lastName" className="block font-semibold mb-2 text-white">
                 Last Name
@@ -125,20 +138,20 @@ export default function SignupPage() {
 
           <button
             type="submit"
-            className="w-full py-3 rounded-md bg-green-500 font-semibold text-white transition-colors hover:bg-green-600"
+            disabled={loading}
+            className={`w-full py-3 rounded-md font-semibold text-white transition-colors ${
+              loading ? 'bg-green-700 cursor-not-allowed' : 'bg-green-500 hover:bg-green-600'
+            }`}
           >
-            Sign Up
+            {loading ? 'Signing up...' : 'Sign Up'}
           </button>
         </form>
 
         <p className="text-center text-sm mt-6 text-white">
           Already have an account?{' '}
-          <a
-            href="/login"
-            className="text-green-500 font-semibold underline"
-          >
+          <Link href="/" className="text-green-500 font-semibold underline">
             Log in
-          </a>
+          </Link>
         </p>
       </div>
     </main>

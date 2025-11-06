@@ -1,23 +1,46 @@
-// src/lib/auth/signup.ts
 export interface SignupResponse {
-  detail: string;
+  success: boolean;
+  message: string;
 }
 
-export async function signupUser(firstName: string, lastName: string, email: string, password: string): Promise<SignupResponse> {
-  const body = { first_name: firstName, last_name: lastName, user_id: email, password };
+export async function signupUser(
+  firstName: string,
+  lastName: string,
+  email: string,
+  password: string
+): Promise<SignupResponse> {
+  const body = {
+    first_name: firstName,
+    last_name: lastName,
+    user_id: email,
+    password,
+  };
 
-  const response = await fetch('http://localhost:8000/auth/register', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
+  try {
+    const response = await fetch('http://localhost:8000/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
 
-  console.log(response.status);
+    const data = await response.json();
 
-  if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.detail || 'Signup failed');
+    if (!response.ok) {
+      return {
+        success: false,
+        message: data.detail || data.message || 'Signup failed.',
+      };
+    }
+
+    return {
+      success: true,
+      message: 'Signup successful!',
+    };
+  } catch (err) {
+    console.error('Network error:', err);
+    return {
+      success: false,
+      message: 'Unable to connect to the server. Please try again later.',
+    };
   }
-
-  return response.json();
 }

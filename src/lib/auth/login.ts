@@ -1,26 +1,42 @@
 export interface LoginResponse {
-  access_token: string;
-  detail: string;
+  success: boolean;
+  message: string;
+  data?: {
+    access_token: string;
+  };
 }
 
 export async function loginUser(email: string, password: string): Promise<LoginResponse> {
-  // Create form data
   const formData = new URLSearchParams();
-  formData.append("username", email); // OAuth2PasswordRequestForm expects 'username'
-  formData.append("password", password);
+  formData.append('username', email);
+  formData.append('password', password);
 
-  const response = await fetch('http://localhost:8000/auth/login', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded', // Important!
-    },
-    body: formData.toString(),
-  });
+  try {
+    const response = await fetch('http://localhost:8000/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: formData.toString(),
+    });
 
-  if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.detail || 'Login failed');
+    const data = await response.json();
+
+    if (!response.ok) {
+      return {
+        success: false,
+        message: data.detail || 'Hmm… we couldn’t log you in. Please check your email and password and try again..',
+      };
+    }
+
+    return {
+      success: true,
+      message: 'Login successful.',
+      data,
+    };
+  } catch (err) {
+    console.error('Network error:', err);
+    return {
+      success: false,
+      message: 'Unable to connect to the server. Please try again later.',
+    };
   }
-
-  return response.json();
 }
