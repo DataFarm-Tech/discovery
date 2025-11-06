@@ -3,12 +3,7 @@ export interface SignupResponse {
   message: string;
 }
 
-export async function signupUser(
-  firstName: string,
-  lastName: string,
-  email: string,
-  password: string
-): Promise<SignupResponse> {
+export async function signupUser(firstName: string, lastName: string, email: string, password: string): Promise<SignupResponse> {
   const body = {
     first_name: firstName,
     last_name: lastName,
