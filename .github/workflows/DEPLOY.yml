@@ -1,0 +1,30 @@
+name: Discovery Development Deployment
+
+on:
+  push:
+    branches:
+      - feat/create-list-paddock
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checkout code
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # SSH into server and deploy using Docker Compose
+      - name: Deploy via Docker Compose
+        uses: appleboy/ssh-action@v0.1.10
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USER }}
+          key: ${{ secrets.SSH_KEY }}
+          port: 5823
+          script: |
+            cd /path/to/your/project  # Change to your server project folder
+            docker-compose pull       # Pull latest images
+            docker-compose down       # Stop and remove old containers
+            docker-compose up -d --build  # Build & start containers
+            echo "Deployment via Docker Compose completed!"
