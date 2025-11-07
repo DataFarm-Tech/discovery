@@ -30,7 +30,7 @@ export default function StatsTile({ title, value, unit, className }: StatsTilePr
   }, [value]);
 
   return (
-    <div className={`bg-[#1a1f2e] border border-[#00be64] rounded-lg shadow p-6 w-full lg:w-1/4 ${className}`}>
+    <div className={`bg-[#1a1f2e] border border-[#00be64] rounded-lg shadow p-6 w-full lg:w-1/20 ${className}`}>
       <h3 className="text-lg font-semibold text-white">{title}</h3>
       <p className="mt-2 text-3xl font-bold text-white flex justify-between items-baseline">
         <span>{count}</span>

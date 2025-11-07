@@ -79,14 +79,31 @@ export default function DashboardPage() {
         <StatsTile title="Temperature (Average)" value={22} unit="°C" className="w-full sm:w-[48%] lg:w-[30%]" />
         <StatsTile title="Nitrogen (Average)" value={12} unit="ppm" className="w-full sm:w-[48%] lg:w-[30%]" />
       </section>
+
+      {/* Paddock Table Section */}
+<section className="mt-8 mb-8 flex flex-col lg:flex-row gap-6">
+  {loading ? (
+    <div className="bg-[#1a1f2e] border border-[#00be64] rounded-lg shadow p-6 flex-1 w-full">
+      <p className="text-white text-center">Loading paddocks...</p>
+    </div>
+  ) : (
+    <PaddockTable paddocks={paddocks} onAddPaddock={handleAddPaddock} />
+  )}
+</section>
+
+      
       
       {/* Layout for Map and Graph */}
       <section className="flex flex-col lg:flex-row gap-6 mb-8">
         {/* Device Map Section */}
-        <section className="bg-[#1a1f2e] border border-[#00be64] rounded-lg shadow p-4 sm:p-6 w-full lg:w-1/2">
-          <h2 className="text-xl font-semibold mb-4 text-white">Device Locations</h2>
-          <DeviceMap />
-        </section>
+        <section className="bg-[#1a1f2e] border border-[#00be64] rounded-lg shadow p-4 sm:p-6 w-full lg:w-1/2 flex flex-col">
+  <h2 className="text-xl font-semibold mb-4 text-white">Device Locations</h2>
+  <div className="flex-1 min-h-[200px] sm:min-h-[250px] lg:min-h-[300px] overflow-hidden rounded-md">
+    <DeviceMap />
+  </div>
+</section>
+
+
         
         {/* Graph Section */}
         <section className="bg-[#1a1f2e] border border-[#00be64] rounded-lg shadow p-6 w-full lg:w-1/2">
@@ -95,16 +112,6 @@ export default function DashboardPage() {
         </section>
       </section>
       
-      {/* Paddock Table Section */}
-      <section className="mt-8 flex flex-col lg:flex-row gap-6">
-        {loading ? (
-          <div className="bg-[#1a1f2e] border border-[#00be64] rounded-lg shadow p-6 flex-1 w-full">
-            <p className="text-white text-center">Loading paddocks...</p>
-          </div>
-        ) : (
-          <PaddockTable paddocks={paddocks} onAddPaddock={handleAddPaddock} />
-        )}
-      </section>
     </main>
   );
 }

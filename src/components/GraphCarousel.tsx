@@ -17,7 +17,7 @@ export default function GraphCarousel() {
     slidesToScroll: 1,   // Number of slides to scroll at once
     arrows: false,       // Disable the arrows on either side of the carousel
     autoplay: true,      // Enable auto-rotation
-    autoplaySpeed: 5000, // Duration between each slide transition (5 seconds)
+    autoplaySpeed: 2000, // Duration between each slide transition (5 seconds)
   };
 
   return (
