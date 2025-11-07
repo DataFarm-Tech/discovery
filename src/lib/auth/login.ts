@@ -23,7 +23,8 @@ export async function loginUser(email: string, password: string): Promise<LoginR
     if (!response.ok) {
       return {
         success: false,
-        message: data.message || data.detail || 'Login failed',
+        message: 'Hmm… we couldn’t log you in. Please check your email and password and try again..',
+        // message: data.message || data.detail || 'Hmm… we couldn’t log you in. Please check your email and password and try again..',
       };
     }
 
