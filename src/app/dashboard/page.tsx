@@ -60,7 +60,7 @@ export default function DashboardPage() {
   };
 
   const handleAddPaddock = () => {
-    router.push('/paddock');
+    router.push('/paddock/create');
   };
 
   return (
