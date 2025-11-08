@@ -3,7 +3,7 @@ name: Discovery Deployment
 on:
   push:
     branches:
-      - main
+      - feat/create-list-paddock
 
 jobs:
   deploy:
