@@ -16,15 +16,15 @@ jobs:
 
       # Log in to Docker Hub
       - name: Log in to Docker Hub
-        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+        run: echo "${{ secrets.DOCKER_LOGIN_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_LOGIN_USERNAME }}" --password-stdin
 
       # Build Docker image
       - name: Build Docker image
-        run: docker build -t ${{ secrets.DOCKER_USERNAME }}/discovery:latest .
+        run: docker build -t ${{ secrets.DOCKER_LOGIN_USERNAME }}/discovery:latest .
 
       # Push Docker image
       - name: Push Docker image
-        run: docker push ${{ secrets.DOCKER_USERNAME }}/discovery:latest
+        run: docker push ${{ secrets.DOCKER_LOGIN_USERNAME }}/discovery:latest
 
       # SSH into Linode and deploy
       - name: Deploy on Linode
@@ -42,14 +42,14 @@ jobs:
             docker rm caddy || true
 
             # Pull latest Next.js image
-            docker pull ${{ secrets.DOCKER_USERNAME }}/discovery:latest
+            docker pull ${{ secrets.DOCKER_LOGIN_USERNAME }}/discovery:latest
 
             # Run Next.js container
             docker run -d \
               --name app \
               -e NODE_ENV=production \
               -p 3000:3000 \
-              ${{ secrets.DOCKER_USERNAME }}/discovery:latest
+              ${{ secrets.DOCKER_LOGIN_USERNAME }}/discovery:latest
 
             # Run Caddy container
             docker run -d \
