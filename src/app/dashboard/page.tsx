@@ -53,12 +53,6 @@ export default function DashboardPage() {
     }
   };
 
-  const handleAddDevice = () => {
-    const newDevice: Device = { name: 'New Device', battery: 100 };
-    setDevices((prevDevices) => [...prevDevices, newDevice]);
-    console.log('Device added:', newDevice);
-  };
-
   const handleAddPaddock = () => {
     router.push('/paddock/create');
   };
