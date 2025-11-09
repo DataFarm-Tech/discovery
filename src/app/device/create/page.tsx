@@ -36,10 +36,19 @@ export default function RegisterDevicePage() {
       }
 
       toast.success(result.message);
-      setTimeout(() => router.push('/dashboard'), 1500);
+
+      // ✅ Redirect back to the paddock’s device list
+      setTimeout(() => {
+        if (paddockId) {
+          router.push(`/paddock/view?paddockId=${paddockId}`);
+        } else {
+          router.push('/dashboard');
+        }
+      }, 1500);
     } catch (error) {
       console.error('Unexpected error:', error);
       toast.error('An unexpected error occurred');
+    } finally {
       setLoading(false);
     }
   };
@@ -56,8 +65,8 @@ export default function RegisterDevicePage() {
     <DeviceForm
       onSubmit={handleRegisterDevice}
       loading={loading}
-      returnLink="/dashboard"
-      returnLinkText="Return to Dashboard"
+      returnLink={`/paddock/view?paddockId=${paddockId}`}
+      returnLinkText="Return to Paddock"
       title="Register / Update Device"
       buttonText="Register Device"
       loadingText="Registering..."
@@ -65,3 +74,4 @@ export default function RegisterDevicePage() {
     />
   );
 }
+``
