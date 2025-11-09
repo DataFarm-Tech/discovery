@@ -1,0 +1,10 @@
+# Caddyfile
+
+yourdomain.com {
+    reverse_proxy app:3000
+    encode gzip
+    log {
+        output file /var/log/caddy/access.log
+        format console
+    }
+}
