@@ -69,8 +69,6 @@ export default function PaddockViewClient() {
       <div className="flex-1 flex flex-col justify-start items-center overflow-y-auto space-y-6">
         {paddockId ? (
           <>
-            <h1 className="text-2xl font-semibold mt-4">Paddock {paddockId}</h1>
-
             {loading && <p className="text-gray-400">Loading devices...</p>}
             {error && <p className="text-red-500">{error}</p>}
 
