@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import DashboardHeader from './DashboardHeader';
 import Sidebar from './Sidebar';
 import DeviceTable, { Device } from './DeviceTable';
+import { getPaddockDevices } from '@/lib/paddock';
 
 export default function PaddockViewClient() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -18,44 +19,37 @@ export default function PaddockViewClient() {
   const router = useRouter();
 
   useEffect(() => {
-    if (!paddockId) return;
+  if (!paddockId) return;
 
-    const fetchDevices = async () => {
-      setLoading(true);
-      setError(null);
+  const fetchDevices = async () => {
+    setLoading(true);
+    setError(null);
 
-      try {
-        const res = await fetch(
-          `http://localhost:8000/paddock/${paddockId}/devices`,
-          {
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${localStorage.getItem('token')}`,
-            },
-          }
-        );
+    try {
+      const token = localStorage.getItem('token') || '';
+      const result = await getPaddockDevices(paddockId, token);
 
-        const data = await res.json();
-        if (!res.ok || !data.success) {
-          throw new Error(data.message || 'Failed to load devices');
-        }
-
-        const mappedDevices: Device[] = data.devices.map((d: any) => ({
-          node_id: d.node_id,
-          node_name: d.node_name,
-          battery: d.battery,
-        }));
-
-        setDevices(mappedDevices);
-      } catch (err: any) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
+      if (!result.success) {
+        throw new Error(result.message);
       }
-    };
 
-    fetchDevices();
-  }, [paddockId]);
+      const mappedDevices: Device[] = result.devices.map((d: any) => ({
+        node_id: d.node_id,
+        node_name: d.node_name,
+        battery: d.battery,
+      }));
+
+      setDevices(mappedDevices);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchDevices();
+}, [paddockId]);
+
 
   const handleAddDevice = () => {
     if (paddockId) {
