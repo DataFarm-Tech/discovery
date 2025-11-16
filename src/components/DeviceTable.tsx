@@ -12,9 +12,11 @@ export interface Device {
 export default function DeviceTable({
   devices,
   onAddDevice,
+  onDeviceClick,
 }: {
   devices: Device[];
   onAddDevice: () => void;
+  onDeviceClick: (device: Device) => void;
 }) {
   return (
     <div className="bg-[#141826] border border-[#00be64]/60 rounded-2xl shadow-lg p-8 flex-1 w-full max-w-6xl mx-auto">
@@ -49,12 +51,12 @@ export default function DeviceTable({
           </button>
         </div>
       ) : (
-        /* Device Grid */
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {devices.map((d, index) => (
+          {devices.map((d) => (
             <div
               key={d.node_id}
-              className="group bg-[#1b2134] border border-[#00be64]/30 hover:border-[#00be64] rounded-xl p-6 flex flex-col items-start justify-between shadow-md hover:shadow-[#00be64]/20 transition-all duration-300 hover:-translate-y-1"
+              onClick={() => onDeviceClick(d)}
+              className="group bg-[#1b2134] border border-[#00be64]/30 hover:border-[#00be64] rounded-xl p-6 flex flex-col items-start justify-between shadow-md hover:shadow-[#00be64]/20 transition-all duration-300 hover:-translate-y-1 cursor-pointer"
             >
               {/* Icon + Info */}
               <div className="flex items-center gap-4">

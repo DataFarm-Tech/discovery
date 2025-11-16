@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import DashboardHeader from './DashboardHeader';
 import Sidebar from './Sidebar';
 import DeviceTable, { Device } from './DeviceTable';
@@ -14,6 +14,8 @@ export default function PaddockViewClient() {
 
   const searchParams = useSearchParams();
   const paddockId = searchParams.get('paddockId');
+
+  const router = useRouter();
 
   useEffect(() => {
     if (!paddockId) return;
@@ -34,7 +36,6 @@ export default function PaddockViewClient() {
         );
 
         const data = await res.json();
-
         if (!res.ok || !data.success) {
           throw new Error(data.message || 'Failed to load devices');
         }
@@ -42,6 +43,7 @@ export default function PaddockViewClient() {
         const mappedDevices: Device[] = data.devices.map((d: any) => ({
           node_id: d.node_id,
           node_name: d.node_name,
+          battery: d.battery,
         }));
 
         setDevices(mappedDevices);
@@ -57,23 +59,35 @@ export default function PaddockViewClient() {
 
   const handleAddDevice = () => {
     if (paddockId) {
-      window.location.href = `/device/create?paddockId=${paddockId}`;
+      router.push(`/device/create?paddockId=${paddockId}`);
     }
+  };
+
+  const handleDeviceClick = (device: Device) => {
+    router.push(`/device/view?nodeId=${device.node_id}`);
   };
 
   return (
     <main className="h-screen overflow-hidden bg-[#0c1220] px-6 py-6 text-white relative flex flex-col">
-      <DashboardHeader userName="Lucas" menuOpen={menuOpen} setMenuOpen={setMenuOpen} />
+      <DashboardHeader
+        userName="Lucas"
+        menuOpen={menuOpen}
+        setMenuOpen={setMenuOpen}
+      />
       <Sidebar menuOpen={menuOpen} setMenuOpen={setMenuOpen} />
 
-      <div className="flex-1 flex flex-col justify-start items-center overflow-y-auto space-y-6">
+      <div className="flex-1 flex flex-col justify-start items-center overflow-y-auto space-y-6 w-full">
         {paddockId ? (
           <>
             {loading && <p className="text-gray-400">Loading devices...</p>}
             {error && <p className="text-red-500">{error}</p>}
 
             {!loading && !error && (
-              <DeviceTable devices={devices} onAddDevice={handleAddDevice} />
+              <DeviceTable
+                devices={devices}
+                onAddDevice={handleAddDevice}
+                onDeviceClick={handleDeviceClick}
+              />
             )}
           </>
         ) : (
