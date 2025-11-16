@@ -1,58 +1,72 @@
-'use client';
+"use client";
 
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
-import L, { LatLngTuple } from 'leaflet';
+import { useEffect, useRef } from "react";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 
-// Custom green map marker
-const greenIcon = new L.Icon({
-  iconUrl: 'https://cdn-icons-png.flaticon.com/512/684/684908.png',
-  iconSize: [30, 30],
-  iconAnchor: [15, 30],
+// Fix Leaflet's broken default icon paths
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
 });
 
-interface Device {
-  name: string;
-  battery: number;
-  version: string;
-  location: LatLngTuple;
+interface DeviceMapProps {
+  lat: number;
+  lng: number;
+  nodeName: string;
 }
 
-const DeviceMap = () => {
-  const devices: Device[] = [
-    { name: 'Irrigation Pump', battery: 80, version: 'v1.2.0', location: [-34.26, 146.038] },
-    { name: 'Soil Sensor', battery: 45, version: 'v2.1.3', location: [-34.263, 146.045] },
-    { name: 'Weather Station', battery: 70, version: 'v3.0.1', location: [-34.267, 146.04] },
-  ];
+export default function DeviceMap({ lat, lng, nodeName }: DeviceMapProps) {
+  const mapRef = useRef<HTMLDivElement | null>(null);
+  const leafletMap = useRef<L.Map | null>(null);
+
+  useEffect(() => {
+    if (!mapRef.current) return;
+    if (leafletMap.current) return;
+
+    // Create map with Google-like behavior
+    leafletMap.current = L.map(mapRef.current, {
+      zoomControl: true,      // Google-style zoom buttons
+      scrollWheelZoom: true,  // Smooth zooming
+      dragging: true,
+      inertia: true,
+      zoomAnimation: true,
+      fadeAnimation: true,
+    }).setView([lat, lng], 15);
+
+    // Google Maps–like street tiles (safe to use)
+    L.tileLayer(
+      "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+      {
+        attribution: "&copy; OpenStreetMap contributors",
+        minZoom: 3,
+        maxZoom: 19,
+      }
+    ).addTo(leafletMap.current);
+
+    // Marker
+    L.marker([lat, lng]).addTo(leafletMap.current).bindPopup(nodeName);
+
+    return () => {
+      if (leafletMap.current) {
+        leafletMap.current.remove();
+        leafletMap.current = null;
+      }
+    };
+  }, [lat, lng, nodeName]);
 
   return (
-    // 👇 Remove fixed height and make it flexible
-    <div className="w-full h-full rounded-lg overflow-hidden">
-      <MapContainer
-        center={[-34.262, 146.043]}
-        zoom={12}
-        className="w-full h-full rounded-lg"
-        style={{ zIndex: 0 }}
-        scrollWheelZoom={true}
-      >
-        <TileLayer
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          attribution="&copy; OpenStreetMap contributors"
-        />
-        {devices.map((d, i) => (
-          <Marker key={i} position={d.location} icon={greenIcon}>
-            <Popup>
-              <b>{d.name}</b>
-              <br />
-              Battery: {d.battery}%
-              <br />
-              Version: {d.version}
-            </Popup>
-          </Marker>
-        ))}
-      </MapContainer>
-    </div>
+    <div
+      ref={mapRef}
+      style={{
+        width: "100%",
+        height: "100%",
+        borderRadius: "16px",
+        overflow: "hidden",
+        boxShadow: "0 0 20px #00be6433",
+      }}
+    />
   );
-};
-
-export default DeviceMap;
+}

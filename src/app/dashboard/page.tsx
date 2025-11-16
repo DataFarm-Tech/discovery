@@ -67,12 +67,6 @@ export default function DashboardPage() {
 
       {/* Scrollable Main Content */}
       <div className="flex-1 overflow-y-auto">
-        {/* Stats Tiles */}
-        <section className="flex flex-col lg:flex-row gap-4 mb-4">
-          <StatsTile title="pH (Average)" value={6.5} className="w-full sm:w-[48%] lg:w-[30%]" />
-          <StatsTile title="Temperature (Average)" value={22} unit="°C" className="w-full sm:w-[48%] lg:w-[30%]" />
-          <StatsTile title="Nitrogen (Average)" value={12} unit="ppm" className="w-full sm:w-[48%] lg:w-[30%]" />
-        </section>
 
         {/* Paddock Table */}
         <section className="flex flex-col lg:flex-row gap-4 mb-4">
@@ -83,25 +77,6 @@ export default function DashboardPage() {
           ) : (
             <PaddockTable paddocks={paddocks} onAddPaddock={handleAddPaddock} />
           )}
-        </section>
-
-        {/* Map and Graph Section */}
-        <section className="flex flex-col lg:flex-row gap-4">
-          {/* Device Map */}
-          <section className="bg-[#1a1f2e] border border-[#00be64] rounded-lg shadow p-4 flex flex-col w-full lg:w-1/2">
-            <h2 className="text-lg font-semibold mb-3 text-white">Device Locations</h2>
-            <div className="flex-1 min-h-[180px] overflow-hidden rounded-md">
-              <DeviceMap />
-            </div>
-          </section>
-
-          {/* Graph Carousel */}
-          <section className="bg-[#1a1f2e] border border-[#00be64] rounded-lg shadow p-4 flex flex-col w-full lg:w-1/2">
-            <h2 className="text-lg font-semibold mb-3 text-white">Graphs</h2>
-            <div className="flex-1 min-h-[180px] flex justify-center items-center">
-              <GraphCarousel />
-            </div>
-          </section>
         </section>
       </div>
     </main>

@@ -2,62 +2,116 @@
 
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import Graph from '@/components/Graph';
+import { getDeviceData, DeviceDataResponse } from '@/lib/device';
 
-interface DeviceReading {
-  reading_type: string;
-  reading_val: number;
-  timestamp: string;
-}
+// Lazy-load map component
+const DeviceMap = dynamic(() => import('@/components/DeviceMap'), {
+  ssr: false,
+});
 
-interface DeviceData {
-  node_id: string;
-  node_name: string;
-  paddock_id: number;
-  readings: DeviceReading[];
-}
+// Temporary map coordinates
+const DEFAULT_COORDS = {
+  lat: 51.505,
+  lng: -0.09,
+};
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+// Hard-coded battery level
+const BATTERY_PERCENT = 87;
 
 export default function DeviceViewPage() {
   const searchParams = useSearchParams();
   const nodeId = searchParams.get('nodeId');
 
-  const [deviceData, setDeviceData] = useState<DeviceData | null>(null);
+  const [temperatureData, setTemperatureData] = useState<DeviceDataResponse["node"] | null>(null);
+  const [phData, setPhData] = useState<DeviceDataResponse["node"] | null>(null);
+  const [selectedGraph, setSelectedGraph] = useState<'temperature' | 'ph'>('temperature');
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  function formatTimestamp(ts: string) {
+    return new Date(ts).toLocaleString(undefined, {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit"
+    });
+  }
+
+  function timeAgo(ts: string) {
+    const now = Date.now();
+    const then = new Date(ts).getTime();
+    const diff = (now - then) / 1000;
+
+    if (diff < 60) return `${Math.floor(diff)}s ago`;
+    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+    return `${Math.floor(diff / 86400)}d ago`;
+  }
+
+  function deviceStatus(ts: string | null) {
+    if (!ts) return { label: "Unknown", color: "gray", online: false };
+
+    const now = Date.now();
+    const then = new Date(ts).getTime();
+    const hours = (now - then) / 1000 / 3600;
+
+    if (hours > 12) {
+      return { label: "Offline", color: "red", online: false };
+    }
+    return { label: "Online", color: "green", online: true };
+  }
+
+  // CSV EXPORTER
+  const exportToCSV = () => {
+    const data =
+      selectedGraph === "temperature"
+        ? temperatureData?.readings || []
+        : phData?.readings || [];
+
+    if (!data.length) return;
+
+    const csvRows = [
+      "timestamp,value",
+      ...data.map(r => `${r.timestamp},${r.reading_val}`)
+    ];
+
+    const blob = new Blob([csvRows.join("\n")], { type: "text/csv" });
+    const url = window.URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${nodeId}_${selectedGraph}_data.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
   useEffect(() => {
     if (!nodeId) {
-      setError('No device selected.');
+      setError("No device selected.");
       setLoading(false);
       return;
     }
 
-    const fetchDeviceData = async () => {
+    const fetchBoth = async () => {
       setLoading(true);
       setError(null);
 
       try {
-        const token = localStorage.getItem('token');
-        if (!token) {
-          throw new Error('You must be logged in to view this device.');
-        }
+        const token = localStorage.getItem("token");
+        if (!token) throw new Error("You must be logged in.");
 
-        const res = await fetch(`${API_BASE_URL}/device/view/${nodeId}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        });
+        const temp = await getDeviceData({ nodeId, readingType: "temperature" }, token);
+        const ph = await getDeviceData({ nodeId, readingType: "ph" }, token);
 
-        const data = await res.json();
+        if (temp.success) setTemperatureData(temp.node);
+        if (ph.success) setPhData(ph.node);
 
-        if (!res.ok || !data.success) {
-          throw new Error(data.message || 'Please go back and select a valid device.');
-        }
-
-        setDeviceData(data);
+        if (!temp.success && !ph.success) throw new Error("Failed to load readings.");
       } catch (err: any) {
         setError(err.message);
       } finally {
@@ -65,53 +119,213 @@ export default function DeviceViewPage() {
       }
     };
 
-    fetchDeviceData();
+    fetchBoth();
   }, [nodeId]);
+
+  const lastUpdated = (() => {
+    const all = [
+      ...(temperatureData?.readings || []),
+      ...(phData?.readings || [])
+    ];
+    if (all.length === 0) return null;
+    return all.reduce((a, b) =>
+      new Date(a.timestamp) > new Date(b.timestamp) ? a : b
+    ).timestamp;
+  })();
+
+  const status = deviceStatus(lastUpdated);
+
+  const avgTemp = temperatureData?.readings?.length
+    ? (
+        temperatureData.readings.reduce((s, r) => s + Number(r.reading_val), 0) /
+        temperatureData.readings.length
+      ).toFixed(2)
+    : null;
+
+  const avgPh = phData?.readings?.length
+    ? (
+        phData.readings.reduce((s, r) => s + Number(r.reading_val), 0) /
+        phData.readings.length
+      ).toFixed(2)
+    : null;
 
   if (loading) {
     return (
       <div className="flex justify-center items-center h-screen bg-[#0c1220] text-white">
-        <p className="text-xl">Loading device data...</p>
+        <p className="text-xl animate-pulse">Loading device data...</p>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="flex flex-col justify-center items-center h-screen bg-[#0c1220] text-white px-6">
+      <div className="flex flex-col justify-center items-center h-screen bg-[#0c1220] text-white">
         <p className="text-red-500 text-lg font-semibold mb-4">{error}</p>
-        <p className="text-white/70 text-center">
-          Please go back and select a valid device.
-        </p>
       </div>
     );
   }
 
+  const graphData =
+    selectedGraph === "temperature"
+      ? temperatureData?.readings?.map(r => ({ x: r.timestamp, y: Number(r.reading_val) })) || []
+      : phData?.readings?.map(r => ({ x: r.timestamp, y: Number(r.reading_val) })) || [];
+
+  const graphTitle = selectedGraph === "temperature" ? "Temperature" : "pH Levels";
+
   return (
-    <div className="min-h-screen bg-[#0c1220] text-white px-6 py-6 flex flex-col items-center">
-      <button
-        onClick={() => window.history.back()}
-        className="mb-6 bg-gray-700 px-4 py-2 rounded hover:bg-gray-600 transition"
-      >
-        ← Back to Devices
-      </button>
+    <div className="min-h-screen bg-[#0c1220] text-white px-10 py-10">
 
-      <h2 className="text-3xl font-bold mb-4">{deviceData?.node_name}</h2>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 w-full items-start">
 
-      {deviceData && deviceData.readings.length > 0 ? (
-        <Graph
-          title={`${deviceData.node_name} Readings`}
-          data={deviceData.readings.map(r => ({
-            x: r.timestamp,
-            y: r.reading_val,
-            type: r.reading_type
-          }))}
-        />
-      ) : (
-        <div className="mt-8 text-white/70 text-center">
-          <p>No readings available for this device yet.</p>
+        {/* LEFT COLUMN */}
+        <div className="flex flex-col gap-8">
+
+          <button
+            onClick={() => window.history.back()}
+            className="w-fit bg-[#11172b] border border-[#00be64] px-4 py-2 rounded-xl hover:bg-[#00be64] hover:text-black transition shadow-[0_0_10px_#00be6455]"
+          >
+            ← Back to Devices
+          </button>
+
+{/* HEADER WITH BATTERY ICON */}
+<div className="flex items-center justify-between w-full">
+  <h1 className="text-4xl font-semibold tracking-wide">
+    {temperatureData?.node_name || phData?.node_name}
+  </h1>
+
+  {/* Battery Icon */}
+  <div className="flex items-center gap-3">
+    <span className="text-white/70 text-sm font-medium">{BATTERY_PERCENT}%</span>
+
+    <div className="relative w-12 h-6 border-2 border-[#00be64] rounded-md flex items-center px-1">
+      {/* Battery fill */}
+      <div
+        className="h-full bg-[#00be64] rounded-sm transition-all duration-300"
+        style={{ width: `${Math.max(0, Math.min(100, BATTERY_PERCENT))}%` }}
+      />
+
+      {/* Battery nub */}
+      <div className="absolute right-[-6px] w-1.5 h-3 bg-[#00be64] rounded-sm" />
+    </div>
+  </div>
+</div>
+
+
+
+
+          {/* STATUS TILE */}
+          <div className="bg-[#11172b] border border-[#00be64] rounded-2xl p-6 shadow-[0_0_18px_#00be6444] flex items-center justify-between">
+
+            <div className="flex items-center gap-4">
+              <span
+                className={`inline-block w-4 h-4 rounded-full ${
+                  status.color === "red" ? "bg-red-500" :
+                  status.color === "green" ? "bg-green-400" :
+                  "bg-gray-500"
+                } shadow-[0_0_10px]`}
+              />
+
+              <div>
+                <h3 className="text-lg font-semibold">Device Status</h3>
+                <p
+                  className={`text-xl ${
+                    status.color === "red"
+                      ? "text-red-500"
+                      : status.color === "green"
+                      ? "text-green-400"
+                      : "text-gray-400"
+                  }`}
+                >
+                  {status.label}
+                </p>
+              </div>
+            </div>
+
+            <div className="text-right">
+              {lastUpdated && (
+                <>
+                  <h3 className="text-lg font-semibold">Last Updated</h3>
+                  <p className="text-[#00be64] text-xl">{timeAgo(lastUpdated)}</p>
+                  <p className="text-white/50 text-sm">{formatTimestamp(lastUpdated)}</p>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* STATS GRID – Avg Temp / Avg pH / Battery */}
+          <div className="grid grid-cols-3 gap-6">
+
+            {/* Avg Temp */}
+            <div className="bg-[#11172b] border border-[#00be64] rounded-2xl p-6 text-center shadow-[0_0_12px_#00be6444]">
+              <h3 className="font-semibold text-white/80">Avg Temp</h3>
+              <p className="text-[#00be64] text-3xl">{avgTemp ?? "--"}</p>
+            </div>
+
+            {/* Avg pH */}
+            <div className="bg-[#11172b] border border-[#00be64] rounded-2xl p-6 text-center shadow-[0_0_12px_#00be6444]">
+              <h3 className="font-semibold text-white/80">Avg pH</h3>
+              <p className="text-[#00be64] text-3xl">{avgPh ?? "--"}</p>
+            </div>
+
+          </div>
+
+          {/* GRAPH + CSV EXPORT */}
+          <section className="bg-[#11172b] border border-[#00be64] rounded-2xl shadow-[0_0_18px_#00be6444] p-6 w-full">
+
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-semibold">{graphTitle}</h2>
+
+              <div className="flex items-center gap-3">
+
+                <button
+                  onClick={exportToCSV}
+                  className="px-4 py-2 text-sm bg-[#00be64] text-black font-semibold rounded-xl hover:bg-[#00d975] transition"
+                >
+                  Export CSV
+                </button>
+
+                <div className="flex bg-[#0c1220] border border-[#00be64] rounded-full overflow-hidden">
+                  {(["temperature", "ph"] as const).map(option => (
+                    <button
+                      key={option}
+                      onClick={() => setSelectedGraph(option)}
+                      className={`px-4 py-2 text-sm ${
+                        selectedGraph === option
+                          ? "bg-[#00be64] text-black font-semibold"
+                          : "text-white hover:bg-[#00be64]/20"
+                      }`}
+                    >
+                      {option === "temperature" ? "Temperature" : "pH"}
+                    </button>
+                  ))}
+                </div>
+
+              </div>
+            </div>
+
+            <div className="w-full h-[360px] rounded-xl overflow-hidden">
+              <Graph title={graphTitle} data={graphData} />
+            </div>
+          </section>
+
         </div>
-      )}
+
+        {/* RIGHT COLUMN — MAP */}
+        <div className="flex flex-col gap-8 items-start">
+          
+          
+          <div className="bg-[#11172b] border border-[#00be64] rounded-2xl shadow-[0_0_18px_#00be6444] p-6 w-full">
+            <div className="rounded-xl overflow-hidden h-[420px] w-full">
+              <DeviceMap
+                lat={DEFAULT_COORDS.lat}
+                lng={DEFAULT_COORDS.lng}
+                nodeName={temperatureData?.node_name || phData?.node_name || nodeId || "Device"}
+              />
+            </div>
+          </div>
+        </div>
+
+      </div>
     </div>
   );
 }
