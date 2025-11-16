@@ -10,7 +10,6 @@ import StatsTile from '@/components/StatsTile';
 import PaddockTable from '@/components/PaddockTable';
 import { Device } from '@/components/DeviceTable';
 import { Paddock } from '@/components/PaddockTable';
-import GraphCarousel from '@/components/GraphCarousel';
 import { getPaddocks } from '@/lib/paddock';
 
 // Load DeviceMap dynamically (Leaflet needs browser APIs)

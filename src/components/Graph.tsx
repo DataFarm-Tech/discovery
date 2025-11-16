@@ -39,13 +39,10 @@ interface GraphProps {
 }
 
 export default function Graph({ title, data }: GraphProps) {
-  // Create golden-orange gradient fill
   const gradientBg = (ctx: any) => {
     const gradient = ctx.chart.ctx.createLinearGradient(0, 0, 0, 300);
-
-    gradient.addColorStop(0, 'rgba(255, 179, 71, 0.45)'); // gold-orange
-    gradient.addColorStop(1, 'rgba(255, 179, 71, 0)');    // fade to transparent
-
+    gradient.addColorStop(0, 'rgba(255, 179, 71, 0.45)');
+    gradient.addColorStop(1, 'rgba(255, 179, 71, 0)');
     return gradient;
   };
 
@@ -54,7 +51,7 @@ export default function Graph({ title, data }: GraphProps) {
       {
         label: title,
         data,
-        borderColor: '#ffb347', // soft gold-orange line
+        borderColor: '#ffb347',
         borderWidth: 3,
         backgroundColor: gradientBg,
         fill: true,
@@ -75,40 +72,33 @@ export default function Graph({ title, data }: GraphProps) {
       legend: {
         labels: {
           color: 'white',
-          font: { size: 16, weight: 'bold' },
+          font: {
+            size: 16,
+            weight: 'bold' as const,
+          },
         },
       },
       tooltip: {
         backgroundColor: 'rgba(0,0,0,0.8)',
-        titleFont: { size: 16, weight: 'bold' },
-        bodyFont: { size: 14 },
+        titleFont: {
+          size: 16,
+          weight: 'bold' as const,
+        },
+        bodyFont: {
+          size: 14,
+        },
         padding: 12,
         cornerRadius: 8,
         displayColors: false,
       },
     },
 
-    layout: {
-      padding: { top: 20, right: 20, bottom: 10, left: 10 },
-    },
-
     scales: {
       x: {
-        type: 'time' as const,
-        time: {
-          unit: 'hour',
-          displayFormats: {
-            hour: 'h a',
-          },
-          tooltipFormat: 'PPpp',
-        },
+        type: 'category',
         grid: { color: 'rgba(255,255,255,0.25)' },
         ticks: {
           color: 'white',
-          maxRotation: 45,
-          minRotation: 30,
-          autoSkip: true,
-          maxTicksLimit: 8,
           font: { size: 12 },
         },
       },
@@ -121,7 +111,7 @@ export default function Graph({ title, data }: GraphProps) {
         },
       },
     },
-  };
+  } as const;
 
   return (
     <div className="w-full max-w-4xl mx-auto h-80 p-4">
