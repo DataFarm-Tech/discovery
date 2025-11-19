@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 
+
 interface Props {
   score: number; // 0–100
 }
