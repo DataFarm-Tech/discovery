@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { FaMicrochip } from 'react-icons/fa6';
-import { MdAdd } from 'react-icons/md';
+import { FaMicrochip } from "react-icons/fa6";
+import { MdAdd, MdArrowBack } from "react-icons/md";
 
 export interface Device {
   node_id: number;
@@ -12,18 +12,34 @@ export interface Device {
 export default function DeviceTable({
   devices,
   onAddDevice,
+  onBack,
 }: {
   devices: Device[];
   onAddDevice: () => void;
+  onBack: () => void;
 }) {
   return (
     <div className="bg-[#141826] border border-[#00be64]/60 rounded-2xl shadow-lg p-8 flex-1 w-full max-w-6xl mx-auto">
       {/* Header Section */}
       <div className="flex items-center justify-between mb-8">
-        <h2 className="text-3xl font-bold text-white flex items-center gap-3">
-          <FaMicrochip className="text-[#00be64]" size={28} />
-          Devices
-        </h2>
+        {/* WRAPPER START: Groups Back Button and Title together on the Left */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={onBack}
+            className="p-2 text-white/50 hover:text-white hover:bg-white/10 rounded-full transition-all duration-200"
+            aria-label="Go Back"
+          >
+            <MdArrowBack size={28} />
+          </button>
+
+          <h2 className="text-3xl font-bold text-white flex items-center gap-3">
+            <FaMicrochip className="text-[#00be64]" size={28} />
+            Devices
+          </h2>
+        </div>
+        {/* WRAPPER END */}
+
+        {/* Add Button stays on the Right */}
         {devices.length > 0 && (
           <button
             onClick={onAddDevice}
@@ -62,23 +78,25 @@ export default function DeviceTable({
                   <FaMicrochip className="text-[#00be64]" size={28} />
                 </div>
                 <div>
-                  <h3 className="text-xl font-semibold text-white">{d.node_name}</h3>
+                  <h3 className="text-xl font-semibold text-white">
+                    {d.node_name}
+                  </h3>
                   <p className="text-white/60 text-sm">Node ID: {d.node_id}</p>
                 </div>
               </div>
 
               {/* Optional Battery */}
-              {typeof d.battery === 'number' && (
+              {typeof d.battery === "number" && (
                 <div className="w-full mt-6">
                   <div className="flex justify-between mb-1">
                     <span className="text-white/70 text-sm">Battery</span>
                     <span
                       className={`text-sm font-medium ${
                         d.battery > 60
-                          ? 'text-[#00be64]'
+                          ? "text-[#00be64]"
                           : d.battery > 30
-                          ? 'text-yellow-400'
-                          : 'text-red-500'
+                          ? "text-yellow-400"
+                          : "text-red-500"
                       }`}
                     >
                       {d.battery}%
@@ -88,10 +106,10 @@ export default function DeviceTable({
                     <div
                       className={`h-2 rounded-full transition-all ${
                         d.battery > 60
-                          ? 'bg-[#00be64]'
+                          ? "bg-[#00be64]"
                           : d.battery > 30
-                          ? 'bg-yellow-400'
-                          : 'bg-red-500'
+                          ? "bg-yellow-400"
+                          : "bg-red-500"
                       }`}
                       style={{ width: `${d.battery}%` }}
                     ></div>
