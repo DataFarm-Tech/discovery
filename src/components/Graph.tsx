@@ -1,64 +1,120 @@
 'use client';
 
 import { Line } from 'react-chartjs-2';
-import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend } from 'chart.js';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend,
+  TimeScale,
+  Filler,
+} from 'chart.js';
 
-// Register the required chart components
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
+import 'chartjs-adapter-date-fns';
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend,
+  TimeScale,
+  Filler
+);
+
+interface DataPoint {
+  x: string;
+  y: number;
+}
 
 interface GraphProps {
   title: string;
-  data: number[];
+  data: DataPoint[];
 }
 
 export default function Graph({ title, data }: GraphProps) {
+  const gradientBg = (ctx: any) => {
+    const gradient = ctx.chart.ctx.createLinearGradient(0, 0, 0, 300);
+    gradient.addColorStop(0, 'rgba(255, 179, 71, 0.45)');
+    gradient.addColorStop(1, 'rgba(255, 179, 71, 0)');
+    return gradient;
+  };
+
   const chartData = {
-    labels: Array.from({ length: data.length }, (_, i) => `${i + 1}`), // Create labels (1, 2, 3, ...)
     datasets: [
       {
         label: title,
-        data: data,
-        borderColor: '#ffffff', // White color for graph line
-        backgroundColor: 'rgba(255, 255, 255, 0.3)', // Lighter background for the graph
+        data,
+        borderColor: '#ffb347',
+        borderWidth: 3,
+        backgroundColor: gradientBg,
         fill: true,
-        tension: 0.4,
+        tension: 0.45,
+        pointRadius: 2,
+        pointHoverRadius: 6,
+        pointHoverBorderWidth: 2,
+        pointHoverBackgroundColor: '#ffb347',
       },
     ],
   };
 
   const options = {
+    responsive: true,
+    maintainAspectRatio: false,
+
     plugins: {
       legend: {
         labels: {
-          color: 'white', // Set legend text color to white
+          color: 'white',
           font: {
-            size: 18, // Increase font size of legend text
+            size: 16,
+            weight: 'bold' as const,
           },
         },
       },
+      tooltip: {
+        backgroundColor: 'rgba(0,0,0,0.8)',
+        titleFont: {
+          size: 16,
+          weight: 'bold' as const,
+        },
+        bodyFont: {
+          size: 14,
+        },
+        padding: 12,
+        cornerRadius: 8,
+        displayColors: false,
+      },
     },
+
     scales: {
       x: {
-        grid: {
-          color: 'white', // Set x-axis grid lines to white
-        },
+        type: 'category',
+        grid: { color: 'rgba(255,255,255,0.25)' },
         ticks: {
-          color: 'white', // Set x-axis ticks to white
+          color: 'white',
+          font: { size: 12 },
         },
       },
+
       y: {
-        grid: {
-          color: 'white', // Set y-axis grid lines to white
-        },
+        grid: { color: 'rgba(255,255,255,0.25)' },
         ticks: {
-          color: 'white', // Set y-axis ticks to white
+          color: 'white',
+          font: { size: 12 },
         },
       },
     },
-  };
+  } as const;
 
   return (
-    <div className="w-full h-72">
+    <div className="w-full max-w-4xl mx-auto h-80 p-4">
       <Line data={chartData} options={options} />
     </div>
   );

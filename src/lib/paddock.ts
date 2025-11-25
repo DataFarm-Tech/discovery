@@ -14,6 +14,54 @@ export interface PaddockApiError {
   message: string;
 }
 
+export interface GetDevicesPaddockResponse {
+    success: boolean;
+    message: string;
+    devices: Array<{
+      node_id: string;
+      node_name: string;
+      battery: number;
+    }>;
+}
+
+export async function getPaddockDevices(
+    paddockId: string,
+    token: string
+  ): Promise<GetDevicesPaddockResponse | PaddockApiError> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/paddock/${paddockId}/devices`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+  
+      const data = await response.json();
+  
+      if (!response.ok) {
+        return {
+          success: false,
+          message: data.message || 'Failed to fetch devices',
+          devices: [],
+        };
+      }
+        return {
+        success: true,
+        message: data.message || 'Devices fetched successfully',
+        devices: data.devices || [],
+      };
+
+    } catch (error) {
+      console.error('Error fetching paddock devices:', error);
+      return {
+        success: false,
+        message: 'An error occurred while fetching devices',
+        devices: [],
+      };
+    }
+}
+
 /**
  * Creates a new paddock
  * @param paddockName - Name of the paddock (optional)
