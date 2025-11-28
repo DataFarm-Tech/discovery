@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
+import Link from "next/link";
 
 export interface Paddock {
   paddock_id?: number;
@@ -30,7 +30,9 @@ export default function PaddockTable({
       {/* Empty State */}
       {paddocks.length === 0 ? (
         <div className="text-center py-16">
-          <h3 className="text-xl font-semibold text-white mb-2">No Paddocks Yet</h3>
+          <h3 className="text-xl font-semibold text-white mb-2">
+            No Paddocks Yet
+          </h3>
           <button
             onClick={onAddPaddock}
             className="px-6 py-3 bg-[#00be64] text-white font-semibold rounded-lg hover:bg-[#009e53] transition-all transform hover:scale-105 shadow-lg"
@@ -42,8 +44,10 @@ export default function PaddockTable({
         <>
           <div className="mb-4">
             <p className="text-sm text-gray-400">
-              Total Paddocks:{' '}
-              <span className="text-[#00be64] font-semibold">{paddocks.length}</span>
+              Total Paddocks:{" "}
+              <span className="text-[#00be64] font-semibold">
+                {paddocks.length}
+              </span>
             </p>
           </div>
 
@@ -51,7 +55,7 @@ export default function PaddockTable({
             {paddocks.map((paddock, index) => (
               <Link
                 key={paddock.paddock_id || index}
-                href={`/paddock/view?paddockId=${paddock.paddock_id}`}
+                href={`/paddock/view?paddockId=${paddock.paddock_id}&paddockName=${paddock.paddock_name}`}
                 className="bg-[#0f1419] border border-gray-700 rounded-lg p-5 hover:border-[#00be64] hover:shadow-lg transition-all duration-200 group cursor-pointer"
               >
                 <div className="flex items-center gap-3">

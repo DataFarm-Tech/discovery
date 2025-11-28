@@ -1,12 +1,13 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
-import DashboardHeader from './DashboardHeader';
-import Sidebar from './Sidebar';
-import DeviceTable, { Device } from './DeviceTable';
-import { getPaddockDevices } from '@/lib/paddock';
+import { useState, useEffect } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+import DashboardHeader from "./DashboardHeader";
+import Sidebar from "./Sidebar";
+import DeviceTable, { Device } from "./DeviceTable";
+import { getPaddockDevices } from "@/lib/paddock";
 import SoilHealthScore from "./SoilHealthScore";
+import { MdDelete, MdEdit } from "react-icons/md";
 
 export default function PaddockViewClient() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -15,7 +16,8 @@ export default function PaddockViewClient() {
   const [error, setError] = useState<string | null>(null);
 
   const searchParams = useSearchParams();
-  const paddockId = searchParams.get('paddockId');
+  const paddockId = searchParams.get("paddockId");
+  const paddockName = searchParams.get("paddockName");
 
   const router = useRouter();
 
@@ -27,7 +29,7 @@ export default function PaddockViewClient() {
       setError(null);
 
       try {
-        const token = localStorage.getItem('token') || '';
+        const token = localStorage.getItem("token") || "";
         const result = await getPaddockDevices(paddockId, token);
 
         if (!result.success) {
@@ -63,7 +65,6 @@ export default function PaddockViewClient() {
 
   return (
     <main className="h-screen overflow-hidden bg-[#0c1220] px-6 py-6 text-white relative flex flex-col">
-      
       {/* Header */}
       <DashboardHeader
         userName="Lucas"
@@ -76,10 +77,50 @@ export default function PaddockViewClient() {
 
       {/* Page content */}
       <div className="flex-1 overflow-y-auto flex flex-col items-center pt-6">
-
         {paddockId ? (
           <div className="w-full max-w-5xl space-y-8">
+            {/* Paddock Header with Name and Actions */}
+            <section className="bg-[#121829] border border-[#00be64]/30 rounded-2xl shadow-xl p-6">
+              <div className="flex items-center justify-between">
+                {/* Paddock Name - Left Aligned */}
+                <h1 className="text-3xl font-bold text-white">
+                  {paddockName || `Paddock #${paddockId}`}
+                </h1>
 
+                {/* Action Icons - Right Aligned */}
+                <div className="flex items-center gap-3">
+                  {/* Edit Icon */}
+                  <button
+                    onClick={() => {
+                      /* Handle edit */
+                    }}
+                    className="p-2.5 bg-[#00be64]/20 hover:bg-[#00be64]/30 rounded-lg transition-all group"
+                    title="Edit paddock"
+                  >
+                    <MdEdit
+                      size={20}
+                      color="#00be64"
+                      className="group-hover:scale-110 transition-transform"
+                    />
+                  </button>
+
+                  {/* Delete Icon */}
+                  <button
+                    onClick={() => {
+                      /* Handle delete */
+                    }}
+                    className="p-2.5 bg-red-500/20 hover:bg-red-500/30 rounded-lg transition-all group"
+                    title="Delete paddock"
+                  >
+                    <MdDelete
+                      size={20}
+                      color="#ef4444"
+                      className="group-hover:scale-110 transition-transform"
+                    />
+                  </button>
+                </div>
+              </div>
+            </section>
             {/* 🌱 Soil Health Section */}
             <section className="bg-[#121829] border border-[#00be64]/30 rounded-2xl shadow-xl p-8 relative overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-br from-[#00be64]/10 to-transparent pointer-events-none" />
@@ -93,8 +134,9 @@ export default function PaddockViewClient() {
               </div>
 
               <p className="text-gray-400 text-center mt-6 max-w-xl mx-auto relative z-10">
-                Soil health is calculated using microbial activity, organic matter,
-                moisture balance, and nutrient availability from your active sensors.
+                Soil health is calculated using microbial activity, organic
+                matter, moisture balance, and nutrient availability from your
+                active sensors.
               </p>
             </section>
 
@@ -102,23 +144,21 @@ export default function PaddockViewClient() {
             {/* <section className="bg-[#121829] border border-[#00be64]/20 rounded-2xl shadow p-6">
               <h2 className="text-xl font-semibold mb-4">Devices in this Paddock</h2> */}
 
-              {loading && <p className="text-gray-400">Loading devices...</p>}
-              {error && <p className="text-red-500">{error}</p>}
+            {loading && <p className="text-gray-400">Loading devices...</p>}
+            {error && <p className="text-red-500">{error}</p>}
 
-              {!loading && !error && (
-                <DeviceTable
-                  devices={devices}
-                  onAddDevice={handleAddDevice}
-                  onDeviceClick={handleDeviceClick}
-                />
-              )}
+            {!loading && !error && (
+              <DeviceTable
+                devices={devices}
+                onAddDevice={handleAddDevice}
+                onDeviceClick={handleDeviceClick}
+              />
+            )}
             {/* </section> */}
-
           </div>
         ) : (
           <p className="text-gray-400">No paddock selected.</p>
         )}
-
       </div>
     </main>
   );
