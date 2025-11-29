@@ -5,15 +5,18 @@ import { useSearchParams, useRouter } from "next/navigation";
 import DashboardHeader from "./DashboardHeader";
 import Sidebar from "./Sidebar";
 import DeviceTable, { Device } from "./DeviceTable";
-import { getPaddockDevices } from "@/lib/paddock";
 import SoilHealthScore from "./SoilHealthScore";
 import { MdDelete, MdEdit } from "react-icons/md";
+import { getPaddockDevices, updatePaddockName } from "@/lib/paddock";
 
 export default function PaddockViewClient() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [devices, setDevices] = useState<Device[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [newPaddockName, setNewPaddockName] = useState("");
+  const [editError, setEditError] = useState<string | null>(null);
 
   const searchParams = useSearchParams();
   const paddockId = searchParams.get("paddockId");
@@ -59,6 +62,49 @@ export default function PaddockViewClient() {
     }
   };
 
+  const handleEditPaddock = async () => {
+    // Clear previous errors
+    setEditError(null);
+
+    // Validation: Check for empty string
+    if (!newPaddockName.trim()) {
+      setEditError("Paddock name cannot be empty");
+      return;
+    }
+
+    // Validation: Check if name is the same
+    if (newPaddockName.trim() === paddockName) {
+      setEditError("New name must be different from current name");
+      return;
+    }
+
+    if (!paddockId) return;
+
+    try {
+      const token = localStorage.getItem("token") || "";
+      const result = await updatePaddockName(
+        paddockId,
+        newPaddockName.trim(),
+        token
+      );
+
+      if (result.success) {
+        // Update URL with new name
+        router.push(
+          `/paddock/view?paddockId=${paddockId}&paddockName=${encodeURIComponent(
+            newPaddockName.trim()
+          )}`
+        );
+        setIsEditModalOpen(false);
+        setEditError(null);
+      } else {
+        setEditError(result.message);
+      }
+    } catch (err: any) {
+      setEditError(err.message);
+    }
+  };
+
   const handleDeviceClick = (device: Device) => {
     router.push(`/device/view?nodeId=${device.node_id}`);
   };
@@ -93,6 +139,9 @@ export default function PaddockViewClient() {
                   <button
                     onClick={() => {
                       /* Handle edit */
+                      setNewPaddockName(paddockName || "");
+                      setEditError(null);
+                      setIsEditModalOpen(true);
                     }}
                     className="p-2.5 bg-[#00be64]/20 hover:bg-[#00be64]/30 rounded-lg transition-all group"
                     title="Edit paddock"
@@ -160,6 +209,48 @@ export default function PaddockViewClient() {
           <p className="text-gray-400">No paddock selected.</p>
         )}
       </div>
+      {/* Edit Paddock Modal */}
+      {isEditModalOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-[#121829] border border-[#00be64]/30 rounded-2xl p-6 w-full max-w-md">
+            <h2 className="text-2xl font-bold mb-4">Edit Paddock Name</h2>
+
+            <input
+              type="text"
+              value={newPaddockName}
+              onChange={(e) => {
+                setNewPaddockName(e.target.value);
+                setEditError(null); // Clear error on input change
+              }}
+              className="w-full px-4 py-2 bg-[#0c1220] border border-gray-700 rounded-lg text-white focus:outline-none focus:border-[#00be64] mb-2"
+              placeholder="Enter paddock name"
+            />
+
+            {/* Error Message */}
+            {editError && (
+              <p className="text-red-500 text-sm mb-4">{editError}</p>
+            )}
+
+            <div className="flex gap-3 justify-end mt-4">
+              <button
+                onClick={() => {
+                  setIsEditModalOpen(false);
+                  setEditError(null);
+                }}
+                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleEditPaddock}
+                className="px-4 py-2 bg-[#00be64] hover:bg-[#009e53] rounded-lg transition-all"
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
