@@ -19,10 +19,6 @@ export default function Page() {
   return (
     <Suspense fallback={<p>Loading paddock...</p>}>
       <PaddockViewClient />
-      <div>
-        <h1>Paddock: {paddockName}</h1>
-        <p>ID: {paddockId}</p>
-      </div>
     </Suspense>
   );
 }
