@@ -89,9 +89,6 @@ export default function PaddockTable({
                     <h3 className="text-lg font-semibold text-white group-hover:text-[#00be64] transition-colors">
                       {paddock.paddock_name}
                     </h3>
-                    <p className="text-xs text-gray-500">
-                      Paddock #{paddock.paddock_id || index + 1}
-                    </p>
                   </div>
                 </div>
               </Link>
