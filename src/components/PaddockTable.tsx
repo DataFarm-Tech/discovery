@@ -14,6 +14,16 @@ export default function PaddockTable({
   paddocks: Paddock[];
   onAddPaddock: () => void;
 }) {
+  const handlePaddockClick = (paddock: Paddock) => {
+    sessionStorage.setItem(
+      "paddockData",
+      JSON.stringify({
+        paddockId: paddock.paddock_id,
+        paddockName: paddock.paddock_name,
+      })
+    );
+  };
+
   return (
     <div className="bg-[#1a1f2e] border border-[#00be64] rounded-lg shadow-lg p-6 flex-1 w-full">
       {/* Header with Add Button */}
@@ -55,7 +65,8 @@ export default function PaddockTable({
             {paddocks.map((paddock, index) => (
               <Link
                 key={paddock.paddock_id || index}
-                href={`/paddock/view?paddockId=${paddock.paddock_id}&paddockName=${paddock.paddock_name}`}
+                href="/paddock/view"
+                onClick={() => handlePaddockClick(paddock)}
                 className="bg-[#0f1419] border border-gray-700 rounded-lg p-5 hover:border-[#00be64] hover:shadow-lg transition-all duration-200 group cursor-pointer"
               >
                 <div className="flex items-center gap-3">

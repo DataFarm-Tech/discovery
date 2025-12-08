@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import DashboardHeader from "./DashboardHeader";
 import Sidebar from "./Sidebar";
 import DeviceTable, { Device } from "./DeviceTable";
@@ -17,12 +17,20 @@ export default function PaddockViewClient() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [newPaddockName, setNewPaddockName] = useState("");
   const [editError, setEditError] = useState<string | null>(null);
-
-  const searchParams = useSearchParams();
-  const paddockId = searchParams.get("paddockId");
-  const paddockName = searchParams.get("paddockName");
+  const [paddockId, setPaddockId] = useState<string | null>(null);
+  const [paddockName, setPaddockName] = useState<string>("");
 
   const router = useRouter();
+
+  // Load paddock data from sessionStorage
+  useEffect(() => {
+    const data = sessionStorage.getItem("paddockData");
+    if (data) {
+      const { paddockId, paddockName } = JSON.parse(data);
+      setPaddockId(paddockId?.toString() || null);
+      setPaddockName(paddockName || "");
+    }
+  }, []);
 
   useEffect(() => {
     if (!paddockId) return;
@@ -63,16 +71,13 @@ export default function PaddockViewClient() {
   };
 
   const handleEditPaddock = async () => {
-    // Clear previous errors
     setEditError(null);
 
-    // Validation: Check for empty string
     if (!newPaddockName.trim()) {
       setEditError("Paddock name cannot be empty");
       return;
     }
 
-    // Validation: Check if name is the same
     if (newPaddockName.trim() === paddockName) {
       setEditError("New name must be different from current name");
       return;
@@ -89,12 +94,17 @@ export default function PaddockViewClient() {
       );
 
       if (result.success) {
-        // Update URL with new name
-        router.push(
-          `/paddock/view?paddockId=${paddockId}&paddockName=${encodeURIComponent(
-            newPaddockName.trim()
-          )}`
+        // Update sessionStorage with new name
+        sessionStorage.setItem(
+          "paddockData",
+          JSON.stringify({
+            paddockId: paddockId,
+            paddockName: newPaddockName.trim(),
+          })
         );
+
+        // Update local state
+        setPaddockName(newPaddockName.trim());
         setIsEditModalOpen(false);
         setEditError(null);
       } else {
@@ -111,34 +121,26 @@ export default function PaddockViewClient() {
 
   return (
     <main className="h-screen overflow-hidden bg-[#0c1220] px-6 py-6 text-white relative flex flex-col">
-      {/* Header */}
       <DashboardHeader
         userName="Lucas"
         menuOpen={menuOpen}
         setMenuOpen={setMenuOpen}
       />
 
-      {/* Sidebar */}
       <Sidebar menuOpen={menuOpen} setMenuOpen={setMenuOpen} />
 
-      {/* Page content */}
       <div className="flex-1 overflow-y-auto flex flex-col items-center pt-6">
         {paddockId ? (
           <div className="w-full max-w-5xl space-y-8">
-            {/* Paddock Header with Name and Actions */}
             <section className="bg-[#121829] border border-[#00be64]/30 rounded-2xl shadow-xl p-6">
               <div className="flex items-center justify-between">
-                {/* Paddock Name - Left Aligned */}
                 <h1 className="text-3xl font-bold text-white">
                   {paddockName || `Paddock #${paddockId}`}
                 </h1>
 
-                {/* Action Icons - Right Aligned */}
                 <div className="flex items-center gap-3">
-                  {/* Edit Icon */}
                   <button
                     onClick={() => {
-                      /* Handle edit */
                       setNewPaddockName(paddockName || "");
                       setEditError(null);
                       setIsEditModalOpen(true);
@@ -153,7 +155,6 @@ export default function PaddockViewClient() {
                     />
                   </button>
 
-                  {/* Delete Icon */}
                   <button
                     onClick={() => {
                       /* Handle delete */
@@ -170,7 +171,7 @@ export default function PaddockViewClient() {
                 </div>
               </div>
             </section>
-            {/* 🌱 Soil Health Section */}
+
             <section className="bg-[#121829] border border-[#00be64]/30 rounded-2xl shadow-xl p-8 relative overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-br from-[#00be64]/10 to-transparent pointer-events-none" />
 
@@ -189,10 +190,6 @@ export default function PaddockViewClient() {
               </p>
             </section>
 
-            {/* 📡 Device list */}
-            {/* <section className="bg-[#121829] border border-[#00be64]/20 rounded-2xl shadow p-6">
-              <h2 className="text-xl font-semibold mb-4">Devices in this Paddock</h2> */}
-
             {loading && <p className="text-gray-400">Loading devices...</p>}
             {error && <p className="text-red-500">{error}</p>}
 
@@ -203,13 +200,12 @@ export default function PaddockViewClient() {
                 onDeviceClick={handleDeviceClick}
               />
             )}
-            {/* </section> */}
           </div>
         ) : (
           <p className="text-gray-400">No paddock selected.</p>
         )}
       </div>
-      {/* Edit Paddock Modal */}
+
       {isEditModalOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-[#121829] border border-[#00be64]/30 rounded-2xl p-6 w-full max-w-md">
@@ -220,13 +216,12 @@ export default function PaddockViewClient() {
               value={newPaddockName}
               onChange={(e) => {
                 setNewPaddockName(e.target.value);
-                setEditError(null); // Clear error on input change
+                setEditError(null);
               }}
               className="w-full px-4 py-2 bg-[#0c1220] border border-gray-700 rounded-lg text-white focus:outline-none focus:border-[#00be64] mb-2"
               placeholder="Enter paddock name"
             />
 
-            {/* Error Message */}
             {editError && (
               <p className="text-red-500 text-sm mb-4">{editError}</p>
             )}
