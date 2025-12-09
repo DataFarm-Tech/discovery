@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { FaMicrochip } from 'react-icons/fa6';
-import { MdAdd } from 'react-icons/md';
+import { FaMicrochip } from "react-icons/fa6";
+import { MdAdd } from "react-icons/md";
 
 export interface Device {
   node_id: number;
@@ -20,7 +20,6 @@ export default function DeviceTable({
 }) {
   return (
     <div className="bg-[#141826] border border-[#00be64]/60 rounded-2xl shadow-lg p-8 w-full">
-
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-2xl font-bold text-white flex items-center gap-3">
@@ -40,11 +39,12 @@ export default function DeviceTable({
       {devices.length === 0 ? (
         <div className="text-white/80 p-10 text-center border border-dashed border-white/20 rounded-xl bg-white/5">
           <p className="text-xl font-semibold">No devices yet</p>
-          <p className="mt-2 text-white/60 text-base">Start by adding a new device.</p>
+          <p className="mt-2 text-white/60 text-base">
+            Start by adding a new device.
+          </p>
         </div>
       ) : (
         <div className="max-h-[420px] overflow-y-auto pr-2 space-y-3">
-
           {devices.map((d) => (
             <div
               key={d.node_id}
@@ -57,21 +57,23 @@ export default function DeviceTable({
                   <FaMicrochip className="text-[#00be64]" size={26} />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-white">{d.node_name}</h3>
+                  <h3 className="text-lg font-semibold text-white">
+                    {d.node_name || `Device ${d.node_id}`}
+                  </h3>
                   <p className="text-white/50 text-sm">Node ID: {d.node_id}</p>
                 </div>
               </div>
 
               {/* Battery */}
-              {typeof d.battery === 'number' && (
+              {typeof d.battery === "number" && (
                 <div className="flex flex-col items-end w-32">
                   <span
                     className={`text-sm font-medium mb-1 ${
                       d.battery > 60
-                        ? 'text-[#00be64]'
+                        ? "text-[#00be64]"
                         : d.battery > 30
-                        ? 'text-yellow-400'
-                        : 'text-red-500'
+                        ? "text-yellow-400"
+                        : "text-red-500"
                     }`}
                   >
                     {d.battery}%
@@ -81,10 +83,10 @@ export default function DeviceTable({
                     <div
                       className={`h-2 rounded-full ${
                         d.battery > 60
-                          ? 'bg-[#00be64]'
+                          ? "bg-[#00be64]"
                           : d.battery > 30
-                          ? 'bg-yellow-400'
-                          : 'bg-red-500'
+                          ? "bg-yellow-400"
+                          : "bg-red-500"
                       }`}
                       style={{ width: `${d.battery}%` }}
                     />
@@ -93,7 +95,6 @@ export default function DeviceTable({
               )}
             </div>
           ))}
-
         </div>
       )}
     </div>

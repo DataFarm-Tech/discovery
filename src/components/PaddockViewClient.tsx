@@ -8,6 +8,7 @@ import DeviceTable, { Device } from "./DeviceTable";
 import SoilHealthScore from "./SoilHealthScore";
 import { MdDelete, MdEdit } from "react-icons/md";
 import { getPaddockDevices, updatePaddockName } from "@/lib/paddock";
+import RegisterDeviceModal from "./RegisterDeviceModal";
 
 export default function PaddockViewClient() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -19,6 +20,7 @@ export default function PaddockViewClient() {
   const [editError, setEditError] = useState<string | null>(null);
   const [paddockId, setPaddockId] = useState<string | null>(null);
   const [paddockName, setPaddockName] = useState<string>("");
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const router = useRouter();
 
@@ -49,7 +51,7 @@ export default function PaddockViewClient() {
 
         const mapped: Device[] = result.devices.map((d: any) => ({
           node_id: d.node_id,
-          node_name: d.node_name,
+          node_name: d.node_name || "",
           battery: d.battery,
         }));
 
@@ -66,7 +68,7 @@ export default function PaddockViewClient() {
 
   const handleAddDevice = () => {
     if (paddockId) {
-      router.push(`/device/create?paddockId=${paddockId}`);
+      setIsModalOpen(true);
     }
   };
 
@@ -205,7 +207,34 @@ export default function PaddockViewClient() {
           <p className="text-gray-400">No paddock selected.</p>
         )}
       </div>
+      {paddockId && (
+        <RegisterDeviceModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          paddockId={Number(paddockId)}
+          onSuccess={() => {
+            // Refetch devices after successful registration
+            const fetchDevices = async () => {
+              try {
+                const token = localStorage.getItem("token") || "";
+                const result = await getPaddockDevices(paddockId, token);
 
+                if (result.success) {
+                  const mapped: Device[] = result.devices.map((d: any) => ({
+                    node_id: d.node_id,
+                    node_name: d.node_name || "",
+                    battery: d.battery,
+                  }));
+                  setDevices(mapped);
+                }
+              } catch (err) {
+                console.error("Failed to refresh devices:", err);
+              }
+            };
+            fetchDevices();
+          }}
+        />
+      )}
       {isEditModalOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-[#121829] border border-[#00be64]/30 rounded-2xl p-6 w-full max-w-md">
