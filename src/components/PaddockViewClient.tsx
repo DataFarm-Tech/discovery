@@ -6,7 +6,7 @@ import DashboardHeader from "./DashboardHeader";
 import Sidebar from "./Sidebar";
 import DeviceTable, { Device } from "./DeviceTable";
 import SoilHealthScore from "./SoilHealthScore";
-import { MdDelete, MdEdit } from "react-icons/md";
+import { MdDelete, MdEdit, MdArrowBack } from "react-icons/md";
 import {
   getPaddockDevices,
   updatePaddockName,
@@ -167,6 +167,18 @@ export default function PaddockViewClient() {
       <div className="flex-1 overflow-y-auto flex flex-col items-center pt-6">
         {paddockId ? (
           <div className="w-full max-w-5xl space-y-8">
+            {/* Back Button */}
+            <button
+              onClick={() => router.push("/dashboard")}
+              className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors group text-lg"
+            >
+              <MdArrowBack
+                size={24}
+                className="group-hover:-translate-x-1 transition-transform"
+              />
+              <span>Back to Dashboard</span>
+            </button>
+
             <section className="bg-[#121829] border border-[#00be64]/30 rounded-2xl shadow-xl p-6">
               <div className="flex items-center justify-between">
                 <h1 className="text-3xl font-bold text-white">
