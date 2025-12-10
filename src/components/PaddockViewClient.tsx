@@ -7,7 +7,12 @@ import Sidebar from "./Sidebar";
 import DeviceTable, { Device } from "./DeviceTable";
 import SoilHealthScore from "./SoilHealthScore";
 import { MdDelete, MdEdit } from "react-icons/md";
-import { getPaddockDevices, updatePaddockName } from "@/lib/paddock";
+import {
+  getPaddockDevices,
+  updatePaddockName,
+  deletePaddock,
+} from "@/lib/paddock";
+import toast from "react-hot-toast";
 import RegisterDeviceModal from "./RegisterDeviceModal";
 
 export default function PaddockViewClient() {
@@ -21,6 +26,8 @@ export default function PaddockViewClient() {
   const [paddockId, setPaddockId] = useState<string | null>(null);
   const [paddockName, setPaddockName] = useState<string>("");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   const router = useRouter();
 
@@ -121,6 +128,32 @@ export default function PaddockViewClient() {
     router.push(`/device/view?nodeId=${device.node_id}`);
   };
 
+  const handleDeletePaddock = async () => {
+    if (!paddockId) return;
+
+    setDeleteLoading(true);
+    try {
+      const token = localStorage.getItem("token") || "";
+      const result = await deletePaddock(paddockId, token);
+
+      if (result.success) {
+        toast.success(result.message);
+
+        // Clear session storage and redirect to dashboard immediately
+        sessionStorage.removeItem("paddockData");
+        setIsDeleteModalOpen(false);
+        router.push("/dashboard");
+      } else {
+        toast.error(result.message);
+      }
+    } catch (err: any) {
+      toast.error("Failed to delete paddock");
+      console.error(err);
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
   return (
     <main className="h-screen overflow-hidden bg-[#0c1220] px-6 py-6 text-white relative flex flex-col">
       <DashboardHeader
@@ -158,9 +191,7 @@ export default function PaddockViewClient() {
                   </button>
 
                   <button
-                    onClick={() => {
-                      /* Handle delete */
-                    }}
+                    onClick={() => setIsDeleteModalOpen(true)}
                     className="p-2.5 bg-red-500/20 hover:bg-red-500/30 rounded-lg transition-all group"
                     title="Delete paddock"
                   >
@@ -270,6 +301,62 @@ export default function PaddockViewClient() {
                 className="px-4 py-2 bg-[#00be64] hover:bg-[#009e53] rounded-lg transition-all"
               >
                 Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {isDeleteModalOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={() => !deleteLoading && setIsDeleteModalOpen(false)}
+        >
+          <div
+            className="bg-[#121829] border border-red-500/30 rounded-2xl p-8 w-full max-w-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-12 h-12 bg-red-500/20 rounded-full flex items-center justify-center">
+                <MdDelete size={24} color="#ef4444" />
+              </div>
+              <h2 className="text-2xl font-bold text-red-500">
+                Delete Paddock
+              </h2>
+            </div>
+
+            <p className="text-white text-lg mb-3">
+              Are you sure you want to delete{" "}
+              <span className="font-semibold text-[#00be64]">
+                {paddockName || `Paddock #${paddockId}`}
+              </span>
+              ?
+            </p>
+
+            <p className="text-gray-400 mb-8 leading-relaxed">
+              This will unlink all devices from this paddock. This action cannot
+              be undone.
+            </p>
+
+            <div className="flex gap-4 justify-end">
+              <button
+                onClick={() => setIsDeleteModalOpen(false)}
+                disabled={deleteLoading}
+                className="px-6 py-3 bg-gray-700 hover:bg-gray-600 rounded-lg transition-all font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeletePaddock}
+                disabled={deleteLoading}
+                className={`px-6 py-3 rounded-lg transition-all font-medium ${
+                  deleteLoading
+                    ? "bg-red-500/50 cursor-not-allowed"
+                    : "bg-red-500 hover:bg-red-600"
+                }`}
+              >
+                {deleteLoading ? "Deleting..." : "Delete Paddock"}
               </button>
             </div>
           </div>

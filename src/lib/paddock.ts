@@ -203,3 +203,29 @@ export async function updatePaddockName(
     };
   }
 }
+
+/**
+ * Deletes a paddock
+ * @param paddockId - ID of the paddock to delete
+ * @param token - JWT authentication token
+ * @returns Promise with the API response
+ */
+export async function deletePaddock(paddockId: string | number, token: string) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/paddock/${paddockId}`, {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error deleting paddock:', error);
+    return {
+      success: false,
+      message: 'Failed to delete paddock',
+    };
+  }
+}
