@@ -13,6 +13,18 @@ export interface PaddockApiError {
   success: false;
   message: string;
 }
+export interface UpdatePaddockRequest {
+  paddock_name: string;
+}
+
+export interface UpdatePaddockResponse {
+  success: boolean;
+  message: string;
+  paddock?: {
+    paddock_id: number;
+    paddock_name: string;
+  };
+}
 
 export interface GetDevicesPaddockResponse {
     success: boolean;
@@ -141,6 +153,79 @@ export async function getPaddocks(token: string) {
       success: false,
       message: 'An error occurred while fetching paddocks',
       paddocks: [],
+    };
+  }
+}
+
+/**
+ * Updates a paddock's name
+ * @param paddockId - ID of the paddock to update
+ * @param paddockName - New name for the paddock
+ * @param token - JWT authentication token
+ * @returns Promise with the API response
+ */
+export async function updatePaddockName(
+  paddockId: string,
+  paddockName: string,
+  token: string
+): Promise<UpdatePaddockResponse> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/paddock/${paddockId}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON. stringify({
+        paddock_name: paddockName,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return {
+        success: false,
+        message: data.message || data.detail || 'Failed to update paddock',
+      };
+    }
+
+    return {
+      success: true,
+      message: data.message || 'Paddock updated successfully',
+      paddock: data.paddock,
+    };
+  } catch (error) {
+    console.error('Error updating paddock:', error);
+    return {
+      success: false,
+      message: 'An error occurred.  Please try again.',
+    };
+  }
+}
+
+/**
+ * Deletes a paddock
+ * @param paddockId - ID of the paddock to delete
+ * @param token - JWT authentication token
+ * @returns Promise with the API response
+ */
+export async function deletePaddock(paddockId: string | number, token: string) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/paddock/${paddockId}`, {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error deleting paddock:', error);
+    return {
+      success: false,
+      message: 'Failed to delete paddock',
     };
   }
 }

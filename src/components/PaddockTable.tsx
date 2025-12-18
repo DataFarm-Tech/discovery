@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
+import Link from "next/link";
 
 export interface Paddock {
   paddock_id?: number;
@@ -14,6 +14,16 @@ export default function PaddockTable({
   paddocks: Paddock[];
   onAddPaddock: () => void;
 }) {
+  const handlePaddockClick = (paddock: Paddock) => {
+    sessionStorage.setItem(
+      "paddockData",
+      JSON.stringify({
+        paddockId: paddock.paddock_id,
+        paddockName: paddock.paddock_name,
+      })
+    );
+  };
+
   return (
     <div className="bg-[#1a1f2e] border border-[#00be64] rounded-lg shadow-lg p-6 flex-1 w-full">
       {/* Header with Add Button */}
@@ -30,7 +40,9 @@ export default function PaddockTable({
       {/* Empty State */}
       {paddocks.length === 0 ? (
         <div className="text-center py-16">
-          <h3 className="text-xl font-semibold text-white mb-2">No Paddocks Yet</h3>
+          <h3 className="text-xl font-semibold text-white mb-2">
+            No Paddocks Yet
+          </h3>
           <button
             onClick={onAddPaddock}
             className="px-6 py-3 bg-[#00be64] text-white font-semibold rounded-lg hover:bg-[#009e53] transition-all transform hover:scale-105 shadow-lg"
@@ -42,8 +54,10 @@ export default function PaddockTable({
         <>
           <div className="mb-4">
             <p className="text-sm text-gray-400">
-              Total Paddocks:{' '}
-              <span className="text-[#00be64] font-semibold">{paddocks.length}</span>
+              Total Paddocks:{" "}
+              <span className="text-[#00be64] font-semibold">
+                {paddocks.length}
+              </span>
             </p>
           </div>
 
@@ -51,7 +65,8 @@ export default function PaddockTable({
             {paddocks.map((paddock, index) => (
               <Link
                 key={paddock.paddock_id || index}
-                href={`/paddock/view?paddockId=${paddock.paddock_id}`}
+                href="/paddock/view"
+                onClick={() => handlePaddockClick(paddock)}
                 className="bg-[#0f1419] border border-gray-700 rounded-lg p-5 hover:border-[#00be64] hover:shadow-lg transition-all duration-200 group cursor-pointer"
               >
                 <div className="flex items-center gap-3">
@@ -74,9 +89,6 @@ export default function PaddockTable({
                     <h3 className="text-lg font-semibold text-white group-hover:text-[#00be64] transition-colors">
                       {paddock.paddock_name}
                     </h3>
-                    <p className="text-xs text-gray-500">
-                      Paddock #{paddock.paddock_id || index + 1}
-                    </p>
                   </div>
                 </div>
               </Link>
