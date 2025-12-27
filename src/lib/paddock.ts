@@ -36,6 +36,26 @@ export interface GetDevicesPaddockResponse {
     }>;
 }
 
+export interface SensorAveragesResponse {
+  success: boolean;
+  message: string;
+  paddock_id?: number;
+  paddock_name?: string;
+  nodes_count?: number;
+  nodes_with_readings?: number;
+  sensor_averages?: {
+    [key: string]: number;
+  };
+  sensor_details?: {
+    [key: string]: {
+      average: number;
+      min: number;
+      max: number;
+      count: number;
+    };
+  };
+}
+
 export async function getPaddockDevices(
     paddockId: string,
     token: string
@@ -72,6 +92,53 @@ export async function getPaddockDevices(
         devices: [],
       };
     }
+}
+
+/**
+ * Gets sensor averages for a paddock
+ * @param paddockId - ID of the paddock
+ * @param token - JWT authentication token
+ * @returns Promise with sensor averages data
+ */
+export async function getPaddockSensorAverages(
+  paddockId: string,
+  token: string
+): Promise<SensorAveragesResponse | PaddockApiError> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/paddock/${paddockId}/sensor-averages`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return {
+        success: false,
+        message: data.message || 'Failed to fetch sensor averages',
+      };
+    }
+
+    return {
+      success: true,
+      message: data.message || 'Sensor averages fetched successfully',
+      paddock_id: data.paddock_id,
+      paddock_name: data.paddock_name,
+      nodes_count: data.nodes_count,
+      nodes_with_readings: data.nodes_with_readings,
+      sensor_averages: data.sensor_averages || {},
+      sensor_details: data.sensor_details || {},
+    };
+  } catch (error) {
+    console.error('Error fetching sensor averages:', error);
+    return {
+      success: false,
+      message: 'An error occurred while fetching sensor averages',
+    };
+  }
 }
 
 /**

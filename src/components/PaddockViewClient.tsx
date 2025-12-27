@@ -14,6 +14,7 @@ import {
 } from "@/lib/paddock";
 import toast from "react-hot-toast";
 import RegisterDeviceModal from "./RegisterDeviceModal";
+import RecentAverages from "./RecentAverages";
 
 export default function PaddockViewClient() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -234,6 +235,8 @@ export default function PaddockViewClient() {
                 active sensors.
               </p>
             </section>
+
+            <RecentAverages paddockId={paddockId} />
 
             {loading && <p className="text-gray-400">Loading devices...</p>}
             {error && <p className="text-red-500">{error}</p>}
