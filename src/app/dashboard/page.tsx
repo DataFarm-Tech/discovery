@@ -84,7 +84,7 @@ export default function DashboardPage() {
 
   // Filter paddocks by search query
   const filteredPaddocks = paddocks.filter(p =>
-    (p.paddock_name || p.name || '')?.toLowerCase().includes(searchQuery.toLowerCase())
+    (p.paddock_name || p.paddock_name || '')?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
