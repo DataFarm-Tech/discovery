@@ -26,6 +26,7 @@ export default function DashboardPage() {
   const [paddocks, setPaddocks] = useState<Paddock[]>([]);
   const [menuOpen, setMenuOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
   const [isCreatePaddockModalOpen, setIsCreatePaddockModalOpen] =
     useState(false);
 
@@ -62,6 +63,50 @@ export default function DashboardPage() {
     setIsCreatePaddockModalOpen(true);
   };
 
+  // Handler for when a search item is clicked
+  const handleSearchItemSelect = (item: any) => {
+  console.log('Selected search item:', item);
+
+  // Handle Paddock
+  if (item.paddock_id || item.id) {
+    const paddockId = item.paddock_id || item.id;
+    const paddockName = item.paddock_name || item.name || 'Unnamed Paddock';
+
+    sessionStorage.setItem(
+      "paddockData",
+      JSON.stringify({
+        paddockId,
+        paddockName,
+      })
+    );
+    router.push("/paddock/view");
+    setSearchQuery(''); // Optional: clear search after selection
+    return;
+  }
+
+  // Handle Device
+  if (item.node_id) {
+    sessionStorage.setItem(
+      "selectedDevice",
+      JSON.stringify({
+        node_id: item.node_id,
+        node_name: item.node_name || item.node_id,
+      })
+    );
+    router.push(`/device/view?nodeId=${item.node_id}`);
+    setSearchQuery(''); // Optional: clear search
+    return;
+  }
+
+  // Fallback (shouldn't happen)
+  toast.error("Unable to navigate to selected item");
+};
+
+  // Filter paddocks by search query
+  const filteredPaddocks = paddocks.filter(p =>
+    (p.paddock_name || p.paddock_name || '')?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
     <main className="h-screen overflow-hidden bg-[#0c1220] px-6 py-6 text-white relative flex flex-col">
       {/* Header */}
@@ -69,6 +114,11 @@ export default function DashboardPage() {
         userName={userName}
         menuOpen={menuOpen}
         setMenuOpen={setMenuOpen}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        paddocks={paddocks}
+        devices={devices}
+        onSearchItemSelect={handleSearchItemSelect}
       />
 
       {/* Sidebar */}
@@ -117,11 +167,6 @@ export default function DashboardPage() {
               />
             </div>
           </div>
-
-          {/* RIGHT — Soil Health Score
-        <div className="flex justify-center items-center">
-          <SoilHealthScore score={78} />
-        </div> */}
         </section>
 
         {/* 🌾 Product Education Section */}
@@ -193,7 +238,7 @@ export default function DashboardPage() {
               <p className="text-white text-center">Loading paddocks...</p>
             </div>
           ) : (
-            <PaddockTable paddocks={paddocks} onAddPaddock={handleAddPaddock} />
+            <PaddockTable paddocks={filteredPaddocks} onAddPaddock={handleAddPaddock} />
           )}
         </section>
       </div>
@@ -211,3 +256,4 @@ export default function DashboardPage() {
     </main>
   );
 }
+
