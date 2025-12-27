@@ -1,7 +1,3 @@
-
-// ==========================================
-// FILE 1: src/components/SearchBar.tsx
-// ==========================================
 'use client';
 
 import { useState, useRef, useEffect } from 'react';

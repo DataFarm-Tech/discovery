@@ -147,11 +147,6 @@ export default function DashboardPage() {
               />
             </div>
           </div>
-
-          {/* RIGHT — Soil Health Score
-        <div className="flex justify-center items-center">
-          <SoilHealthScore score={78} />
-        </div> */}
         </section>
 
         {/* 🌾 Product Education Section */}
