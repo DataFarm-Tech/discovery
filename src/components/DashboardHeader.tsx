@@ -3,6 +3,7 @@
 
 import { useRouter } from 'next/navigation';
 import SearchBar from '@/components/SearchBar'; // Import SearchBar
+import { useState } from 'react';
 
 interface DashboardHeaderProps {
   userName: string | null;
@@ -12,6 +13,7 @@ interface DashboardHeaderProps {
 
 export default function DashboardHeader({ userName, menuOpen, setMenuOpen }: DashboardHeaderProps) {
   const router = useRouter();
+  const [searchQuery, setSearchQuery] = useState('');
 
   return (
     <header className="mb-8 flex justify-between items-center border-b border-white/20 pb-4">
@@ -29,7 +31,7 @@ export default function DashboardHeader({ userName, menuOpen, setMenuOpen }: Das
       </div>
 
       {/* Use the SearchBar Component */}
-      <SearchBar />
+      <SearchBar value={searchQuery} onChange={setSearchQuery} />
 
       <div className="flex items-center gap-4">
         <button className="text-white/80 hover:text-white transition relative" title="Notifications">
