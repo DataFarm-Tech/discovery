@@ -1,13 +1,13 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
-import dynamic from 'next/dynamic';
-import Graph from '@/components/Graph';
-import { getDeviceData, DeviceDataResponse } from '@/lib/device';
+import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import dynamic from "next/dynamic";
+import Graph from "@/components/Graph";
+import { getDeviceData, DeviceDataResponse } from "@/lib/device";
 
 // Lazy-load map component
-const DeviceMap = dynamic(() => import('@/components/DeviceMap'), {
+const DeviceMap = dynamic(() => import("@/components/DeviceMap"), {
   ssr: false,
 });
 
@@ -22,11 +22,15 @@ const BATTERY_PERCENT = 87;
 
 export default function DeviceViewPage() {
   const searchParams = useSearchParams();
-  const nodeId = searchParams.get('nodeId');
+  const nodeId = searchParams.get("nodeId");
 
-  const [temperatureData, setTemperatureData] = useState<DeviceDataResponse["node"] | null>(null);
+  const [temperatureData, setTemperatureData] = useState<
+    DeviceDataResponse["node"] | null
+  >(null);
   const [phData, setPhData] = useState<DeviceDataResponse["node"] | null>(null);
-  const [selectedGraph, setSelectedGraph] = useState<'temperature' | 'ph'>('temperature');
+  const [selectedGraph, setSelectedGraph] = useState<"temperature" | "ph">(
+    "temperature"
+  );
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -38,7 +42,7 @@ export default function DeviceViewPage() {
       day: "numeric",
       hour: "2-digit",
       minute: "2-digit",
-      second: "2-digit"
+      second: "2-digit",
     });
   }
 
@@ -77,7 +81,7 @@ export default function DeviceViewPage() {
 
     const csvRows = [
       "timestamp,value",
-      ...data.map(r => `${r.timestamp},${r.reading_val}`)
+      ...data.map((r) => `${r.timestamp},${r.reading_val}`),
     ];
 
     const blob = new Blob([csvRows.join("\n")], { type: "text/csv" });
@@ -105,13 +109,17 @@ export default function DeviceViewPage() {
         const token = localStorage.getItem("token");
         if (!token) throw new Error("You must be logged in.");
 
-        const temp = await getDeviceData({ nodeId, readingType: "temperature" }, token);
+        const temp = await getDeviceData(
+          { nodeId, readingType: "temperature" },
+          token
+        );
         const ph = await getDeviceData({ nodeId, readingType: "ph" }, token);
 
         if (temp.success) setTemperatureData(temp.node);
         if (ph.success) setPhData(ph.node);
 
-        if (!temp.success && !ph.success) throw new Error("Failed to load readings.");
+        if (!temp.success && !ph.success)
+          throw new Error("Failed to load readings.");
       } catch (err: any) {
         setError(err.message);
       } finally {
@@ -125,7 +133,7 @@ export default function DeviceViewPage() {
   const lastUpdated = (() => {
     const all = [
       ...(temperatureData?.readings || []),
-      ...(phData?.readings || [])
+      ...(phData?.readings || []),
     ];
     if (all.length === 0) return null;
     return all.reduce((a, b) =>
@@ -135,18 +143,24 @@ export default function DeviceViewPage() {
 
   const status = deviceStatus(lastUpdated);
 
-  const avgTemp = temperatureData?.readings?.length
-    ? (
-        temperatureData.readings.reduce((s, r) => s + Number(r.reading_val), 0) /
-        temperatureData.readings.length
-      ).toFixed(2)
+  const recentTemp = temperatureData?.readings?.length
+    ? Number(
+        temperatureData.readings.reduce((latest, reading) =>
+          new Date(reading.timestamp) > new Date(latest.timestamp)
+            ? reading
+            : latest
+        ).reading_val
+      ).toFixed(1)
     : null;
 
-  const avgPh = phData?.readings?.length
-    ? (
-        phData.readings.reduce((s, r) => s + Number(r.reading_val), 0) /
-        phData.readings.length
-      ).toFixed(2)
+  const recentPh = phData?.readings?.length
+    ? Number(
+        phData.readings.reduce((latest, reading) =>
+          new Date(reading.timestamp) > new Date(latest.timestamp)
+            ? reading
+            : latest
+        ).reading_val
+      ).toFixed(1)
     : null;
 
   if (loading) {
@@ -167,19 +181,23 @@ export default function DeviceViewPage() {
 
   const graphData =
     selectedGraph === "temperature"
-      ? temperatureData?.readings?.map(r => ({ x: r.timestamp, y: Number(r.reading_val) })) || []
-      : phData?.readings?.map(r => ({ x: r.timestamp, y: Number(r.reading_val) })) || [];
+      ? temperatureData?.readings?.map((r) => ({
+          x: r.timestamp,
+          y: Number(r.reading_val),
+        })) || []
+      : phData?.readings?.map((r) => ({
+          x: r.timestamp,
+          y: Number(r.reading_val),
+        })) || [];
 
-  const graphTitle = selectedGraph === "temperature" ? "Temperature" : "pH Levels";
+  const graphTitle =
+    selectedGraph === "temperature" ? "Temperature" : "pH Levels";
 
   return (
     <div className="min-h-screen bg-[#0c1220] text-white px-10 py-10">
-
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 w-full items-start">
-
         {/* LEFT COLUMN */}
         <div className="flex flex-col gap-8">
-
           <button
             onClick={() => window.history.back()}
             className="w-fit bg-[#11172b] border border-[#00be64] px-4 py-2 rounded-xl hover:bg-[#00be64] hover:text-black transition shadow-[0_0_10px_#00be6455]"
@@ -187,41 +205,43 @@ export default function DeviceViewPage() {
             ← Back to Devices
           </button>
 
-{/* HEADER WITH BATTERY ICON */}
-<div className="flex items-center justify-between w-full">
-  <h1 className="text-4xl font-semibold tracking-wide">
-    {temperatureData?.node_name || phData?.node_name}
-  </h1>
+          {/* HEADER WITH BATTERY ICON */}
+          <div className="flex items-center justify-between w-full">
+            <h1 className="text-4xl font-semibold tracking-wide">
+              {temperatureData?.node_name || phData?.node_name}
+            </h1>
 
-  {/* Battery Icon */}
-  <div className="flex items-center gap-3">
-    <span className="text-white/70 text-sm font-medium">{BATTERY_PERCENT}%</span>
+            {/* Battery Icon */}
+            <div className="flex items-center gap-3">
+              <span className="text-white/70 text-sm font-medium">
+                {BATTERY_PERCENT}%
+              </span>
 
-    <div className="relative w-12 h-6 border-2 border-[#00be64] rounded-md flex items-center px-1">
-      {/* Battery fill */}
-      <div
-        className="h-full bg-[#00be64] rounded-sm transition-all duration-300"
-        style={{ width: `${Math.max(0, Math.min(100, BATTERY_PERCENT))}%` }}
-      />
+              <div className="relative w-12 h-6 border-2 border-[#00be64] rounded-md flex items-center px-1">
+                {/* Battery fill */}
+                <div
+                  className="h-full bg-[#00be64] rounded-sm transition-all duration-300"
+                  style={{
+                    width: `${Math.max(0, Math.min(100, BATTERY_PERCENT))}%`,
+                  }}
+                />
 
-      {/* Battery nub */}
-      <div className="absolute right-[-6px] w-1.5 h-3 bg-[#00be64] rounded-sm" />
-    </div>
-  </div>
-</div>
-
-
-
+                {/* Battery nub */}
+                <div className="absolute right-[-6px] w-1.5 h-3 bg-[#00be64] rounded-sm" />
+              </div>
+            </div>
+          </div>
 
           {/* STATUS TILE */}
           <div className="bg-[#11172b] border border-[#00be64] rounded-2xl p-6 shadow-[0_0_18px_#00be6444] flex items-center justify-between">
-
             <div className="flex items-center gap-4">
               <span
                 className={`inline-block w-4 h-4 rounded-full ${
-                  status.color === "red" ? "bg-red-500" :
-                  status.color === "green" ? "bg-green-400" :
-                  "bg-gray-500"
+                  status.color === "red"
+                    ? "bg-red-500"
+                    : status.color === "green"
+                    ? "bg-green-400"
+                    : "bg-gray-500"
                 } shadow-[0_0_10px]`}
               />
 
@@ -245,38 +265,48 @@ export default function DeviceViewPage() {
               {lastUpdated && (
                 <>
                   <h3 className="text-lg font-semibold">Last Updated</h3>
-                  <p className="text-[#00be64] text-xl">{timeAgo(lastUpdated)}</p>
-                  <p className="text-white/50 text-sm">{formatTimestamp(lastUpdated)}</p>
+                  <p className="text-[#00be64] text-xl">
+                    {timeAgo(lastUpdated)}
+                  </p>
+                  <p className="text-white/50 text-sm">
+                    {formatTimestamp(lastUpdated)}
+                  </p>
                 </>
               )}
             </div>
           </div>
 
-          {/* STATS GRID – Avg Temp / Avg pH / Battery */}
-          <div className="grid grid-cols-3 gap-6">
+          {/* LATEST READINGS SECTION */}
+          <div className="bg-[#11172b] border border-[#00be64] rounded-2xl p-6 shadow-[0_0_18px_#00be6444]">
+            <h2 className="text-2xl font-semibold mb-6">Latest Readings</h2>
 
-            {/* Avg Temp */}
-            <div className="bg-[#11172b] border border-[#00be64] rounded-2xl p-6 text-center shadow-[0_0_12px_#00be6444]">
-              <h3 className="font-semibold text-white/80">Avg Temp</h3>
-              <p className="text-[#00be64] text-3xl">{avgTemp ?? "--"}</p>
+            <div className="grid grid-cols-2 gap-4">
+              {/* Temperature */}
+              <div className="bg-[#0c1220] border border-[#00be64]/50 rounded-xl p-4 text-center">
+                <h3 className="text-xs font-semibold text-white/80 mb-1">
+                  Temperature
+                </h3>
+                <p className="text-[#00be64] text-2xl font-bold">
+                  {recentTemp ?? "--"}°C
+                </p>
+              </div>
+
+              {/* pH */}
+              <div className="bg-[#0c1220] border border-[#00be64]/50 rounded-xl p-4 text-center">
+                <h3 className="text-xs font-semibold text-white/80 mb-1">pH</h3>
+                <p className="text-[#00be64] text-2xl font-bold">
+                  {recentPh ?? "--"}
+                </p>
+              </div>
             </div>
-
-            {/* Avg pH */}
-            <div className="bg-[#11172b] border border-[#00be64] rounded-2xl p-6 text-center shadow-[0_0_12px_#00be6444]">
-              <h3 className="font-semibold text-white/80">Avg pH</h3>
-              <p className="text-[#00be64] text-3xl">{avgPh ?? "--"}</p>
-            </div>
-
           </div>
 
           {/* GRAPH + CSV EXPORT */}
           <section className="bg-[#11172b] border border-[#00be64] rounded-2xl shadow-[0_0_18px_#00be6444] p-6 w-full">
-
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-2xl font-semibold">{graphTitle}</h2>
 
               <div className="flex items-center gap-3">
-
                 <button
                   onClick={exportToCSV}
                   className="px-4 py-2 text-sm bg-[#00be64] text-black font-semibold rounded-xl hover:bg-[#00d975] transition"
@@ -285,7 +315,7 @@ export default function DeviceViewPage() {
                 </button>
 
                 <div className="flex bg-[#0c1220] border border-[#00be64] rounded-full overflow-hidden">
-                  {(["temperature", "ph"] as const).map(option => (
+                  {(["temperature", "ph"] as const).map((option) => (
                     <button
                       key={option}
                       onClick={() => setSelectedGraph(option)}
@@ -299,7 +329,6 @@ export default function DeviceViewPage() {
                     </button>
                   ))}
                 </div>
-
               </div>
             </div>
 
@@ -307,24 +336,25 @@ export default function DeviceViewPage() {
               <Graph title={graphTitle} data={graphData} />
             </div>
           </section>
-
         </div>
 
         {/* RIGHT COLUMN — MAP */}
         <div className="flex flex-col gap-8 items-start">
-          
-          
           <div className="bg-[#11172b] border border-[#00be64] rounded-2xl shadow-[0_0_18px_#00be6444] p-6 w-full">
             <div className="rounded-xl overflow-hidden h-[420px] w-full">
               <DeviceMap
                 lat={DEFAULT_COORDS.lat}
                 lng={DEFAULT_COORDS.lng}
-                nodeName={temperatureData?.node_name || phData?.node_name || nodeId || "Device"}
+                nodeName={
+                  temperatureData?.node_name ||
+                  phData?.node_name ||
+                  nodeId ||
+                  "Device"
+                }
               />
             </div>
           </div>
         </div>
-
       </div>
     </div>
   );
