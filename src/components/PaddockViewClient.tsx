@@ -151,10 +151,14 @@ export default function PaddockViewClient() {
     }
   };
 
-  const filteredDevices = devices.filter(device =>
-    device.node_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    device.node_id.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Handler for when a search item is clicked
+  const handleSearchItemSelect = (item: any) => {
+    console.log('Selected item:', item);
+    // Navigate to device view if it's a device
+    if (item.node_id) {
+      router.push(`/device/view?nodeId=${item.node_id}`);
+    }
+  };
 
   return (
     <main className="h-screen overflow-hidden bg-[#0c1220] px-6 py-6 text-white relative flex flex-col">
@@ -166,7 +170,7 @@ export default function PaddockViewClient() {
         setSearchQuery={setSearchQuery}
         paddocks={[]}
         devices={devices}
-        onSearchItemSelect={() => {}}
+        onSearchItemSelect={handleSearchItemSelect}
       />
 
       <Sidebar menuOpen={menuOpen} setMenuOpen={setMenuOpen} />
@@ -230,7 +234,7 @@ export default function PaddockViewClient() {
 
             {!loading && !error && (
               <DeviceTable
-                devices={filteredDevices}
+                devices={devices}
                 onAddDevice={handleAddDevice}
                 onDeviceClick={handleDeviceClick}
               />

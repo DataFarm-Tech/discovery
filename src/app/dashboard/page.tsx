@@ -65,22 +65,42 @@ export default function DashboardPage() {
 
   // Handler for when a search item is clicked
   const handleSearchItemSelect = (item: any) => {
-    console.log('Selected item:', item);
-    // Navigate to paddock view if it's a paddock
+  console.log('Selected search item:', item);
+
+  // Handle Paddock
+  if (item.paddock_id || item.id) {
     const paddockId = item.paddock_id || item.id;
-    const paddockName = item.paddock_name || item.name;
-    
-    if (paddockId) {
-      sessionStorage.setItem(
-        "paddockData",
-        JSON.stringify({
-          paddockId: paddockId,
-          paddockName: paddockName,
-        })
-      );
-      router.push("/paddock/view");
-    }
-  };
+    const paddockName = item.paddock_name || item.name || 'Unnamed Paddock';
+
+    sessionStorage.setItem(
+      "paddockData",
+      JSON.stringify({
+        paddockId,
+        paddockName,
+      })
+    );
+    router.push("/paddock/view");
+    setSearchQuery(''); // Optional: clear search after selection
+    return;
+  }
+
+  // Handle Device
+  if (item.node_id) {
+    sessionStorage.setItem(
+      "selectedDevice",
+      JSON.stringify({
+        node_id: item.node_id,
+        node_name: item.node_name || item.node_id,
+      })
+    );
+    router.push(`/device/view?nodeId=${item.node_id}`);
+    setSearchQuery(''); // Optional: clear search
+    return;
+  }
+
+  // Fallback (shouldn't happen)
+  toast.error("Unable to navigate to selected item");
+};
 
   // Filter paddocks by search query
   const filteredPaddocks = paddocks.filter(p =>
