@@ -1,19 +1,30 @@
-// src/components/DashboardHeader.tsx
 'use client';
 
 import { useRouter } from 'next/navigation';
-import SearchBar from '@/components/SearchBar'; // Import SearchBar
-import { useState } from 'react';
+import SearchBar from '@/components/SearchBar';
 
 interface DashboardHeaderProps {
   userName: string | null;
   menuOpen: boolean;
   setMenuOpen: (open: boolean) => void;
+  searchQuery: string;
+  setSearchQuery: (query: string) => void;
+  paddocks?: Array<{ paddock_id?: number; id?: number; paddock_name?: string; name?: string }>;
+  devices?: Array<{ node_id: string; node_name: string }>;
+  onSearchItemSelect?: (item: any) => void;
 }
 
-export default function DashboardHeader({ userName, menuOpen, setMenuOpen }: DashboardHeaderProps) {
+export default function DashboardHeader({ 
+  userName, 
+  menuOpen, 
+  setMenuOpen,
+  searchQuery,
+  setSearchQuery,
+  paddocks = [],
+  devices = [],
+  onSearchItemSelect
+}: DashboardHeaderProps) {
   const router = useRouter();
-  const [searchQuery, setSearchQuery] = useState('');
 
   return (
     <header className="mb-8 flex justify-between items-center border-b border-white/20 pb-4">
@@ -30,8 +41,14 @@ export default function DashboardHeader({ userName, menuOpen, setMenuOpen }: Das
         <h1 className="text-2xl font-semibold text-white">Discovery</h1>
       </div>
 
-      {/* Use the SearchBar Component */}
-      <SearchBar value={searchQuery} onChange={setSearchQuery} />
+      {/* Use the SearchBar Component with data */}
+      <SearchBar 
+        value={searchQuery} 
+        onChange={setSearchQuery}
+        paddocks={paddocks}
+        devices={devices}
+        onItemSelect={onSearchItemSelect}
+      />
 
       <div className="flex items-center gap-4">
         <button className="text-white/80 hover:text-white transition relative" title="Notifications">

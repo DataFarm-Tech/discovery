@@ -26,6 +26,7 @@ export default function DashboardPage() {
   const [paddocks, setPaddocks] = useState<Paddock[]>([]);
   const [menuOpen, setMenuOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
   const [isCreatePaddockModalOpen, setIsCreatePaddockModalOpen] =
     useState(false);
 
@@ -62,6 +63,30 @@ export default function DashboardPage() {
     setIsCreatePaddockModalOpen(true);
   };
 
+  // Handler for when a search item is clicked
+  const handleSearchItemSelect = (item: any) => {
+    console.log('Selected item:', item);
+    // Navigate to paddock view if it's a paddock
+    const paddockId = item.paddock_id || item.id;
+    const paddockName = item.paddock_name || item.name;
+    
+    if (paddockId) {
+      sessionStorage.setItem(
+        "paddockData",
+        JSON.stringify({
+          paddockId: paddockId,
+          paddockName: paddockName,
+        })
+      );
+      router.push("/paddock/view");
+    }
+  };
+
+  // Filter paddocks by search query
+  const filteredPaddocks = paddocks.filter(p =>
+    (p.paddock_name || p.name || '')?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
     <main className="h-screen overflow-hidden bg-[#0c1220] px-6 py-6 text-white relative flex flex-col">
       {/* Header */}
@@ -69,6 +94,11 @@ export default function DashboardPage() {
         userName={userName}
         menuOpen={menuOpen}
         setMenuOpen={setMenuOpen}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        paddocks={paddocks}
+        devices={devices}
+        onSearchItemSelect={handleSearchItemSelect}
       />
 
       {/* Sidebar */}
@@ -193,7 +223,7 @@ export default function DashboardPage() {
               <p className="text-white text-center">Loading paddocks...</p>
             </div>
           ) : (
-            <PaddockTable paddocks={paddocks} onAddPaddock={handleAddPaddock} />
+            <PaddockTable paddocks={filteredPaddocks} onAddPaddock={handleAddPaddock} />
           )}
         </section>
       </div>
@@ -211,3 +241,4 @@ export default function DashboardPage() {
     </main>
   );
 }
+

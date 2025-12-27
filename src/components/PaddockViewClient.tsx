@@ -29,6 +29,7 @@ export default function PaddockViewClient() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState(""); // Add this line
 
   const router = useRouter();
 
@@ -155,12 +156,20 @@ export default function PaddockViewClient() {
     }
   };
 
+  // Optional: Filter devices by search query
+  const filteredDevices = devices.filter(device =>
+    device.node_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    device.node_id.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
     <main className="h-screen overflow-hidden bg-[#0c1220] px-6 py-6 text-white relative flex flex-col">
       <DashboardHeader
         userName="Lucas"
         menuOpen={menuOpen}
         setMenuOpen={setMenuOpen}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
       />
 
       <Sidebar menuOpen={menuOpen} setMenuOpen={setMenuOpen} />
@@ -243,7 +252,7 @@ export default function PaddockViewClient() {
 
             {!loading && !error && (
               <DeviceTable
-                devices={devices}
+                devices={filteredDevices}
                 onAddDevice={handleAddDevice}
                 onDeviceClick={handleDeviceClick}
               />
