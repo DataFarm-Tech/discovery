@@ -1,16 +1,12 @@
-# Production image
-FROM node:20-alpine AS runner
+# 1️⃣ Build stage
+FROM node:20-alpine AS builder
 WORKDIR /app
+COPY package*.json ./
+RUN npm install
+COPY . .
+RUN npm run build
 
-# Copy build files from builder
-COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/package*.json ./
-COPY --from=builder /app/public ./public
-
-# Install only production dependencies
-RUN npm install --omit=dev
-
-# Expose port
-EXPOSE 3000
-
-CMD ["npm", "start"]
+# 2️⃣ Serve with Caddy
+FROM caddy:2-alpine
+COPY Caddyfile /etc/caddy/Caddyfile
+COPY --from=builder /app/out /srv
