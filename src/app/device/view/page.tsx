@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import Graph from "@/components/Graph";
@@ -20,7 +20,7 @@ const DEFAULT_COORDS = {
 // Hard-coded battery level
 const BATTERY_PERCENT = 87;
 
-export default function Page() {
+function DeviceViewContent() {
   const searchParams = useSearchParams();
   const nodeId = searchParams.get("nodeId");
 
@@ -357,5 +357,17 @@ export default function Page() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function Page() {
+  return (
+    <Suspense fallback={
+      <div className="flex justify-center items-center h-screen bg-[#0c1220] text-white">
+        <p className="text-xl animate-pulse">Loading...</p>
+      </div>
+    }>
+      <DeviceViewContent />
+    </Suspense>
   );
 }
