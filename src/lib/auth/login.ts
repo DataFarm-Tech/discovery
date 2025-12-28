@@ -1,3 +1,5 @@
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
 export interface LoginResponse {
   success: boolean;
   message: string;
@@ -12,7 +14,7 @@ export async function loginUser(email: string, password: string): Promise<LoginR
   formData.append('password', password);
 
   try {
-    const response = await fetch('http://localhost:8000/auth/login', {
+    const response = await fetch(`${API_BASE_URL}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: formData.toString(),

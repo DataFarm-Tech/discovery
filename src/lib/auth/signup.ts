@@ -1,3 +1,5 @@
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
 export interface SignupResponse {
   success: boolean;
   message: string;
@@ -12,7 +14,7 @@ export async function signupUser(firstName: string, lastName: string, email: str
   };
 
   try {
-    const response = await fetch('http://localhost:8000/auth/register', {
+    const response = await fetch(`${API_BASE_URL}/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
