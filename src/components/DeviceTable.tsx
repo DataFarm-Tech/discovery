@@ -4,7 +4,7 @@ import { FaMicrochip } from "react-icons/fa6";
 import { MdAdd } from "react-icons/md";
 
 export interface Device {
-  node_id: number;
+  node_id: string;
   node_name: string;
   battery?: number;
 }
