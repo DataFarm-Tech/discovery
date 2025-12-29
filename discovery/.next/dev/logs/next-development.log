@@ -1,0 +1,14 @@
+[00:00:00.522] Server  LOG      ✓ Ready in 403ms
+[00:00:03.545] Server  LOG      ○ Compiling /paddock/view ...
+[00:00:04.933] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:00:27.638] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:00:32.613] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:04:32.915] Browser ERROR   Error fetching sensor averages: {}
+[00:04:32.915] Browser ERROR   Error fetching paddock devices: {}
+[00:04:32.915] Browser ERROR   Error fetching sensor averages: {}
+[00:04:49.651] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:04:49.822] Browser ERROR   Error fetching sensor averages: {}
+[00:04:49.822] Browser ERROR   Error fetching paddock devices: {}
+[00:04:49.822] Browser ERROR   Error fetching sensor averages: {}
+[00:04:51.919] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:05:06.411] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold

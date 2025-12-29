@@ -1,5 +1,17 @@
-https://discovery-datafarm.com.au {
-    root * /srv
-    try_files {path} /index.html
-    file_server
+# Replace with your actual domain
+discovery-datafarm.com.au {
+    # Frontend - serve React app
+    handle /* {
+        reverse_proxy discovery:3000
+    }
+    
+    # API routes - proxy to FastAPI
+    handle /api/* {
+        reverse_proxy netlink:8000
+    }
+    
+    # Optional: WebSocket support if needed
+    # handle /ws/* {
+    #     reverse_proxy netlink:8000
+    # }
 }

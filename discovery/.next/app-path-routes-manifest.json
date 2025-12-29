@@ -1,0 +1,9 @@
+{
+  "/_global-error/page": "/_global-error",
+  "/_not-found/page": "/_not-found",
+  "/dashboard/page": "/dashboard",
+  "/device/view/page": "/device/view",
+  "/paddock/view/page": "/paddock/view",
+  "/page": "/",
+  "/signup/page": "/signup"
+}

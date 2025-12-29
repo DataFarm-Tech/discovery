@@ -1,0 +1,105 @@
+name: Net-Link Development Deployment Routine
+
+on:
+  push:
+    branches:
+      - development
+
+jobs:
+  generate-certs:
+    name: Generate SSL Certificates
+    runs-on: ubuntu-latest
+    outputs:
+      certs-generated: ${{ steps.verify-certs.outputs.certs-generated }}
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+      
+      - name: Create keys directory
+        run: mkdir -p keys
+
+      - name: Generate SSL Certificates
+        run: |
+          openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+            -keyout keys/key.pem -out keys/cert.pem \
+            -subj "/C=US/ST=YourState/L=YourCity/O=YourOrg/OU=Dev/CN=yourdomain.com"
+          
+      - name: Verify certificates
+        id: verify-certs
+        run: |
+          if [ -f "keys/key.pem" ] && [ -f "keys/cert.pem" ]; then
+            echo "certs-generated=true" >> $GITHUB_OUTPUT
+            echo "Certificates generated successfully"
+            ls -la keys/key.pem keys/cert.pem
+          else
+            echo "certs-generated=false" >> $GITHUB_OUTPUT
+            echo "Certificate generation failed"
+            exit 1
+          fi
+
+      - name: Upload certificates as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ssl-certs
+          path: keys/
+
+  build-image:
+    name: Build and Push Docker Image
+    runs-on: ubuntu-latest
+    needs: generate-certs
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Download certificates
+        uses: actions/download-artifact@v4
+        with:
+          name: ssl-certs
+          path: keys/
+
+      - name: Log in to Docker Hub
+        run: echo "${{ secrets.DOCKER_LOGIN_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_LOGIN_USERNAME }}" --password-stdin
+
+      - name: Build Docker Image
+        run: docker build -t datafarm/net-link:development .
+
+      - name: Push Docker Image to Docker Hub
+        run: docker push datafarm/net-link:development
+
+  deploy-to-dev:
+    name: Deploy to Development Environment
+    runs-on: ubuntu-latest
+    needs: build-image
+
+    steps:
+      - name: SSH into EC2 and deploy Docker container
+        uses: appleboy/ssh-action@v0.1.10
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USER }}
+          key: ${{ secrets.SSH_KEY }}
+          port: 5823
+          script: |
+            # Stop and remove any old containers if they exist
+            docker stop net-link || true
+            docker rm net-link || true
+
+            docker image prune -f || true
+
+            # Pull the latest image from Docker Hub
+            docker pull ${{ secrets.DOCKER_LOGIN_USERNAME }}/net-link:development
+
+            # Run the container in detached mode
+            docker run -d \
+            -p 8081:80 \
+            --name net-link \
+            -e DB_USER="${{ secrets.DEV_DB_USER}}" \
+            -e DB_PASSWORD="${{ secrets.DEV_DB_PASSWORD}}" \
+            -e IPV4="${{ secrets.DEV_DB_HOST}}" \
+            -e PORT_NUMBER="${{ secrets.DEV_DB_PORT}}" \
+            -e DB_DATABASE="${{ secrets.DEV_DB_NAME}}" \
+            ${{ secrets.DOCKER_LOGIN_USERNAME }}/net-link:development
+
+            echo "Deployment completed successfully!"
