@@ -39,3 +39,8 @@ jobs:
             docker pull ${{ secrets.DOCKER_LOGIN_USERNAME }}/discovery:latest
 
             echo "Deployment completed successfully!"
+
+
+            # Run the container in detached mode
+            docker compose down --remove-orphans
+            docker compose up -d
