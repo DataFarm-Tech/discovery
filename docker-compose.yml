@@ -1,5 +1,6 @@
 services:
   caddy:
+    image: datafarm/discovery:latest
     build: .  # Build from Dockerfile
     container_name: caddy
     ports:
