@@ -20,7 +20,7 @@ jobs:
 
       # Build Docker image
       - name: Build Docker image
-        run: docker compose build --build-arg NEXT_PUBLIC_API_URL=https://api.example.com
+        run: docker compose build --build-arg BACKEND_URL=https://api.example.com
 
       # Push Docker image
       - name: Push Docker image
