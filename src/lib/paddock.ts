@@ -1,7 +1,10 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
+export type PaddockType = 'default' | 'wheat' | 'barley' | 'fruit' | 'wine' | 'other';
+
 export interface CreatePaddockRequest {
   paddock_name: string | null;
+  paddock_type: PaddockType;
 }
 
 export interface CreatePaddockResponse {
@@ -15,6 +18,7 @@ export interface PaddockApiError {
 }
 export interface UpdatePaddockRequest {
   paddock_name: string;
+  paddock_type: PaddockType;
 }
 
 export interface UpdatePaddockResponse {
@@ -23,6 +27,7 @@ export interface UpdatePaddockResponse {
   paddock?: {
     paddock_id: number;
     paddock_name: string;
+    paddock_type: PaddockType;
   };
 }
 
@@ -144,11 +149,13 @@ export async function getPaddockSensorAverages(
 /**
  * Creates a new paddock
  * @param paddockName - Name of the paddock (optional)
+ * @param paddockType - Type of the paddock
  * @param token - JWT authentication token
  * @returns Promise with the API response
  */
 export async function createPaddock(
   paddockName: string | null,
+  paddockType: PaddockType,
   token: string
 ): Promise<CreatePaddockResponse> {
   try {
@@ -160,6 +167,7 @@ export async function createPaddock(
       },
       body: JSON.stringify({
         paddock_name: paddockName || null,
+        paddock_type: paddockType,
       }),
     });
 
@@ -228,12 +236,14 @@ export async function getPaddocks(token: string) {
  * Updates a paddock's name
  * @param paddockId - ID of the paddock to update
  * @param paddockName - New name for the paddock
+ * @param paddockType - Type of the paddock
  * @param token - JWT authentication token
  * @returns Promise with the API response
  */
 export async function updatePaddockName(
   paddockId: string,
   paddockName: string,
+  paddockType: PaddockType,
   token: string
 ): Promise<UpdatePaddockResponse> {
   try {
@@ -245,6 +255,7 @@ export async function updatePaddockName(
       },
       body: JSON. stringify({
         paddock_name: paddockName,
+        paddock_type: paddockType,
       }),
     });
 
