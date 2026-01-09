@@ -31,6 +31,9 @@ function DeviceViewContent() {
   const [selectedGraph, setSelectedGraph] = useState<"moisture" | "ph">(
     "moisture"
   );
+  const [timePeriod, setTimePeriod] = useState<
+    "week" | "month" | "6months" | "year" | "all"
+  >("all");
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -179,13 +182,42 @@ function DeviceViewContent() {
     );
   }
 
+  // Filter data based on time period
+  const filterDataByTimePeriod = (readings: any[] | undefined) => {
+    if (!readings || readings.length === 0) return [];
+
+    if (timePeriod === "all") return readings;
+
+    const now = new Date();
+    let cutoffDate: Date;
+
+    switch (timePeriod) {
+      case "week":
+        cutoffDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        break;
+      case "month":
+        cutoffDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        break;
+      case "6months":
+        cutoffDate = new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000);
+        break;
+      case "year":
+        cutoffDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+        break;
+      default:
+        return readings;
+    }
+
+    return readings.filter((r) => new Date(r.timestamp) >= cutoffDate);
+  };
+
   const graphData =
     selectedGraph === "moisture"
-      ? moistureData?.readings?.map((r) => ({
+      ? filterDataByTimePeriod(moistureData?.readings)?.map((r) => ({
           x: r.timestamp,
           y: Number(r.reading_val),
         })) || []
-      : phData?.readings?.map((r) => ({
+      : filterDataByTimePeriod(phData?.readings)?.map((r) => ({
           x: r.timestamp,
           y: Number(r.reading_val),
         })) || [];
@@ -313,6 +345,21 @@ function DeviceViewContent() {
                 >
                   Export CSV
                 </button>
+
+                {/* Time Period Filter */}
+                <select
+                  value={timePeriod}
+                  onChange={(e) =>
+                    setTimePeriod(e.target.value as typeof timePeriod)
+                  }
+                  className="px-4 py-2 text-sm bg-[#0c1220] border border-[#00be64] rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-[#00be64] cursor-pointer hover:bg-[#00be64]/10 transition [&>option]:bg-[#0c1220] [&>option]:text-white"
+                >
+                  <option value="week">Past Week</option>
+                  <option value="month">Past Month</option>
+                  <option value="6months">Past 6 Months</option>
+                  <option value="year">Past Year</option>
+                  <option value="all">All Time</option>
+                </select>
 
                 <div className="flex bg-[#0c1220] border border-[#00be64] rounded-full overflow-hidden">
                   {(["moisture", "ph"] as const).map((option) => (
