@@ -380,7 +380,11 @@ function DeviceViewContent() {
             </div>
 
             <div className="w-full h-[360px] rounded-xl overflow-hidden">
-              <Graph title={graphTitle} data={graphData} />
+              <Graph
+                title={graphTitle}
+                data={graphData}
+                timePeriod={timePeriod}
+              />
             </div>
           </section>
         </div>
