@@ -24,12 +24,12 @@ function DeviceViewContent() {
   const searchParams = useSearchParams();
   const nodeId = searchParams.get("nodeId");
 
-  const [temperatureData, setTemperatureData] = useState<
+  const [moistureData, setMoistureData] = useState<
     DeviceDataResponse["node"] | null
   >(null);
   const [phData, setPhData] = useState<DeviceDataResponse["node"] | null>(null);
-  const [selectedGraph, setSelectedGraph] = useState<"temperature" | "ph">(
-    "temperature"
+  const [selectedGraph, setSelectedGraph] = useState<"moisture" | "ph">(
+    "moisture"
   );
 
   const [loading, setLoading] = useState(true);
@@ -73,8 +73,8 @@ function DeviceViewContent() {
   // CSV EXPORTER
   const exportToCSV = () => {
     const data =
-      selectedGraph === "temperature"
-        ? temperatureData?.readings || []
+      selectedGraph === "moisture"
+        ? moistureData?.readings || []
         : phData?.readings || [];
 
     if (!data.length) return;
@@ -109,16 +109,16 @@ function DeviceViewContent() {
         const token = localStorage.getItem("token");
         if (!token) throw new Error("You must be logged in.");
 
-        const temp = await getDeviceData(
-          { nodeId, readingType: "temperature" },
+        const moisture = await getDeviceData(
+          { nodeId, readingType: "moisture" },
           token
         );
         const ph = await getDeviceData({ nodeId, readingType: "ph" }, token);
 
-        if (temp.success) setTemperatureData(temp.node);
+        if (moisture.success) setMoistureData(moisture.node);
         if (ph.success) setPhData(ph.node);
 
-        if (!temp.success && !ph.success)
+        if (!moisture.success && !ph.success)
           throw new Error("Failed to load readings.");
       } catch (err: any) {
         setError(err.message);
@@ -132,7 +132,7 @@ function DeviceViewContent() {
 
   const lastUpdated = (() => {
     const all = [
-      ...(temperatureData?.readings || []),
+      ...(moistureData?.readings || []),
       ...(phData?.readings || []),
     ];
     if (all.length === 0) return null;
@@ -143,9 +143,9 @@ function DeviceViewContent() {
 
   const status = deviceStatus(lastUpdated);
 
-  const recentTemp = temperatureData?.readings?.length
+  const recentMoisture = moistureData?.readings?.length
     ? Number(
-        temperatureData.readings.reduce((latest, reading) =>
+        moistureData.readings.reduce((latest, reading) =>
           new Date(reading.timestamp) > new Date(latest.timestamp)
             ? reading
             : latest
@@ -180,8 +180,8 @@ function DeviceViewContent() {
   }
 
   const graphData =
-    selectedGraph === "temperature"
-      ? temperatureData?.readings?.map((r) => ({
+    selectedGraph === "moisture"
+      ? moistureData?.readings?.map((r) => ({
           x: r.timestamp,
           y: Number(r.reading_val),
         })) || []
@@ -191,7 +191,7 @@ function DeviceViewContent() {
         })) || [];
 
   const graphTitle =
-    selectedGraph === "temperature" ? "Temperature" : "pH Levels";
+    selectedGraph === "moisture" ? "Moisture Levels" : "pH Levels";
 
   return (
     <div className="min-h-screen bg-[#0c1220] text-white px-10 py-10">
@@ -208,7 +208,7 @@ function DeviceViewContent() {
           {/* HEADER WITH BATTERY ICON */}
           <div className="flex items-center justify-between w-full">
             <h1 className="text-4xl font-semibold tracking-wide">
-              {temperatureData?.node_name || phData?.node_name}
+              {moistureData?.node_name || phData?.node_name}
             </h1>
 
             {/* Battery Icon */}
@@ -281,13 +281,13 @@ function DeviceViewContent() {
             <h2 className="text-2xl font-semibold mb-6">Latest Readings</h2>
 
             <div className="grid grid-cols-2 gap-4">
-              {/* Temperature */}
+              {/* Moisture */}
               <div className="bg-[#0c1220] border border-[#00be64]/50 rounded-xl p-4 text-center">
                 <h3 className="text-xs font-semibold text-white/80 mb-1">
-                  Temperature
+                  Moisture
                 </h3>
                 <p className="text-[#00be64] text-2xl font-bold">
-                  {recentTemp ?? "--"}°C
+                  {recentMoisture ?? "--"}%
                 </p>
               </div>
 
@@ -315,7 +315,7 @@ function DeviceViewContent() {
                 </button>
 
                 <div className="flex bg-[#0c1220] border border-[#00be64] rounded-full overflow-hidden">
-                  {(["temperature", "ph"] as const).map((option) => (
+                  {(["moisture", "ph"] as const).map((option) => (
                     <button
                       key={option}
                       onClick={() => setSelectedGraph(option)}
@@ -325,7 +325,7 @@ function DeviceViewContent() {
                           : "text-white hover:bg-[#00be64]/20"
                       }`}
                     >
-                      {option === "temperature" ? "Temperature" : "pH"}
+                      {option === "moisture" ? "Moisture" : "pH"}
                     </button>
                   ))}
                 </div>
@@ -346,7 +346,7 @@ function DeviceViewContent() {
                 lat={DEFAULT_COORDS.lat}
                 lng={DEFAULT_COORDS.lng}
                 nodeName={
-                  temperatureData?.node_name ||
+                  moistureData?.node_name ||
                   phData?.node_name ||
                   nodeId ||
                   "Device"
@@ -362,11 +362,13 @@ function DeviceViewContent() {
 
 export default function Page() {
   return (
-    <Suspense fallback={
-      <div className="flex justify-center items-center h-screen bg-[#0c1220] text-white">
-        <p className="text-xl animate-pulse">Loading...</p>
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="flex justify-center items-center h-screen bg-[#0c1220] text-white">
+          <p className="text-xl animate-pulse">Loading...</p>
+        </div>
+      }
+    >
       <DeviceViewContent />
     </Suspense>
   );
