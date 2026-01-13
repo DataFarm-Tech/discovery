@@ -125,11 +125,11 @@ export default function DashboardPage() {
       <Sidebar menuOpen={menuOpen} setMenuOpen={setMenuOpen} />
 
       {/* Scrollable Main Content */}
-      <div className="flex-1 overflow-y-auto space-y-10">
-        {/* 🌱 Welcome + Soil Score Section */}
-        <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="flex-1 overflow-y-auto space-y-10 scrollbar-hide">
+        {/* 🌱 Welcome + What's New Section */}
+        <section className="grid grid-cols-1 lg:grid-cols-7 gap-6">
           {/* LEFT — Welcome */}
-          <div className="bg-[#121829] border border-[#00be64]/30 rounded-2xl shadow-xl p-8 relative overflow-hidden col-span-2">
+          <div className="bg-[#121829] border border-[#00be64]/30 rounded-2xl shadow-xl p-8 relative overflow-hidden col-span-1 lg:col-span-4">
             {/* Glow */}
             <div className="absolute inset-0 bg-gradient-to-br from-[#00be64]/10 to-transparent pointer-events-none" />
 
@@ -165,6 +165,44 @@ export default function DashboardPage() {
                 alt="Google Play"
                 className="h-10 opacity-80 hover:opacity-100 transition"
               />
+            </div>
+          </div>
+
+          {/* RIGHT — What's New */}
+          <div className="bg-[#121829] border border-[#00be64]/30 rounded-2xl shadow-xl p-8 relative overflow-hidden col-span-1 lg:col-span-3">
+            {/* Glow */}
+            <div className="absolute inset-0 bg-gradient-to-bl from-[#00be64]/10 to-transparent pointer-events-none" />
+
+            <div className="relative z-10">
+              <div className="flex items-center gap-2 mb-4">
+                <span className="text-2xl">✨</span>
+                <h2 className="text-2xl font-bold">What's New in 0.0.1</h2>
+              </div>
+
+              <ul className="space-y-4 text-gray-300">
+                <li className="flex items-start gap-3">
+                  <span className="text-[#00be64] mt-1">•</span>
+                  <span>
+                    <strong className="text-white">Enhanced Paddock Management</strong> — Create, edit, and organize your paddocks with an intuitive interface
+                  </span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="text-[#00be64] mt-1">•</span>
+                  <span>
+                    <strong className="text-white">Real-Time Search</strong> — Quickly find paddocks and devices with our new smart search functionality
+                  </span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="text-[#00be64] mt-1">•</span>
+                  <span>
+                    <strong className="text-white">Educational Resources</strong> — Access guides and tutorials to maximize your soil intelligence insights
+                  </span>
+                </li>
+              </ul>
+
+              <p className="mt-6 text-sm text-gray-400">
+                Stay tuned for more updates as we continue to improve your Discovery experience.
+              </p>
             </div>
           </div>
         </section>
@@ -256,4 +294,3 @@ export default function DashboardPage() {
     </main>
   );
 }
-
