@@ -13,7 +13,7 @@ COPY . .
 ARG BACKEND_URL=https://discovery-datafarm.com.au:8080
 ENV NEXT_PUBLIC_API_URL=$BACKEND_URL
 RUN npm run build
-RUN npm run export   # for Next.js static export (creates /out)
+# RUN npm run export   # for Next.js static export (creates /out)
 
 # ----------------------------
 # Production stage
