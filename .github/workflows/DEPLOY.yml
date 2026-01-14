@@ -3,31 +3,29 @@ name: Discovery Deployment
 on:
   push:
     branches:
-      - main
+      - kalana
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      # Checkout code
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Log in to Docker Hub
       - name: Log in to Docker Hub
         run: echo "${{ secrets.DOCKER_LOGIN_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_LOGIN_USERNAME }}" --password-stdin
 
-      # Build Docker image
+      # 3. Build Docker image with SSL keys
       - name: Build Docker image
-        run: docker compose build --build-arg BACKEND_URL=https://api.example.com
+        run: docker build -t ${{ secrets.DOCKER_LOGIN_USERNAME }}/discovery:latest .
 
-      # Push Docker image
+      # 4. Push Docker image to Docker Hub
       - name: Push Docker image
-        run: docker compose push
+        run: docker push ${{ secrets.DOCKER_LOGIN_USERNAME }}/discovery:latest
 
-      # SSH into Linode and deploy
-      - name: Deploy on Linode
+      # 5. Deploy on server
+      - name: SSH into server and deploy
         uses: appleboy/ssh-action@v0.1.10
         with:
           host: ${{ secrets.HOST }}
@@ -35,11 +33,18 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           port: 5823
           script: |
-            # Pull latest Next.js image
+            # Stop and remove old container
+            docker stop discovery || true
+            docker rm discovery || true
+            docker image prune -f || true
+
+            # Pull latest image
             docker pull ${{ secrets.DOCKER_LOGIN_USERNAME }}/discovery:latest
 
-            echo "Deployment completed successfully!"
+            # Run container
+            docker run -d \
+              -p 443:443 \
+              --name discovery \
+              ${{ secrets.DOCKER_LOGIN_USERNAME }}/discovery:latest
 
-            # Run the container in detached mode
-            docker compose down --remove-orphans
-            docker compose up -d
+            echo "Deployment completed successfully!"

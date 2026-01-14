@@ -1,31 +1,38 @@
+# ----------------------------
 # Build stage
+# ----------------------------
 FROM node:20-alpine AS builder
 WORKDIR /app
 
+# Install dependencies
 COPY package*.json ./
 RUN npm ci
 
+# Copy app source and build
 COPY . .
-
-ARG BACKEND_URL=/api
+ARG BACKEND_URL=https://api.example.com
 ENV NEXT_PUBLIC_API_URL=$BACKEND_URL
-
 RUN npm run build
+RUN npm run export   # for Next.js static export (creates /out)
 
-# Serve with Caddy
-FROM caddy:2-alpine
+# ----------------------------
+# Production stage
+# ----------------------------
+FROM nginx:alpine
+WORKDIR /usr/share/nginx/html
 
-# Copy the static files from the build
-COPY --from=builder /app/out /srv
+# Copy static build from builder
+COPY --from=builder /app/out .
 
-# Simple Caddyfile for serving static files
-RUN echo $':80 {\n\
-    root * /srv\n\
-    encode gzip\n\
-    try_files {path} {path}/ /index.html\n\
-    file_server\n\
-}' > /etc/caddy/Caddyfile
+# Copy SSL certificates
+COPY fullchain.pem /etc/ssl/certs/fullchain.pem
+COPY privkey.pem /etc/ssl/private/privkey.pem
 
-EXPOSE 80
+# Copy custom Nginx configuration
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-CMD ["caddy", "run", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]
+# Expose HTTPS
+EXPOSE 443
+
+# Start Nginx
+CMD ["nginx", "-g", "daemon off;"]
