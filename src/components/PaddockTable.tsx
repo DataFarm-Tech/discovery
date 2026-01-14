@@ -1,10 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import { PaddockType } from "@/lib/paddock";
+import InfoPopup from "./InfoPopup";
 
 export interface Paddock {
   paddock_id?: number;
   paddock_name: string;
+  paddock_type?: PaddockType;
 }
 
 export default function PaddockTable({
@@ -20,15 +23,22 @@ export default function PaddockTable({
       JSON.stringify({
         paddockId: paddock.paddock_id,
         paddockName: paddock.paddock_name,
+        paddockType: paddock.paddock_type,
       })
     );
   };
 
   return (
     <div className="bg-[#1a1f2e] border border-[#00be64] rounded-lg shadow-lg p-6 flex-1 w-full">
-      {/* Header with Add Button */}
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold text-white">My Paddocks</h2>
+        <div className="flex items-center gap-2">
+          <h2 className="text-2xl font-bold text-white">My Paddocks</h2>
+          <InfoPopup
+            title="What is a Paddock?"
+            description="A paddock is a field or area on your farm. Multiple devices can belong to a paddock, and you're free to move devices between paddocks as needed."
+            ariaLabel="What is a paddock?"
+          />
+        </div>
         <button
           onClick={onAddPaddock}
           className="px-5 py-2.5 bg-[#00be64] text-white font-semibold rounded-lg hover:bg-[#009e53] transition-all transform hover:scale-105 shadow-md"
@@ -88,6 +98,11 @@ export default function PaddockTable({
                   <div>
                     <h3 className="text-lg font-semibold text-white group-hover:text-[#00be64] transition-colors">
                       {paddock.paddock_name}
+                      {paddock.paddock_type && (
+                        <span className="ml-2 text-sm text-gray-400 font-normal">
+                          ({paddock.paddock_type})
+                        </span>
+                      )}
                     </h3>
                   </div>
                 </div>

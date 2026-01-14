@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-import { createPaddock } from "@/lib/paddock";
+import { createPaddock, PaddockType } from "@/lib/paddock";
 
 interface CreatePaddockModalProps {
   isOpen: boolean;
@@ -18,6 +18,7 @@ export default function CreatePaddockModal({
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [paddockName, setPaddockName] = useState("");
+  const [paddockType, setPaddockType] = useState<PaddockType>("default");
 
   const handleCreatePaddock = async () => {
     setLoading(true);
@@ -29,7 +30,11 @@ export default function CreatePaddockModal({
         return;
       }
 
-      const result = await createPaddock(paddockName.trim() || null, token);
+      const result = await createPaddock(
+        paddockName.trim() || null,
+        paddockType,
+        token
+      );
       if (!result.success) {
         toast.error(result.message);
         setLoading(false);
@@ -38,6 +43,7 @@ export default function CreatePaddockModal({
 
       toast.success(result.message);
       setPaddockName("");
+      setPaddockType("default");
       onClose();
 
       if (onSuccess) {
@@ -117,6 +123,29 @@ export default function CreatePaddockModal({
             <p className="text-sm text-gray-400 mt-2">
               Leave blank to create an unnamed paddock
             </p>
+          </div>
+
+          <div>
+            <label
+              htmlFor="paddockType"
+              className="block text-sm font-semibold mb-2 text-white"
+            >
+              Paddock Type
+            </label>
+            <select
+              id="paddockType"
+              value={paddockType}
+              onChange={(e) => setPaddockType(e.target.value as PaddockType)}
+              className="w-full px-4 py-3 bg-[#0c1220] border border-gray-700 rounded-lg text-white focus:outline-none focus:border-[#00be64] transition-colors"
+              disabled={loading}
+            >
+              <option value="default">Default</option>
+              <option value="wheat">Wheat</option>
+              <option value="barley">Barley</option>
+              <option value="fruit">Fruit</option>
+              <option value="wine">Wine</option>
+              <option value="other">Other</option>
+            </select>
           </div>
 
           <div className="flex gap-3 justify-end pt-4">

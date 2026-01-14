@@ -11,6 +11,7 @@ import {
   getPaddockDevices,
   updatePaddockName,
   deletePaddock,
+  PaddockType,
 } from "@/lib/paddock";
 import toast from "react-hot-toast";
 import RegisterDeviceModal from "@/components/RegisterDeviceModal";
@@ -26,6 +27,8 @@ export default function Page() {
   const [editError, setEditError] = useState<string | null>(null);
   const [paddockId, setPaddockId] = useState<string | null>(null);
   const [paddockName, setPaddockName] = useState<string>("");
+  const [paddockType, setPaddockType] = useState<PaddockType>("default");
+  const [newPaddockType, setNewPaddockType] = useState<PaddockType>("default");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
@@ -36,9 +39,10 @@ export default function Page() {
   useEffect(() => {
     const data = sessionStorage.getItem("paddockData");
     if (data) {
-      const { paddockId, paddockName } = JSON.parse(data);
+      const { paddockId, paddockName, paddockType } = JSON.parse(data);
       setPaddockId(paddockId?.toString() || null);
       setPaddockName(paddockName || "");
+      setPaddockType(paddockType || "default");
     }
   }, []);
 
@@ -88,8 +92,11 @@ export default function Page() {
       return;
     }
 
-    if (newPaddockName.trim() === paddockName) {
-      setEditError("New name must be different from current name");
+    if (
+      newPaddockName.trim() === paddockName &&
+      newPaddockType === paddockType
+    ) {
+      setEditError("No changes made");
       return;
     }
 
@@ -100,6 +107,7 @@ export default function Page() {
       const result = await updatePaddockName(
         paddockId,
         newPaddockName.trim(),
+        newPaddockType,
         token
       );
 
@@ -109,10 +117,12 @@ export default function Page() {
           JSON.stringify({
             paddockId: paddockId,
             paddockName: newPaddockName.trim(),
+            paddockType: newPaddockType,
           })
         );
 
         setPaddockName(newPaddockName.trim());
+        setPaddockType(newPaddockType);
         setIsEditModalOpen(false);
         setEditError(null);
       } else {
@@ -152,7 +162,7 @@ export default function Page() {
   };
 
   const handleSearchItemSelect = (item: any) => {
-    console.log('Selected item:', item);
+    console.log("Selected item:", item);
     if (item.node_id) {
       router.push(`/device/view?nodeId=${item.node_id}`);
     }
@@ -180,7 +190,10 @@ export default function Page() {
               onClick={() => router.push("/dashboard")}
               className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors group text-lg"
             >
-              <MdArrowBack size={24} className="group-hover:-translate-x-1 transition-transform" />
+              <MdArrowBack
+                size={24}
+                className="group-hover:-translate-x-1 transition-transform"
+              />
               <span>Back to Dashboard</span>
             </button>
 
@@ -188,19 +201,29 @@ export default function Page() {
               <div className="flex items-center justify-between">
                 <h1 className="text-3xl font-bold text-white">
                   {paddockName || `Paddock #${paddockId}`}
+                  {paddockType && (
+                    <span className="ml-3 text-xl text-gray-400 font-normal">
+                      ({paddockType})
+                    </span>
+                  )}
                 </h1>
 
                 <div className="flex items-center gap-3">
                   <button
                     onClick={() => {
                       setNewPaddockName(paddockName || "");
+                      setNewPaddockType(paddockType);
                       setEditError(null);
                       setIsEditModalOpen(true);
                     }}
                     className="p-2.5 bg-[#00be64]/20 hover:bg-[#00be64]/30 rounded-lg transition-all group"
                     title="Edit paddock"
                   >
-                    <MdEdit size={20} color="#00be64" className="group-hover:scale-110 transition-transform" />
+                    <MdEdit
+                      size={20}
+                      color="#00be64"
+                      className="group-hover:scale-110 transition-transform"
+                    />
                   </button>
 
                   <button
@@ -208,7 +231,11 @@ export default function Page() {
                     className="p-2.5 bg-red-500/20 hover:bg-red-500/30 rounded-lg transition-all group"
                     title="Delete paddock"
                   >
-                    <MdDelete size={20} color="#ef4444" className="group-hover:scale-110 transition-transform" />
+                    <MdDelete
+                      size={20}
+                      color="#ef4444"
+                      className="group-hover:scale-110 transition-transform"
+                    />
                   </button>
                 </div>
               </div>
@@ -216,12 +243,16 @@ export default function Page() {
 
             <section className="bg-[#121829] border border-[#00be64]/30 rounded-2xl shadow-xl p-8 relative overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-br from-[#00be64]/10 to-transparent pointer-events-none" />
-              <h2 className="text-2xl font-semibold mb-6 relative z-10">Soil Health Overview</h2>
+              <h2 className="text-2xl font-semibold mb-6 relative z-10">
+                Soil Health Overview
+              </h2>
               <div className="flex justify-center">
                 <SoilHealthScore score={72} />
               </div>
               <p className="text-gray-400 text-center mt-6 max-w-xl mx-auto relative z-10">
-                Soil health is calculated using microbial activity, organic matter, moisture balance, and nutrient availability from your active sensors.
+                Soil health is calculated using microbial activity, organic
+                matter, moisture balance, and nutrient availability from your
+                active sensors.
               </p>
             </section>
 
@@ -281,10 +312,27 @@ export default function Page() {
                 setNewPaddockName(e.target.value);
                 setEditError(null);
               }}
-              className="w-full px-4 py-2 bg-[#0c1220] border border-gray-700 rounded-lg text-white focus:outline-none focus:border-[#00be64] mb-2"
+              className="w-full px-4 py-2 bg-[#0c1220] border border-gray-700 rounded-lg text-white focus:outline-none focus:border-[#00be64] mb-4"
               placeholder="Enter paddock name"
             />
-            {editError && <p className="text-red-500 text-sm mb-4">{editError}</p>}
+            <label className="block text-sm font-semibold mb-2 text-white">
+              Paddock Type
+            </label>
+            <select
+              value={newPaddockType}
+              onChange={(e) => setNewPaddockType(e.target.value as PaddockType)}
+              className="w-full px-4 py-2 bg-[#0c1220] border border-gray-700 rounded-lg text-white focus:outline-none focus:border-[#00be64] mb-2"
+            >
+              <option value="default">Default</option>
+              <option value="wheat">Wheat</option>
+              <option value="barley">Barley</option>
+              <option value="fruit">Fruit</option>
+              <option value="wine">Wine</option>
+              <option value="other">Other</option>
+            </select>
+            {editError && (
+              <p className="text-red-500 text-sm mb-4">{editError}</p>
+            )}
             <div className="flex gap-3 justify-end mt-4">
               <button
                 onClick={() => {
@@ -311,19 +359,28 @@ export default function Page() {
           className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
           onClick={() => !deleteLoading && setIsDeleteModalOpen(false)}
         >
-          <div className="bg-[#121829] border border-red-500/30 rounded-2xl p-8 w-full max-w-lg" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="bg-[#121829] border border-red-500/30 rounded-2xl p-8 w-full max-w-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-center gap-3 mb-6">
               <div className="w-12 h-12 bg-red-500/20 rounded-full flex items-center justify-center">
                 <MdDelete size={24} color="#ef4444" />
               </div>
-              <h2 className="text-2xl font-bold text-red-500">Delete Paddock</h2>
+              <h2 className="text-2xl font-bold text-red-500">
+                Delete Paddock
+              </h2>
             </div>
             <p className="text-white text-lg mb-3">
               Are you sure you want to delete{" "}
-              <span className="font-semibold text-[#00be64]">{paddockName || `Paddock #${paddockId}`}</span>?
+              <span className="font-semibold text-[#00be64]">
+                {paddockName || `Paddock #${paddockId}`}
+              </span>
+              ?
             </p>
             <p className="text-gray-400 mb-8 leading-relaxed">
-              This will unlink all devices from this paddock. This action cannot be undone.
+              This will unlink all devices from this paddock. This action cannot
+              be undone.
             </p>
             <div className="flex gap-4 justify-end">
               <button
@@ -337,7 +394,9 @@ export default function Page() {
                 onClick={handleDeletePaddock}
                 disabled={deleteLoading}
                 className={`px-6 py-3 rounded-lg transition-all font-medium ${
-                  deleteLoading ? "bg-red-500/50 cursor-not-allowed" : "bg-red-500 hover:bg-red-600"
+                  deleteLoading
+                    ? "bg-red-500/50 cursor-not-allowed"
+                    : "bg-red-500 hover:bg-red-600"
                 }`}
               >
                 {deleteLoading ? "Deleting..." : "Delete Paddock"}

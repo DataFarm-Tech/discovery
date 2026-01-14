@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { getPaddockSensorAverages } from "@/lib/paddock";
 import StatsTile from "./StatsTile";
+import InfoPopup from "./InfoPopup";
 
 interface RecentAveragesProps {
   paddockId: string;
@@ -101,7 +102,14 @@ export default function RecentAverages({ paddockId }: RecentAveragesProps) {
 
       <div className="relative z-10">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-semibold">Recent Averages</h2>
+          <div className="flex items-center gap-3">
+            <h2 className="text-2xl font-semibold">Recent Averages</h2>
+            <InfoPopup
+              title="What are Recent Averages?"
+              description="Recent averages show the most recent average sensor readings from all active devices in this paddock. These values are calculated from the latest data collected across all your sensors."
+              ariaLabel="What are recent averages?"
+            />
+          </div>
           {nodesInfo && (
             <p className="text-sm text-gray-400">
               {nodesInfo.withReadings} of {nodesInfo.count} devices reporting

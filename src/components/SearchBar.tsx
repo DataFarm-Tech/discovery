@@ -1,55 +1,65 @@
-'use client';
+"use client";
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from "react";
 
 interface SearchBarProps {
   value: string;
   onChange: (value: string) => void;
-  paddocks?: Array<{ paddock_id?: number; id?: number; paddock_name?: string; name?: string }>;
+  paddocks?: Array<{
+    paddock_id?: number;
+    id?: number;
+    paddock_name?: string;
+    name?: string;
+    paddock_type?: string;
+  }>;
   devices?: Array<{ node_id: string; node_name: string }>;
   onItemSelect?: (item: any) => void;
 }
 
-export default function SearchBar({ 
-  value, 
-  onChange, 
-  paddocks = [], 
+export default function SearchBar({
+  value,
+  onChange,
+  paddocks = [],
   devices = [],
-  onItemSelect 
+  onItemSelect,
 }: SearchBarProps) {
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Combine paddocks and devices into searchable items
   const searchItems = [
-    ...paddocks.map(p => ({ 
-      id: `paddock-${p.paddock_id || p.id}`, 
-      name: p.paddock_name || p.name || 'Unnamed Paddock', 
-      type: 'paddock',
-      data: p 
+    ...paddocks.map((p) => ({
+      id: `paddock-${p.paddock_id || p.id}`,
+      name: p.paddock_name || p.name || "Unnamed Paddock",
+      type: "paddock",
+      paddock_type: p.paddock_type,
+      data: p,
     })),
-    ...devices.map(d => ({ 
-      id: `device-${d.node_id}`, 
-      name: d.node_name || d.node_id, 
-      type: 'device',
-      data: d 
-    }))
+    ...devices.map((d) => ({
+      id: `device-${d.node_id}`,
+      name: d.node_name || d.node_id,
+      type: "device",
+      data: d,
+    })),
   ];
 
   // Filter items based on search query
-  const filteredItems = searchItems.filter(item =>
+  const filteredItems = searchItems.filter((item) =>
     item.name.toLowerCase().includes(value.toLowerCase())
   );
 
   // Close dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
         setShowDropdown(false);
       }
     }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   const handleInputChange = (newValue: string) => {
@@ -82,7 +92,7 @@ export default function SearchBar({
         {value && (
           <button
             onClick={() => {
-              onChange('');
+              onChange("");
               setShowDropdown(false);
             }}
             className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
@@ -113,12 +123,14 @@ export default function SearchBar({
               className="px-4 py-3 hover:bg-[#2c3e50] cursor-pointer transition-colors border-b border-gray-700 last:border-b-0 flex items-center gap-3"
             >
               {/* Icon based on type */}
-              <div className={`p-2 rounded-lg ${
-                item.type === 'paddock' 
-                  ? 'bg-[#00be64]/20 text-[#00be64]' 
-                  : 'bg-blue-500/20 text-blue-400'
-              }`}>
-                {item.type === 'paddock' ? (
+              <div
+                className={`p-2 rounded-lg ${
+                  item.type === "paddock"
+                    ? "bg-[#00be64]/20 text-[#00be64]"
+                    : "bg-blue-500/20 text-blue-400"
+                }`}
+              >
+                {item.type === "paddock" ? (
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     className="h-4 w-4"
@@ -144,7 +156,9 @@ export default function SearchBar({
               </div>
 
               <div className="flex-1">
-                <div className="text-white font-medium text-sm">{item.name}</div>
+                <div className="text-white font-medium text-sm">
+                  {item.name}
+                </div>
                 <div className="text-xs text-gray-400 capitalize mt-0.5">
                   {item.type}
                 </div>

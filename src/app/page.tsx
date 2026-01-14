@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation'; // Import router
 import { loginUser, LoginResponse } from '@/lib/auth/login';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
@@ -9,30 +10,39 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const router = useRouter(); // Initialize router
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
-    const result: LoginResponse = await loginUser(email, password);
-    setLoading(false);
+    try {
+      const result: LoginResponse = await loginUser(email, password);
 
-    if (!result.success) {
-      toast.error(result.message);
-      return;
+      if (!result.success) {
+        toast.error(result.message);
+        setLoading(false);
+        return;
+      }
+
+      // Save token
+      const token = result.data?.access_token;
+      if (token) {
+        localStorage.setItem('token', token);
+      }
+
+      toast.success('Login successful! Redirecting...');
+
+      // Use Next.js router instead of window.location
+      setTimeout(() => {
+        router.push('/dashboard');
+        router.refresh(); // Force a refresh to ensure auth state updates
+      }, 1500);
+    } catch (error) {
+      console.error('Login error:', error);
+      toast.error('An error occurred during login');
+      setLoading(false);
     }
-
-    // ✅ Save token correctly
-    const token = result.data?.access_token;
-    if (token) {
-      localStorage.setItem('token', token);
-    }
-
-    toast.success('Login successful! Redirecting...');
-
-    setTimeout(() => {
-      window.location.href = '/dashboard';
-    }, 1500);
   };
 
   return (
@@ -49,7 +59,7 @@ export default function LoginPage() {
         style={{ backgroundColor: 'rgba(20, 20, 20, 0.9)' }}
       >
         <h1 className="text-3xl font-bold text-center mb-6 text-white">
-          Let’s Get Farming!
+          Let's Get Farming!
         </h1>
 
         <form onSubmit={handleLogin} className="space-y-5">
@@ -95,7 +105,7 @@ export default function LoginPage() {
         </form>
 
         <p className="text-center text-sm mt-6 text-white">
-          Don’t have an account?{' '}
+          Don't have an account?{' '}
           <Link href="/signup" className="text-green-500 font-semibold underline">
             Sign up
           </Link>
