@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import DashboardHeader from "@/components/DashboardHeader";
 import Sidebar from "@/components/Sidebar";
 import DeviceTable, { Device } from "@/components/DeviceTable";
@@ -12,14 +13,23 @@ import {
   updatePaddockName,
   deletePaddock,
   PaddockType,
+  getPaddockSensorAverages,
 } from "@/lib/paddock";
 import toast from "react-hot-toast";
 import RegisterDeviceModal from "@/components/RegisterDeviceModal";
 import RecentAverages from "@/components/RecentAverages";
 
+// Lazy-load map component
+const DeviceMap = dynamic(() => import("@/components/DeviceMap"), {
+  ssr: false,
+});
+
 export default function Page() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [devices, setDevices] = useState<Device[]>([]);
+  const [nodeLocations, setNodeLocations] = useState<Array<{ node_id: string; node_name: string; lat: number; lng: number }>>([]);
+  const [sensorAverages, setSensorAverages] = useState<{ [key: string]: number }>({});
+  const [soilHealthScore, setSoilHealthScore] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -46,28 +56,110 @@ export default function Page() {
     }
   }, []);
 
+  // Function to compute soil health score from sensor averages
+  const computeSoilHealthScore = (averages: { [key: string]: number }): number => {
+    let score = 0;
+    let weightSum = 0;
+
+    // Temperature contribution (optimal range 15-25°C)
+    if (averages.temperature !== undefined) {
+      const temp = averages.temperature;
+      let tempScore = 0;
+      if (temp >= 15 && temp <= 25) {
+        tempScore = 100;
+      } else if (temp >= 10 && temp < 15) {
+        tempScore = 50 + (temp - 10) * 10;
+      } else if (temp > 25 && temp <= 30) {
+        tempScore = 100 - (temp - 25) * 20;
+      } else {
+        tempScore = Math.max(0, 50 - Math.abs(temp - 20) * 5);
+      }
+      score += tempScore * 0.35;
+      weightSum += 0.35;
+    }
+
+    // pH contribution (optimal range 6-7)
+    if (averages.ph !== undefined) {
+      const ph = averages.ph;
+      let phScore = 0;
+      if (ph >= 6 && ph <= 7) {
+        phScore = 100;
+      } else if (ph >= 5.5 && ph < 6) {
+        phScore = 50 + (ph - 5.5) * 100;
+      } else if (ph > 7 && ph <= 7.5) {
+        phScore = 100 - (ph - 7) * 20;
+      } else {
+        phScore = Math.max(0, 50 - Math.abs(ph - 6.5) * 10);
+      }
+      score += phScore * 0.35;
+      weightSum += 0.35;
+    }
+
+    // Moisture contribution (optimal range 40-60%)
+    if (averages.moisture !== undefined) {
+      const moisture = averages.moisture;
+      let moistureScore = 0;
+      if (moisture >= 40 && moisture <= 60) {
+        moistureScore = 100;
+      } else if (moisture >= 30 && moisture < 40) {
+        moistureScore = 50 + (moisture - 30) * 5;
+      } else if (moisture > 60 && moisture <= 80) {
+        moistureScore = 100 - (moisture - 60) * 2;
+      } else {
+        moistureScore = Math.max(0, 50 - Math.abs(moisture - 50) * 2);
+      }
+      score += moistureScore * 0.30;
+      weightSum += 0.30;
+    }
+
+    // Normalize score if we have some data
+    if (weightSum > 0) {
+      return Math.round(score / weightSum);
+    }
+
+    return 0;
+  };
+
   useEffect(() => {
     if (!paddockId) return;
 
-    const fetchDevices = async () => {
+    const fetchData = async () => {
       setLoading(true);
       setError(null);
 
       try {
         const token = localStorage.getItem("token") || "";
-        const result = await getPaddockDevices(paddockId, token);
-
-        if (!result.success) {
-          throw new Error(result.message);
+        
+        // Fetch devices
+        const devicesResult = await getPaddockDevices(paddockId, token);
+        if (!devicesResult.success) {
+          throw new Error(devicesResult.message);
         }
 
-        const mapped: Device[] = result.devices.map((d: any) => ({
+        const mapped: Device[] = devicesResult.devices.map((d: any) => ({
           node_id: d.node_id,
           node_name: d.node_name || "",
           battery: d.battery,
         }));
 
         setDevices(mapped);
+
+        // Generate mock GPS coordinates for each device
+        const locations = mapped.map((device, index) => ({
+          node_id: device.node_id,
+          node_name: device.node_name,
+          lat: 51.505 + (index * 0.005),
+          lng: -0.09 + (index * 0.005),
+        }));
+        setNodeLocations(locations);
+
+        // Fetch sensor averages
+        const averagesResult = await getPaddockSensorAverages(paddockId, token);
+        if (averagesResult.success && averagesResult.sensor_averages) {
+          setSensorAverages(averagesResult.sensor_averages);
+          const computedScore = computeSoilHealthScore(averagesResult.sensor_averages);
+          setSoilHealthScore(computedScore);
+        }
       } catch (err: any) {
         setError(err.message);
       } finally {
@@ -75,7 +167,7 @@ export default function Page() {
       }
     };
 
-    fetchDevices();
+    fetchData();
   }, [paddockId]);
 
   const handleAddDevice = () => {
@@ -247,7 +339,7 @@ export default function Page() {
                 Soil Health Overview
               </h2>
               <div className="flex justify-center">
-                <SoilHealthScore score={72} />
+                <SoilHealthScore score={soilHealthScore} />
               </div>
               <p className="text-gray-400 text-center mt-6 max-w-xl mx-auto relative z-10">
                 Soil health is calculated using microbial activity, organic
@@ -257,6 +349,16 @@ export default function Page() {
             </section>
 
             <RecentAverages paddockId={paddockId} />
+
+            {/* DEVICE MAP */}
+            {!loading && !error && nodeLocations.length > 0 && (
+              <section className="bg-[#121829] border border-[#00be64]/30 rounded-2xl shadow-xl p-6 w-full">
+                <h2 className="text-2xl font-semibold mb-6">Device Locations</h2>
+                <div className="rounded-xl overflow-hidden h-[500px] w-full">
+                  <DeviceMap nodes={nodeLocations} />
+                </div>
+              </section>
+            )}
 
             {loading && <p className="text-gray-400">Loading devices...</p>}
             {error && <p className="text-red-500">{error}</p>}
@@ -291,6 +393,15 @@ export default function Page() {
                     battery: d.battery,
                   }));
                   setDevices(mapped);
+
+                  // Update node locations with mock GPS data
+                  const locations = mapped.map((device, index) => ({
+                    node_id: device.node_id,
+                    node_name: device.node_name,
+                    lat: 51.505 + (index * 0.005),
+                    lng: -0.09 + (index * 0.005),
+                  }));
+                  setNodeLocations(locations);
                 }
               } catch (err) {
                 console.error("Failed to refresh devices:", err);
