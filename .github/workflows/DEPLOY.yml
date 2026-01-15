@@ -3,7 +3,7 @@ name: Discovery Deployment
 on:
   push:
     branches:
-      - kalana
+      - main
 
 jobs:
   deploy:
