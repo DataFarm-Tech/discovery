@@ -2,20 +2,8 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import dynamic from "next/dynamic";
 import Graph from "@/components/Graph";
 import { getDeviceData, DeviceDataResponse } from "@/lib/device";
-
-// Lazy-load map component
-const DeviceMap = dynamic(() => import("@/components/DeviceMap"), {
-  ssr: false,
-});
-
-// Temporary map coordinates
-const DEFAULT_COORDS = {
-  lat: 51.505,
-  lng: -0.09,
-};
 
 // Hard-coded battery level
 const BATTERY_PERCENT = 87;
@@ -389,22 +377,9 @@ function DeviceViewContent() {
           </section>
         </div>
 
-        {/* RIGHT COLUMN — MAP */}
+        {/* RIGHT COLUMN */}
         <div className="flex flex-col gap-8 items-start">
-          <div className="bg-[#11172b] border border-[#00be64] rounded-2xl shadow-[0_0_18px_#00be6444] p-6 w-full">
-            <div className="rounded-xl overflow-hidden h-[420px] w-full">
-              <DeviceMap
-                lat={DEFAULT_COORDS.lat}
-                lng={DEFAULT_COORDS.lng}
-                nodeName={
-                  moistureData?.node_name ||
-                  phData?.node_name ||
-                  nodeId ||
-                  "Device"
-                }
-              />
-            </div>
-          </div>
+          {/* ADDITIONAL DEVICE INFORMATION CAN BE ADDED HERE */}
         </div>
       </div>
     </div>

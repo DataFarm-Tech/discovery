@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import DashboardHeader from "@/components/DashboardHeader";
 import Sidebar from "@/components/Sidebar";
 import DeviceTable, { Device } from "@/components/DeviceTable";
@@ -17,9 +18,15 @@ import toast from "react-hot-toast";
 import RegisterDeviceModal from "@/components/RegisterDeviceModal";
 import RecentAverages from "@/components/RecentAverages";
 
+// Lazy-load map component
+const DeviceMap = dynamic(() => import("@/components/DeviceMap"), {
+  ssr: false,
+});
+
 export default function Page() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [devices, setDevices] = useState<Device[]>([]);
+  const [nodeLocations, setNodeLocations] = useState<Array<{ node_id: string; node_name: string; lat: number; lng: number }>>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -68,6 +75,16 @@ export default function Page() {
         }));
 
         setDevices(mapped);
+
+        // Generate mock GPS coordinates for each device
+        // In production, these would come from the API
+        const locations = mapped.map((device, index) => ({
+          node_id: device.node_id,
+          node_name: device.node_name,
+          lat: 51.505 + (index * 0.005), // Offset latitude for each device
+          lng: -0.09 + (index * 0.005),  // Offset longitude for each device
+        }));
+        setNodeLocations(locations);
       } catch (err: any) {
         setError(err.message);
       } finally {
@@ -258,6 +275,16 @@ export default function Page() {
 
             <RecentAverages paddockId={paddockId} />
 
+            {/* DEVICE MAP */}
+            {!loading && !error && nodeLocations.length > 0 && (
+              <section className="bg-[#121829] border border-[#00be64]/30 rounded-2xl shadow-xl p-6 w-full">
+                <h2 className="text-2xl font-semibold mb-6">Device Locations</h2>
+                <div className="rounded-xl overflow-hidden h-[500px] w-full">
+                  <DeviceMap nodes={nodeLocations} />
+                </div>
+              </section>
+            )}
+
             {loading && <p className="text-gray-400">Loading devices...</p>}
             {error && <p className="text-red-500">{error}</p>}
 
@@ -291,6 +318,15 @@ export default function Page() {
                     battery: d.battery,
                   }));
                   setDevices(mapped);
+
+                  // Update node locations with mock GPS data
+                  const locations = mapped.map((device, index) => ({
+                    node_id: device.node_id,
+                    node_name: device.node_name,
+                    lat: 51.505 + (index * 0.005),
+                    lng: -0.09 + (index * 0.005),
+                  }));
+                  setNodeLocations(locations);
                 }
               } catch (err) {
                 console.error("Failed to refresh devices:", err);

@@ -12,13 +12,18 @@ L.Icon.Default.mergeOptions({
   shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
 });
 
-interface DeviceMapProps {
+export interface NodeLocation {
+  node_id: string;
+  node_name: string;
   lat: number;
   lng: number;
-  nodeName: string;
 }
 
-export default function DeviceMap({ lat, lng, nodeName }: DeviceMapProps) {
+interface DeviceMapProps {
+  nodes: NodeLocation[];
+}
+
+export default function DeviceMap({ nodes }: DeviceMapProps) {
   const mapRef = useRef<HTMLDivElement | null>(null);
   const leafletMap = useRef<L.Map | null>(null);
 
@@ -26,7 +31,36 @@ export default function DeviceMap({ lat, lng, nodeName }: DeviceMapProps) {
     if (!mapRef.current) return;
     if (leafletMap.current) return;
 
+    if (nodes.length === 0) {
+      // No nodes to display
+      leafletMap.current = L.map(mapRef.current, {
+        zoomControl: true,
+        scrollWheelZoom: true,
+        dragging: true,
+        inertia: true,
+        zoomAnimation: true,
+        fadeAnimation: true,
+      }).setView([51.505, -0.09], 15);
+
+      L.tileLayer(
+        "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+        {
+          attribution: "&copy; OpenStreetMap contributors",
+          minZoom: 3,
+          maxZoom: 19,
+        }
+      ).addTo(leafletMap.current);
+
+      return () => {
+        if (leafletMap.current) {
+          leafletMap.current.remove();
+          leafletMap.current = null;
+        }
+      };
+    }
+
     // Create map with Google-like behavior
+    const firstNode = nodes[0];
     leafletMap.current = L.map(mapRef.current, {
       zoomControl: true,      // Google-style zoom buttons
       scrollWheelZoom: true,  // Smooth zooming
@@ -34,7 +68,7 @@ export default function DeviceMap({ lat, lng, nodeName }: DeviceMapProps) {
       inertia: true,
       zoomAnimation: true,
       fadeAnimation: true,
-    }).setView([lat, lng], 15);
+    }).setView([firstNode.lat, firstNode.lng], 13);
 
     // Google Maps–like street tiles (safe to use)
     L.tileLayer(
@@ -46,8 +80,18 @@ export default function DeviceMap({ lat, lng, nodeName }: DeviceMapProps) {
       }
     ).addTo(leafletMap.current);
 
-    // Marker
-    L.marker([lat, lng]).addTo(leafletMap.current).bindPopup(nodeName);
+    // Add markers for all nodes
+    const markers = nodes.map((node) => {
+      return L.marker([node.lat, node.lng])
+        .addTo(leafletMap.current!)
+        .bindPopup(`<strong>${node.node_name}</strong><br>ID: ${node.node_id}`);
+    });
+
+    // Fit all markers in view if multiple nodes
+    if (nodes.length > 1) {
+      const group = new L.FeatureGroup(markers);
+      leafletMap.current.fitBounds(group.getBounds(), { padding: [50, 50] });
+    }
 
     return () => {
       if (leafletMap.current) {
@@ -55,7 +99,7 @@ export default function DeviceMap({ lat, lng, nodeName }: DeviceMapProps) {
         leafletMap.current = null;
       }
     };
-  }, [lat, lng, nodeName]);
+  }, [nodes]);
 
   return (
     <div
