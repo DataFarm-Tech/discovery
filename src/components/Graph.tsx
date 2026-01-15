@@ -1,5 +1,6 @@
 "use client";
 
+// Graph component for visualizing sensor data with optional optimal value reference line
 import { Line } from "react-chartjs-2";
 import {
   Chart as ChartJS,
@@ -37,9 +38,11 @@ interface GraphProps {
   title: string;
   data: DataPoint[];
   timePeriod?: "week" | "month" | "6months" | "year" | "all";
+  optimalValue?: number;
 }
 
-export default function Graph({ title, data, timePeriod = "all" }: GraphProps) {
+// Component displays sensor data with optional optimal value line
+export default function Graph({ title, data, timePeriod = "all", optimalValue }: GraphProps) {
   const gradientBg = (ctx: any) => {
     const gradient = ctx.chart.ctx.createLinearGradient(0, 0, 0, 300);
     gradient.addColorStop(0, "rgba(255, 179, 71, 0.45)");
@@ -161,6 +164,19 @@ export default function Graph({ title, data, timePeriod = "all" }: GraphProps) {
         pointHoverBorderWidth: 2,
         pointHoverBackgroundColor: "#ffb347",
       },
+      ...(optimalValue !== undefined ? [
+        {
+          label: "Optimal",
+          data: data.map((point) => ({ x: point.x, y: optimalValue })),
+          borderColor: "#00be64",
+          borderWidth: 2,
+          borderDash: [5, 5],
+          fill: false,
+          tension: 0,
+          pointRadius: 0,
+          pointHoverRadius: 0,
+        },
+      ] : []),
     ],
   };
 
