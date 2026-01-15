@@ -313,7 +313,7 @@ function DeviceViewContent() {
           token
         );
 
-        if (moisture.success) {
+        if (moisture.success && moisture.node) {
           setMoistureData(moisture.node);
           setMoistureTrend(calculateTrend(moisture.node.readings));
           // Capture paddock ID for fetching paddock type
@@ -332,15 +332,15 @@ function DeviceViewContent() {
             }
           }
         }
-        if (ph.success) {
+        if (ph.success && ph.node) {
           setPhData(ph.node);
           setPhTrend(calculateTrend(ph.node.readings));
         }
-        if (temperature.success) {
+        if (temperature.success && temperature.node) {
           setTemperatureData(temperature.node);
           setTemperatureTrend(calculateTrend(temperature.node.readings));
         }
-        if (nitrogen.success) {
+        if (nitrogen.success && nitrogen.node) {
           setNitrogenData(nitrogen.node);
           setNitrogenTrend(calculateTrend(nitrogen.node.readings));
         }
