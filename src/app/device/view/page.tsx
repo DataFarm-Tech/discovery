@@ -16,7 +16,13 @@ function DeviceViewContent() {
     DeviceDataResponse["node"] | null
   >(null);
   const [phData, setPhData] = useState<DeviceDataResponse["node"] | null>(null);
-  const [selectedGraph, setSelectedGraph] = useState<"moisture" | "ph">(
+  const [temperatureData, setTemperatureData] = useState<
+    DeviceDataResponse["node"] | null
+  >(null);
+  const [nitrogenData, setNitrogenData] = useState<
+    DeviceDataResponse["node"] | null
+  >(null);
+  const [selectedGraph, setSelectedGraph] = useState<"moisture" | "ph" | "temperature" | "nitrogen">(
     "moisture"
   );
   const [timePeriod, setTimePeriod] = useState<
@@ -25,6 +31,13 @@ function DeviceViewContent() {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [paddockType, setPaddockType] = useState<string>("default");
+  const [paddockId, setPaddockId] = useState<number | null>(null);
+  
+  const [moistureTrend, setMoistureTrend] = useState<{ trend: "up" | "down" | "stable" | "no-data"; percentChange: number }>({ trend: "no-data", percentChange: 0 });
+  const [temperatureTrend, setTemperatureTrend] = useState<{ trend: "up" | "down" | "stable" | "no-data"; percentChange: number }>({ trend: "no-data", percentChange: 0 });
+  const [nitrogenTrend, setNitrogenTrend] = useState<{ trend: "up" | "down" | "stable" | "no-data"; percentChange: number }>({ trend: "no-data", percentChange: 0 });
+  const [phTrend, setPhTrend] = useState<{ trend: "up" | "down" | "stable" | "no-data"; percentChange: number }>({ trend: "no-data", percentChange: 0 });
 
   function formatTimestamp(ts: string) {
     return new Date(ts).toLocaleString(undefined, {
@@ -59,6 +72,192 @@ function DeviceViewContent() {
       return { label: "Offline", color: "red", online: false };
     }
     return { label: "Online", color: "green", online: true };
+  }
+
+  // Calculate trend by comparing recent readings to previous period
+  function calculateTrend(
+    readings: any[] | undefined
+  ): { trend: "up" | "down" | "stable" | "no-data"; percentChange: number } {
+    if (!readings || readings.length < 2) return { trend: "no-data", percentChange: 0 };
+
+    // Get average of last 3 readings (or less if not available)
+    const recentCount = Math.min(3, readings.length);
+    const recentReadings = readings
+      .slice(-recentCount)
+      .map((r: any) => Number(r.reading_val));
+    const recentAvg =
+      recentReadings.reduce((a: number, b: number) => a + b, 0) /
+      recentReadings.length;
+
+    // Get average of readings before that (previous 3-6 readings)
+    const previousStart = Math.max(0, readings.length - 6);
+    const previousEnd = Math.max(0, readings.length - 3);
+    if (previousStart === previousEnd) return { trend: "no-data", percentChange: 0 };
+
+    const previousReadings = readings
+      .slice(previousStart, previousEnd)
+      .map((r: any) => Number(r.reading_val));
+    if (previousReadings.length === 0) return { trend: "no-data", percentChange: 0 };
+
+    const previousAvg =
+      previousReadings.reduce((a: number, b: number) => a + b, 0) /
+      previousReadings.length;
+
+    // Calculate percent change
+    const percentChange = ((recentAvg - previousAvg) / previousAvg) * 100;
+    const absPercentChange = Math.abs(percentChange);
+
+    // Compare with threshold (0.5% difference)
+    if (absPercentChange < 0.5) return { trend: "stable", percentChange: 0 };
+    return {
+      trend: recentAvg > previousAvg ? "up" : "down",
+      percentChange: parseFloat(percentChange.toFixed(1)),
+    };
+  }
+
+  // Get optimal sensor value based on crop type
+  function getOptimalValue(sensorType: "moisture" | "ph" | "temperature" | "nitrogen"): number {
+    const optimalValues: Record<string, Record<string, number>> = {
+      default: { moisture: 50, ph: 6.5, temperature: 20, nitrogen: 100 },
+      wheat: { moisture: 45, ph: 6.5, temperature: 18, nitrogen: 120 },
+      barley: { moisture: 45, ph: 6.5, temperature: 18, nitrogen: 110 },
+      fruit: { moisture: 55, ph: 6.8, temperature: 22, nitrogen: 90 },
+      wine: { moisture: 40, ph: 7.0, temperature: 20, nitrogen: 80 },
+      other: { moisture: 50, ph: 6.5, temperature: 20, nitrogen: 100 },
+    };
+
+    const cropOptimal = optimalValues[paddockType] || optimalValues["default"];
+    return cropOptimal[sensorType] || 50;
+  }
+
+  // Get optimal ranges for sensor alerts
+  function getOptimalRange(sensorType: "moisture" | "ph" | "temperature" | "nitrogen"): { min: number; max: number } {
+    const ranges: Record<string, Record<string, { min: number; max: number }>> = {
+      default: {
+        moisture: { min: 40, max: 60 },
+        ph: { min: 6.0, max: 7.0 },
+        temperature: { min: 15, max: 25 },
+        nitrogen: { min: 80, max: 120 },
+      },
+      wheat: {
+        moisture: { min: 35, max: 55 },
+        ph: { min: 6.0, max: 7.0 },
+        temperature: { min: 15, max: 22 },
+        nitrogen: { min: 100, max: 140 },
+      },
+      barley: {
+        moisture: { min: 35, max: 55 },
+        ph: { min: 6.0, max: 7.0 },
+        temperature: { min: 15, max: 22 },
+        nitrogen: { min: 90, max: 130 },
+      },
+      fruit: {
+        moisture: { min: 50, max: 70 },
+        ph: { min: 6.5, max: 7.5 },
+        temperature: { min: 18, max: 26 },
+        nitrogen: { min: 70, max: 110 },
+      },
+      wine: {
+        moisture: { min: 30, max: 50 },
+        ph: { min: 6.5, max: 7.5 },
+        temperature: { min: 15, max: 25 },
+        nitrogen: { min: 60, max: 100 },
+      },
+      other: {
+        moisture: { min: 40, max: 60 },
+        ph: { min: 6.0, max: 7.0 },
+        temperature: { min: 15, max: 25 },
+        nitrogen: { min: 80, max: 120 },
+      },
+    };
+
+    const cropRange = ranges[paddockType] || ranges["default"];
+    return cropRange[sensorType] || { min: 0, max: 100 };
+  }
+
+  // Check for critical alerts
+  function getCriticalAlerts(): Array<{ type: string; message: string; severity: "warning" | "critical" }> {
+    const alerts: Array<{ type: string; message: string; severity: "warning" | "critical" }> = [];
+
+    // Convert recent values to numbers
+    const moisture = recentMoisture ? Number(recentMoisture) : null;
+    const temperature = recentTemperature ? Number(recentTemperature) : null;
+    const ph = recentPh ? Number(recentPh) : null;
+    const nitrogen = recentNitrogen ? Number(recentNitrogen) : null;
+
+    // Moisture alerts
+    if (moisture !== null) {
+      const moistureRange = getOptimalRange("moisture");
+      if (moisture < moistureRange.min) {
+        alerts.push({
+          type: "Moisture",
+          message: `Soil moisture is critically low (${moisture}%). Irrigation needed.`,
+          severity: moisture < moistureRange.min * 0.8 ? "critical" : "warning",
+        });
+      } else if (moisture > moistureRange.max) {
+        alerts.push({
+          type: "Moisture",
+          message: `Soil moisture is too high (${moisture}%). Risk of waterlogging.`,
+          severity: moisture > moistureRange.max * 1.2 ? "critical" : "warning",
+        });
+      }
+    }
+
+    // Temperature alerts
+    if (temperature !== null) {
+      const tempRange = getOptimalRange("temperature");
+      if (temperature < tempRange.min) {
+        alerts.push({
+          type: "Temperature",
+          message: `Temperature is below optimal (${temperature}°C).`,
+          severity: temperature < tempRange.min * 0.9 ? "critical" : "warning",
+        });
+      } else if (temperature > tempRange.max) {
+        alerts.push({
+          type: "Temperature",
+          message: `Temperature is above optimal (${temperature}°C). Heat stress risk.`,
+          severity: temperature > tempRange.max * 1.1 ? "critical" : "warning",
+        });
+      }
+    }
+
+    // pH alerts
+    if (ph !== null) {
+      const phRange = getOptimalRange("ph");
+      if (ph < phRange.min) {
+        alerts.push({
+          type: "pH Level",
+          message: `Soil is too acidic (pH ${ph}). Consider liming.`,
+          severity: ph < phRange.min - 0.5 ? "critical" : "warning",
+        });
+      } else if (ph > phRange.max) {
+        alerts.push({
+          type: "pH Level",
+          message: `Soil is too alkaline (pH ${ph}). Consider acidification.`,
+          severity: ph > phRange.max + 0.5 ? "critical" : "warning",
+        });
+      }
+    }
+
+    // Nitrogen alerts
+    if (nitrogen !== null) {
+      const nitrogenRange = getOptimalRange("nitrogen");
+      if (nitrogen < nitrogenRange.min) {
+        alerts.push({
+          type: "Nitrogen",
+          message: `Nitrogen levels are low (${nitrogen} ppm). Fertilizer recommended.`,
+          severity: nitrogen < nitrogenRange.min * 0.7 ? "critical" : "warning",
+        });
+      } else if (nitrogen > nitrogenRange.max) {
+        alerts.push({
+          type: "Nitrogen",
+          message: `Nitrogen levels are high (${nitrogen} ppm). Risk of nutrient runoff.`,
+          severity: nitrogen > nitrogenRange.max * 1.3 ? "critical" : "warning",
+        });
+      }
+    }
+
+    return alerts;
   }
 
   // CSV EXPORTER
@@ -105,11 +304,48 @@ function DeviceViewContent() {
           token
         );
         const ph = await getDeviceData({ nodeId, readingType: "ph" }, token);
+        const temperature = await getDeviceData(
+          { nodeId, readingType: "temperature" },
+          token
+        );
+        const nitrogen = await getDeviceData(
+          { nodeId, readingType: "nitrogen" },
+          token
+        );
 
-        if (moisture.success) setMoistureData(moisture.node);
-        if (ph.success) setPhData(ph.node);
+        if (moisture.success) {
+          setMoistureData(moisture.node);
+          setMoistureTrend(calculateTrend(moisture.node.readings));
+          // Capture paddock ID for fetching paddock type
+          if (moisture.node?.paddock_id) {
+            setPaddockId(moisture.node.paddock_id);
+            // Fetch paddock info to get crop type
+            const paddockResponse = await fetch(
+              `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/paddock/${moisture.node.paddock_id}`,
+              {
+                headers: { Authorization: `Bearer ${token}` },
+              }
+            );
+            if (paddockResponse.ok) {
+              const paddockData = await paddockResponse.json();
+              setPaddockType(paddockData.paddock_type || "default");
+            }
+          }
+        }
+        if (ph.success) {
+          setPhData(ph.node);
+          setPhTrend(calculateTrend(ph.node.readings));
+        }
+        if (temperature.success) {
+          setTemperatureData(temperature.node);
+          setTemperatureTrend(calculateTrend(temperature.node.readings));
+        }
+        if (nitrogen.success) {
+          setNitrogenData(nitrogen.node);
+          setNitrogenTrend(calculateTrend(nitrogen.node.readings));
+        }
 
-        if (!moisture.success && !ph.success)
+        if (!moisture.success && !ph.success && !temperature.success && !nitrogen.success)
           throw new Error("Failed to load readings.");
       } catch (err: any) {
         setError(err.message);
@@ -125,6 +361,8 @@ function DeviceViewContent() {
     const all = [
       ...(moistureData?.readings || []),
       ...(phData?.readings || []),
+      ...(temperatureData?.readings || []),
+      ...(nitrogenData?.readings || []),
     ];
     if (all.length === 0) return null;
     return all.reduce((a, b) =>
@@ -147,6 +385,26 @@ function DeviceViewContent() {
   const recentPh = phData?.readings?.length
     ? Number(
         phData.readings.reduce((latest, reading) =>
+          new Date(reading.timestamp) > new Date(latest.timestamp)
+            ? reading
+            : latest
+        ).reading_val
+      ).toFixed(1)
+    : null;
+
+  const recentTemperature = temperatureData?.readings?.length
+    ? Number(
+        temperatureData.readings.reduce((latest, reading) =>
+          new Date(reading.timestamp) > new Date(latest.timestamp)
+            ? reading
+            : latest
+        ).reading_val
+      ).toFixed(1)
+    : null;
+
+  const recentNitrogen = nitrogenData?.readings?.length
+    ? Number(
+        nitrogenData.readings.reduce((latest, reading) =>
           new Date(reading.timestamp) > new Date(latest.timestamp)
             ? reading
             : latest
@@ -205,181 +463,276 @@ function DeviceViewContent() {
           x: r.timestamp,
           y: Number(r.reading_val),
         })) || []
-      : filterDataByTimePeriod(phData?.readings)?.map((r) => ({
+      : selectedGraph === "ph"
+      ? filterDataByTimePeriod(phData?.readings)?.map((r) => ({
+          x: r.timestamp,
+          y: Number(r.reading_val),
+        })) || []
+      : selectedGraph === "temperature"
+      ? filterDataByTimePeriod(temperatureData?.readings)?.map((r) => ({
+          x: r.timestamp,
+          y: Number(r.reading_val),
+        })) || []
+      : filterDataByTimePeriod(nitrogenData?.readings)?.map((r) => ({
           x: r.timestamp,
           y: Number(r.reading_val),
         })) || [];
 
   const graphTitle =
-    selectedGraph === "moisture" ? "Moisture Levels" : "pH Levels";
+    selectedGraph === "moisture"
+      ? "Moisture Levels"
+      : selectedGraph === "ph"
+      ? "pH Levels"
+      : selectedGraph === "temperature"
+      ? "Temperature"
+      : "Nitrogen";
 
   return (
-    <div className="min-h-screen bg-[#0c1220] text-white px-10 py-10">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 w-full items-start">
-        {/* LEFT COLUMN */}
-        <div className="flex flex-col gap-8">
+    <div className="min-h-screen bg-[#0c1220] text-white">
+      {/* Header */}
+      <div className="sticky top-0 z-40 bg-gradient-to-b from-[#0c1220] via-[#0c1220] to-transparent border-b border-[#00be64]/20 backdrop-blur-sm">
+        <div className="px-8 py-6">
           <button
             onClick={() => window.history.back()}
-            className="w-fit bg-[#11172b] border border-[#00be64] px-4 py-2 rounded-xl hover:bg-[#00be64] hover:text-black transition shadow-[0_0_10px_#00be6455]"
+            className="inline-flex items-center gap-2 text-gray-400 hover:text-white transition-colors group mb-4"
           >
-            ← Back to Devices
+            <span className="text-xl group-hover:-translate-x-1 transition-transform">←</span>
+            <span>Back</span>
           </button>
-
-          {/* HEADER WITH BATTERY ICON */}
-          <div className="flex items-center justify-between w-full">
-            <h1 className="text-4xl font-semibold tracking-wide">
-              {moistureData?.node_name || phData?.node_name}
+          <div className="flex items-center justify-between">
+            <h1 className="text-4xl font-bold tracking-tight">
+              {moistureData?.node_name || phData?.node_name || "Device"}
             </h1>
-
-            {/* Battery Icon */}
-            <div className="flex items-center gap-3">
-              <span className="text-white/70 text-sm font-medium">
-                {BATTERY_PERCENT}%
-              </span>
-
-              <div className="relative w-12 h-6 border-2 border-[#00be64] rounded-md flex items-center px-1">
-                {/* Battery fill */}
-                <div
-                  className="h-full bg-[#00be64] rounded-sm transition-all duration-300"
-                  style={{
-                    width: `${Math.max(0, Math.min(100, BATTERY_PERCENT))}%`,
-                  }}
-                />
-
-                {/* Battery nub */}
-                <div className="absolute right-[-6px] w-1.5 h-3 bg-[#00be64] rounded-sm" />
+            {/* <div className="flex items-center gap-4">
+              <div className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                status.color === "green" 
+                  ? "bg-green-500/20 text-green-300 border border-green-500/30" 
+                  : "bg-red-500/20 text-red-300 border border-red-500/30"
+              }`}>
+                {status.label}
               </div>
-            </div>
+            </div> */}
           </div>
+        </div>
+      </div>
 
-          {/* STATUS TILE */}
-          <div className="bg-[#11172b] border border-[#00be64] rounded-2xl p-6 shadow-[0_0_18px_#00be6444] flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <span
-                className={`inline-block w-4 h-4 rounded-full ${
-                  status.color === "red"
-                    ? "bg-red-500"
-                    : status.color === "green"
-                    ? "bg-green-400"
-                    : "bg-gray-500"
-                } shadow-[0_0_10px]`}
-              />
-
-              <div>
-                <h3 className="text-lg font-semibold">Device Status</h3>
-                <p
-                  className={`text-xl ${
-                    status.color === "red"
-                      ? "text-red-500"
-                      : status.color === "green"
-                      ? "text-green-400"
-                      : "text-gray-400"
-                  }`}
-                >
-                  {status.label}
-                </p>
-              </div>
-            </div>
-
-            <div className="text-right">
-              {lastUpdated && (
-                <>
-                  <h3 className="text-lg font-semibold">Last Updated</h3>
-                  <p className="text-[#00be64] text-xl">
-                    {timeAgo(lastUpdated)}
-                  </p>
-                  <p className="text-white/50 text-sm">
-                    {formatTimestamp(lastUpdated)}
-                  </p>
-                </>
-              )}
-            </div>
-          </div>
-
-          {/* LATEST READINGS SECTION */}
-          <div className="bg-[#11172b] border border-[#00be64] rounded-2xl p-6 shadow-[0_0_18px_#00be6444]">
-            <h2 className="text-2xl font-semibold mb-6">Latest Readings</h2>
-
-            <div className="grid grid-cols-2 gap-4">
-              {/* Moisture */}
-              <div className="bg-[#0c1220] border border-[#00be64]/50 rounded-xl p-4 text-center">
-                <h3 className="text-xs font-semibold text-white/80 mb-1">
-                  Moisture
-                </h3>
-                <p className="text-[#00be64] text-2xl font-bold">
-                  {recentMoisture ?? "--"}%
-                </p>
-              </div>
-
-              {/* pH */}
-              <div className="bg-[#0c1220] border border-[#00be64]/50 rounded-xl p-4 text-center">
-                <h3 className="text-xs font-semibold text-white/80 mb-1">pH</h3>
-                <p className="text-[#00be64] text-2xl font-bold">
-                  {recentPh ?? "--"}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* GRAPH + CSV EXPORT */}
-          <section className="bg-[#11172b] border border-[#00be64] rounded-2xl shadow-[0_0_18px_#00be6444] p-6 w-full">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-semibold">{graphTitle}</h2>
-
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={exportToCSV}
-                  className="px-4 py-2 text-sm bg-[#00be64] text-black font-semibold rounded-xl hover:bg-[#00d975] transition"
-                >
-                  Export CSV
-                </button>
-
-                {/* Time Period Filter */}
-                <select
-                  value={timePeriod}
-                  onChange={(e) =>
-                    setTimePeriod(e.target.value as typeof timePeriod)
-                  }
-                  className="px-4 py-2 text-sm bg-[#0c1220] border border-[#00be64] rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-[#00be64] cursor-pointer hover:bg-[#00be64]/10 transition [&>option]:bg-[#0c1220] [&>option]:text-white"
-                >
-                  <option value="week">Past Week</option>
-                  <option value="month">Past Month</option>
-                  <option value="6months">Past 6 Months</option>
-                  <option value="year">Past Year</option>
-                  <option value="all">All Time</option>
-                </select>
-
-                <div className="flex bg-[#0c1220] border border-[#00be64] rounded-full overflow-hidden">
-                  {(["moisture", "ph"] as const).map((option) => (
-                    <button
-                      key={option}
-                      onClick={() => setSelectedGraph(option)}
-                      className={`px-4 py-2 text-sm ${
-                        selectedGraph === option
-                          ? "bg-[#00be64] text-black font-semibold"
-                          : "text-white hover:bg-[#00be64]/20"
+      {/* Main Content */}
+      <div className="px-8 py-8 max-w-7xl mx-auto">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* LEFT COLUMN - Main Content */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* STATUS & LAST UPDATED */}
+            <div className="bg-gradient-to-br from-[#121829] to-[#0f1318] border border-[#00be64]/30 rounded-2xl p-6 shadow-lg">
+              <div className="grid grid-cols-2 gap-6">
+                <div>
+                  <p className="text-sm text-gray-400 mb-2">Status</p>
+                  <div className="flex items-center gap-3">
+                    <span
+                      className={`inline-block w-3 h-3 rounded-full animate-pulse ${
+                        status.color === "green" ? "bg-green-400" : "bg-red-500"
                       }`}
+                    />
+                    <span className={`text-lg font-semibold ${
+                      status.color === "green" ? "text-green-400" : "text-red-500"
+                    }`}>
+                      {status.label}
+                    </span>
+                  </div>
+                </div>
+                {lastUpdated && (
+                  <div>
+                    <p className="text-sm text-gray-400 mb-2">Last Updated</p>
+                    <p className="text-lg font-semibold text-[#00be64]">{timeAgo(lastUpdated)}</p>
+                    <p className="text-xs text-gray-500 mt-1">{formatTimestamp(lastUpdated)}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* GRAPH SECTION */}
+            <section className="bg-gradient-to-br from-[#121829] to-[#0f1318] border border-[#00be64]/30 rounded-2xl shadow-lg p-6">
+              <div className="mb-6">
+                <h2 className="text-xl font-bold flex items-center gap-2 mb-4">
+                  <span className="w-1 h-6 bg-[#00be64] rounded-full"></span>
+                  {graphTitle}
+                </h2>
+                
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm text-gray-400">Time Period:</label>
+                    <select
+                      value={timePeriod}
+                      onChange={(e) =>
+                        setTimePeriod(e.target.value as typeof timePeriod)
+                      }
+                      className="px-3 py-2 text-sm bg-[#0c1220] border border-[#00be64]/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-[#00be64] cursor-pointer hover:border-[#00be64] transition [&>option]:bg-[#0c1220] [&>option]:text-white"
                     >
-                      {option === "moisture" ? "Moisture" : "pH"}
+                      <option value="week">Past Week</option>
+                      <option value="month">Past Month</option>
+                      <option value="6months">Past 6 Months</option>
+                      <option value="year">Past Year</option>
+                      <option value="all">All Time</option>
+                    </select>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm text-gray-400">Graph Type:</label>
+                    <select
+                      value={selectedGraph}
+                      onChange={(e) =>
+                        setSelectedGraph(e.target.value as typeof selectedGraph)
+                      }
+                      className="px-3 py-2 text-sm bg-[#0c1220] border border-[#00be64]/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-[#00be64] cursor-pointer hover:border-[#00be64] transition [&>option]:bg-[#0c1220] [&>option]:text-white"
+                    >
+                      <option value="moisture">Moisture</option>
+                      <option value="temperature">Temperature</option>
+                      <option value="nitrogen">Nitrogen</option>
+                      <option value="ph">pH</option>
+                    </select>
+                    <button
+                      onClick={exportToCSV}
+                      className="px-4 py-2 text-sm bg-[#00be64] text-black font-semibold rounded-lg hover:bg-[#00d975] transition-colors shadow-lg shadow-[#00be64]/20"
+                    >
+                      Export CSV
                     </button>
-                  ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="w-full h-[400px] rounded-xl overflow-hidden bg-[#0c1220]/50">
+                <Graph
+                  title={graphTitle}
+                  data={graphData}
+                  timePeriod={timePeriod}
+                  optimalValue={getOptimalValue(selectedGraph)}
+                />
+              </div>
+            </section>
+
+            {/* LATEST READINGS */}
+            <div className="bg-gradient-to-br from-[#121829] to-[#0f1318] border border-[#00be64]/30 rounded-2xl p-6 shadow-lg">
+              <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
+                <span className="w-1 h-6 bg-[#00be64] rounded-full"></span>
+                Latest Readings
+              </h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="bg-[#0c1220]/50 border border-[#00be64]/40 rounded-xl p-5 text-center hover:border-[#00be64] transition-colors">
+                  <p className="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wide">Moisture</p>
+                  <div className="flex items-baseline justify-center gap-2">
+                    <p className="text-3xl font-bold text-[#00be64]">{recentMoisture ?? "--"}</p>
+                    {moistureTrend.trend === "up" && <span className="text-sm text-green-400 font-semibold">↑ +{moistureTrend.percentChange}%</span>}
+                    {moistureTrend.trend === "down" && <span className="text-sm text-orange-400 font-semibold">↓ {moistureTrend.percentChange}%</span>}
+                    {moistureTrend.trend === "stable" && <span className="text-sm text-gray-400 font-semibold">→ Stable</span>}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">%</p>
+                </div>
+                <div className="bg-[#0c1220]/50 border border-[#00be64]/40 rounded-xl p-5 text-center hover:border-[#00be64] transition-colors">
+                  <p className="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wide">Temperature</p>
+                  <div className="flex items-baseline justify-center gap-2">
+                    <p className="text-3xl font-bold text-[#00be64]">{recentTemperature ?? "--"}</p>
+                    {temperatureTrend.trend === "up" && <span className="text-sm text-red-400 font-semibold">↑ +{temperatureTrend.percentChange}%</span>}
+                    {temperatureTrend.trend === "down" && <span className="text-sm text-blue-400 font-semibold">↓ {temperatureTrend.percentChange}%</span>}
+                    {temperatureTrend.trend === "stable" && <span className="text-sm text-gray-400 font-semibold">→ Stable</span>}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">°C</p>
+                </div>
+                <div className="bg-[#0c1220]/50 border border-[#00be64]/40 rounded-xl p-5 text-center hover:border-[#00be64] transition-colors">
+                  <p className="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wide">Nitrogen</p>
+                  <div className="flex items-baseline justify-center gap-2">
+                    <p className="text-3xl font-bold text-[#00be64]">{recentNitrogen ?? "--"}</p>
+                    {nitrogenTrend.trend === "up" && <span className="text-sm text-green-400 font-semibold">↑ +{nitrogenTrend.percentChange}%</span>}
+                    {nitrogenTrend.trend === "down" && <span className="text-sm text-orange-400 font-semibold">↓ {nitrogenTrend.percentChange}%</span>}
+                    {nitrogenTrend.trend === "stable" && <span className="text-sm text-gray-400 font-semibold">→ Stable</span>}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">ppm</p>
+                </div>
+                <div className="bg-[#0c1220]/50 border border-[#00be64]/40 rounded-xl p-5 text-center hover:border-[#00be64] transition-colors">
+                  <p className="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wide">pH Level</p>
+                  <div className="flex items-baseline justify-center gap-2">
+                    <p className="text-3xl font-bold text-[#00be64]">{recentPh ?? "--"}</p>
+                    {phTrend.trend === "up" && <span className="text-sm text-red-400 font-semibold">↑ +{phTrend.percentChange}%</span>}
+                    {phTrend.trend === "down" && <span className="text-sm text-blue-400 font-semibold">↓ {phTrend.percentChange}%</span>}
+                    {phTrend.trend === "stable" && <span className="text-sm text-gray-400 font-semibold">→ Stable</span>}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">pH</p>
                 </div>
               </div>
             </div>
 
-            <div className="w-full h-[360px] rounded-xl overflow-hidden">
-              <Graph
-                title={graphTitle}
-                data={graphData}
-                timePeriod={timePeriod}
-              />
+            {/* CRITICAL ALERTS SECTION */}
+            <div className="bg-gradient-to-br from-[#1a0f0f] to-[#0f0a0a] border border-red-500/30 rounded-2xl p-6 shadow-lg">
+              <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+                <span className="w-1 h-6 bg-red-500 rounded-full"></span>
+                <span className="text-red-400">Alerts</span>
+              </h2>
+              {getCriticalAlerts().length > 0 ? (
+                <div className="space-y-3">
+                  {getCriticalAlerts().map((alert, index) => (
+                    <div
+                      key={index}
+                      className={`p-4 rounded-lg border-l-4 flex items-start gap-3 ${
+                        alert.severity === "critical"
+                          ? "bg-red-950/30 border-l-red-500 border border-red-500/20"
+                          : "bg-orange-950/30 border-l-orange-500 border border-orange-500/20"
+                      }`}
+                    >
+                      <div className={`mt-0.5 text-lg font-bold flex-shrink-0 ${
+                        alert.severity === "critical" ? "text-red-400" : "text-orange-400"
+                      }`}>
+                        ⚠
+                      </div>
+                      <div className="flex-grow">
+                        <p className={`text-sm font-bold ${
+                          alert.severity === "critical" ? "text-red-300" : "text-orange-300"
+                        }`}>
+                          {alert.type}
+                        </p>
+                        <p className="text-xs text-gray-300 mt-1">{alert.message}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex items-center gap-3 p-4 bg-green-950/20 border border-green-500/20 rounded-lg">
+                  <div className="text-lg font-bold text-green-400">✓</div>
+                  <div>
+                    <p className="text-sm font-bold text-green-300">All Systems Normal</p>
+                    <p className="text-xs text-gray-400 mt-1">All sensor readings are within optimal ranges for {paddockType || "default"} crop.</p>
+                  </div>
+                </div>
+              )}
             </div>
-          </section>
-        </div>
+          </div>
 
-        {/* RIGHT COLUMN */}
-        <div className="flex flex-col gap-8 items-start">
-          {/* ADDITIONAL DEVICE INFORMATION CAN BE ADDED HERE */}
+          {/* RIGHT COLUMN - Summary Info */}
+          <div className="space-y-6">
+            <div className="bg-gradient-to-br from-[#121829] to-[#0f1318] border border-[#00be64]/30 rounded-2xl p-6 shadow-lg">
+              <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-4">Device Info</h3>
+              <div className="space-y-4">
+                <div>
+                  <p className="text-xs text-gray-500 mb-1">Node ID</p>
+                  <p className="font-mono text-sm text-[#00be64] break-all">{moistureData?.node_id || phData?.node_id || nodeId}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 mb-1">Paddock ID</p>
+                  <p className="font-mono text-sm text-[#00be64]">{moistureData?.paddock_id || phData?.paddock_id}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-br from-green-500/10 to-green-500/5 border border-green-500/30 rounded-2xl p-6 shadow-lg">
+              <h3 className="text-sm font-semibold text-green-300 uppercase tracking-wide mb-3">Data Status</h3>
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 bg-green-400 rounded-full"></span>
+                  <span className="text-gray-300">Readings available</span>
+                </div>
+                <div className="text-xs text-gray-500 mt-3 pt-3 border-t border-green-500/20">
+                  Last update: {lastUpdated ? timeAgo(lastUpdated) : "N/A"}
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
