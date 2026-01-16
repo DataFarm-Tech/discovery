@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Graph from "@/components/Graph";
 import { getDeviceData, DeviceDataResponse } from "@/lib/device";
+import InfoPopup from "@/components/InfoPopup";
 
 // Hard-coded battery level
 const BATTERY_PERCENT = 87;
@@ -664,6 +665,10 @@ function DeviceViewContent() {
               <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
                 <span className="w-1 h-6 bg-[#00be64] rounded-full"></span>
                 Latest Readings
+                <InfoPopup
+                  title="Latest Readings"
+                  description="Shows the most recent sensor values from your device. The percentage indicates the change from the previous reading period, calculated by comparing the latest reading with the previous one."
+                />
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="bg-[#0c1220]/50 border border-[#00be64]/40 rounded-xl p-5 text-center hover:border-[#00be64] transition-colors">
