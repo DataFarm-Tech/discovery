@@ -1,6 +1,6 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
-export type PaddockType = 'default' | 'wheat' | 'barley' | 'fruit' | 'wine' | 'other';
+export type PaddockType = 'default' | 'Grains' | 'Legumes' | 'Fruit' |'Oil Seeds' |'Root Crops' | 'Tropical'| 'Other';
 
 export interface CreatePaddockRequest {
   paddock_name: string | null;

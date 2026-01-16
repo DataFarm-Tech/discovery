@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Graph from "@/components/Graph";
 import { getDeviceData, DeviceDataResponse } from "@/lib/device";
+import InfoPopup from "@/components/InfoPopup";
 
 // Hard-coded battery level
 const BATTERY_PERCENT = 87;
@@ -22,9 +23,9 @@ function DeviceViewContent() {
   const [nitrogenData, setNitrogenData] = useState<
     DeviceDataResponse["node"] | null
   >(null);
-  const [selectedGraph, setSelectedGraph] = useState<"moisture" | "ph" | "temperature" | "nitrogen">(
-    "moisture"
-  );
+  const [selectedGraph, setSelectedGraph] = useState<
+    "moisture" | "ph" | "temperature" | "nitrogen"
+  >("moisture");
   const [timePeriod, setTimePeriod] = useState<
     "week" | "month" | "6months" | "year" | "all"
   >("all");
@@ -33,11 +34,23 @@ function DeviceViewContent() {
   const [error, setError] = useState<string | null>(null);
   const [paddockType, setPaddockType] = useState<string>("default");
   const [paddockId, setPaddockId] = useState<number | null>(null);
-  
-  const [moistureTrend, setMoistureTrend] = useState<{ trend: "up" | "down" | "stable" | "no-data"; percentChange: number }>({ trend: "no-data", percentChange: 0 });
-  const [temperatureTrend, setTemperatureTrend] = useState<{ trend: "up" | "down" | "stable" | "no-data"; percentChange: number }>({ trend: "no-data", percentChange: 0 });
-  const [nitrogenTrend, setNitrogenTrend] = useState<{ trend: "up" | "down" | "stable" | "no-data"; percentChange: number }>({ trend: "no-data", percentChange: 0 });
-  const [phTrend, setPhTrend] = useState<{ trend: "up" | "down" | "stable" | "no-data"; percentChange: number }>({ trend: "no-data", percentChange: 0 });
+
+  const [moistureTrend, setMoistureTrend] = useState<{
+    trend: "up" | "down" | "stable" | "no-data";
+    percentChange: number;
+  }>({ trend: "no-data", percentChange: 0 });
+  const [temperatureTrend, setTemperatureTrend] = useState<{
+    trend: "up" | "down" | "stable" | "no-data";
+    percentChange: number;
+  }>({ trend: "no-data", percentChange: 0 });
+  const [nitrogenTrend, setNitrogenTrend] = useState<{
+    trend: "up" | "down" | "stable" | "no-data";
+    percentChange: number;
+  }>({ trend: "no-data", percentChange: 0 });
+  const [phTrend, setPhTrend] = useState<{
+    trend: "up" | "down" | "stable" | "no-data";
+    percentChange: number;
+  }>({ trend: "no-data", percentChange: 0 });
 
   function formatTimestamp(ts: string) {
     return new Date(ts).toLocaleString(undefined, {
@@ -75,10 +88,12 @@ function DeviceViewContent() {
   }
 
   // Calculate trend by comparing recent readings to previous period
-  function calculateTrend(
-    readings: any[] | undefined
-  ): { trend: "up" | "down" | "stable" | "no-data"; percentChange: number } {
-    if (!readings || readings.length < 2) return { trend: "no-data", percentChange: 0 };
+  function calculateTrend(readings: any[] | undefined): {
+    trend: "up" | "down" | "stable" | "no-data";
+    percentChange: number;
+  } {
+    if (!readings || readings.length < 2)
+      return { trend: "no-data", percentChange: 0 };
 
     // Get average of last 3 readings (or less if not available)
     const recentCount = Math.min(3, readings.length);
@@ -92,12 +107,14 @@ function DeviceViewContent() {
     // Get average of readings before that (previous 3-6 readings)
     const previousStart = Math.max(0, readings.length - 6);
     const previousEnd = Math.max(0, readings.length - 3);
-    if (previousStart === previousEnd) return { trend: "no-data", percentChange: 0 };
+    if (previousStart === previousEnd)
+      return { trend: "no-data", percentChange: 0 };
 
     const previousReadings = readings
       .slice(previousStart, previousEnd)
       .map((r: any) => Number(r.reading_val));
-    if (previousReadings.length === 0) return { trend: "no-data", percentChange: 0 };
+    if (previousReadings.length === 0)
+      return { trend: "no-data", percentChange: 0 };
 
     const previousAvg =
       previousReadings.reduce((a: number, b: number) => a + b, 0) /
@@ -116,7 +133,9 @@ function DeviceViewContent() {
   }
 
   // Get optimal sensor value based on crop type
-  function getOptimalValue(sensorType: "moisture" | "ph" | "temperature" | "nitrogen"): number {
+  function getOptimalValue(
+    sensorType: "moisture" | "ph" | "temperature" | "nitrogen"
+  ): number {
     const optimalValues: Record<string, Record<string, number>> = {
       default: { moisture: 50, ph: 6.5, temperature: 20, nitrogen: 100 },
       wheat: { moisture: 45, ph: 6.5, temperature: 18, nitrogen: 120 },
@@ -131,8 +150,13 @@ function DeviceViewContent() {
   }
 
   // Get optimal ranges for sensor alerts
-  function getOptimalRange(sensorType: "moisture" | "ph" | "temperature" | "nitrogen"): { min: number; max: number } {
-    const ranges: Record<string, Record<string, { min: number; max: number }>> = {
+  function getOptimalRange(
+    sensorType: "moisture" | "ph" | "temperature" | "nitrogen"
+  ): { min: number; max: number } {
+    const ranges: Record<
+      string,
+      Record<string, { min: number; max: number }>
+    > = {
       default: {
         moisture: { min: 40, max: 60 },
         ph: { min: 6.0, max: 7.0 },
@@ -176,8 +200,16 @@ function DeviceViewContent() {
   }
 
   // Check for critical alerts
-  function getCriticalAlerts(): Array<{ type: string; message: string; severity: "warning" | "critical" }> {
-    const alerts: Array<{ type: string; message: string; severity: "warning" | "critical" }> = [];
+  function getCriticalAlerts(): Array<{
+    type: string;
+    message: string;
+    severity: "warning" | "critical";
+  }> {
+    const alerts: Array<{
+      type: string;
+      message: string;
+      severity: "warning" | "critical";
+    }> = [];
 
     // Convert recent values to numbers
     const moisture = recentMoisture ? Number(recentMoisture) : null;
@@ -321,7 +353,9 @@ function DeviceViewContent() {
             setPaddockId(moisture.node.paddock_id);
             // Fetch paddock info to get crop type
             const paddockResponse = await fetch(
-              `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/paddock/${moisture.node.paddock_id}`,
+              `${
+                process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
+              }/paddock/${moisture.node.paddock_id}`,
               {
                 headers: { Authorization: `Bearer ${token}` },
               }
@@ -345,7 +379,12 @@ function DeviceViewContent() {
           setNitrogenTrend(calculateTrend(nitrogen.node.readings));
         }
 
-        if (!moisture.success && !ph.success && !temperature.success && !nitrogen.success)
+        if (
+          !moisture.success &&
+          !ph.success &&
+          !temperature.success &&
+          !nitrogen.success
+        )
           throw new Error("Failed to load readings.");
       } catch (err: any) {
         setError(err.message);
@@ -496,7 +535,9 @@ function DeviceViewContent() {
             onClick={() => window.history.back()}
             className="inline-flex items-center gap-2 text-gray-400 hover:text-white transition-colors group mb-4"
           >
-            <span className="text-xl group-hover:-translate-x-1 transition-transform">←</span>
+            <span className="text-xl group-hover:-translate-x-1 transition-transform">
+              ←
+            </span>
             <span>Back</span>
           </button>
           <div className="flex items-center justify-between">
@@ -532,9 +573,13 @@ function DeviceViewContent() {
                         status.color === "green" ? "bg-green-400" : "bg-red-500"
                       }`}
                     />
-                    <span className={`text-lg font-semibold ${
-                      status.color === "green" ? "text-green-400" : "text-red-500"
-                    }`}>
+                    <span
+                      className={`text-lg font-semibold ${
+                        status.color === "green"
+                          ? "text-green-400"
+                          : "text-red-500"
+                      }`}
+                    >
                       {status.label}
                     </span>
                   </div>
@@ -542,8 +587,12 @@ function DeviceViewContent() {
                 {lastUpdated && (
                   <div>
                     <p className="text-sm text-gray-400 mb-2">Last Updated</p>
-                    <p className="text-lg font-semibold text-[#00be64]">{timeAgo(lastUpdated)}</p>
-                    <p className="text-xs text-gray-500 mt-1">{formatTimestamp(lastUpdated)}</p>
+                    <p className="text-lg font-semibold text-[#00be64]">
+                      {timeAgo(lastUpdated)}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {formatTimestamp(lastUpdated)}
+                    </p>
                   </div>
                 )}
               </div>
@@ -556,10 +605,12 @@ function DeviceViewContent() {
                   <span className="w-1 h-6 bg-[#00be64] rounded-full"></span>
                   {graphTitle}
                 </h2>
-                
+
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                   <div className="flex items-center gap-2">
-                    <label className="text-sm text-gray-400">Time Period:</label>
+                    <label className="text-sm text-gray-400">
+                      Time Period:
+                    </label>
                     <select
                       value={timePeriod}
                       onChange={(e) =>
@@ -614,45 +665,113 @@ function DeviceViewContent() {
               <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
                 <span className="w-1 h-6 bg-[#00be64] rounded-full"></span>
                 Latest Readings
+                <InfoPopup
+                  title="Latest Readings"
+                  description="Shows the most recent sensor values from your device. The percentage indicates the change from the previous reading period, calculated by comparing the latest reading with the previous one."
+                />
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="bg-[#0c1220]/50 border border-[#00be64]/40 rounded-xl p-5 text-center hover:border-[#00be64] transition-colors">
-                  <p className="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wide">Moisture</p>
+                  <p className="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wide">
+                    Moisture
+                  </p>
                   <div className="flex items-baseline justify-center gap-2">
-                    <p className="text-3xl font-bold text-[#00be64]">{recentMoisture ?? "--"}</p>
-                    {moistureTrend.trend === "up" && <span className="text-sm text-green-400 font-semibold">↑ +{moistureTrend.percentChange}%</span>}
-                    {moistureTrend.trend === "down" && <span className="text-sm text-orange-400 font-semibold">↓ {moistureTrend.percentChange}%</span>}
-                    {moistureTrend.trend === "stable" && <span className="text-sm text-gray-400 font-semibold">→ Stable</span>}
+                    <p className="text-3xl font-bold text-[#00be64]">
+                      {recentMoisture ?? "--"}
+                    </p>
+                    {moistureTrend.trend === "up" && (
+                      <span className="text-sm text-green-400 font-semibold">
+                        ↑ +{moistureTrend.percentChange}%
+                      </span>
+                    )}
+                    {moistureTrend.trend === "down" && (
+                      <span className="text-sm text-orange-400 font-semibold">
+                        ↓ {moistureTrend.percentChange}%
+                      </span>
+                    )}
+                    {moistureTrend.trend === "stable" && (
+                      <span className="text-sm text-gray-400 font-semibold">
+                        → Stable
+                      </span>
+                    )}
                   </div>
                   <p className="text-xs text-gray-500 mt-1">%</p>
                 </div>
                 <div className="bg-[#0c1220]/50 border border-[#00be64]/40 rounded-xl p-5 text-center hover:border-[#00be64] transition-colors">
-                  <p className="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wide">Temperature</p>
+                  <p className="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wide">
+                    Temperature
+                  </p>
                   <div className="flex items-baseline justify-center gap-2">
-                    <p className="text-3xl font-bold text-[#00be64]">{recentTemperature ?? "--"}</p>
-                    {temperatureTrend.trend === "up" && <span className="text-sm text-red-400 font-semibold">↑ +{temperatureTrend.percentChange}%</span>}
-                    {temperatureTrend.trend === "down" && <span className="text-sm text-blue-400 font-semibold">↓ {temperatureTrend.percentChange}%</span>}
-                    {temperatureTrend.trend === "stable" && <span className="text-sm text-gray-400 font-semibold">→ Stable</span>}
+                    <p className="text-3xl font-bold text-[#00be64]">
+                      {recentTemperature ?? "--"}
+                    </p>
+                    {temperatureTrend.trend === "up" && (
+                      <span className="text-sm text-red-400 font-semibold">
+                        ↑ +{temperatureTrend.percentChange}%
+                      </span>
+                    )}
+                    {temperatureTrend.trend === "down" && (
+                      <span className="text-sm text-blue-400 font-semibold">
+                        ↓ {temperatureTrend.percentChange}%
+                      </span>
+                    )}
+                    {temperatureTrend.trend === "stable" && (
+                      <span className="text-sm text-gray-400 font-semibold">
+                        → Stable
+                      </span>
+                    )}
                   </div>
                   <p className="text-xs text-gray-500 mt-1">°C</p>
                 </div>
                 <div className="bg-[#0c1220]/50 border border-[#00be64]/40 rounded-xl p-5 text-center hover:border-[#00be64] transition-colors">
-                  <p className="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wide">Nitrogen</p>
+                  <p className="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wide">
+                    Nitrogen
+                  </p>
                   <div className="flex items-baseline justify-center gap-2">
-                    <p className="text-3xl font-bold text-[#00be64]">{recentNitrogen ?? "--"}</p>
-                    {nitrogenTrend.trend === "up" && <span className="text-sm text-green-400 font-semibold">↑ +{nitrogenTrend.percentChange}%</span>}
-                    {nitrogenTrend.trend === "down" && <span className="text-sm text-orange-400 font-semibold">↓ {nitrogenTrend.percentChange}%</span>}
-                    {nitrogenTrend.trend === "stable" && <span className="text-sm text-gray-400 font-semibold">→ Stable</span>}
+                    <p className="text-3xl font-bold text-[#00be64]">
+                      {recentNitrogen ?? "--"}
+                    </p>
+                    {nitrogenTrend.trend === "up" && (
+                      <span className="text-sm text-green-400 font-semibold">
+                        ↑ +{nitrogenTrend.percentChange}%
+                      </span>
+                    )}
+                    {nitrogenTrend.trend === "down" && (
+                      <span className="text-sm text-orange-400 font-semibold">
+                        ↓ {nitrogenTrend.percentChange}%
+                      </span>
+                    )}
+                    {nitrogenTrend.trend === "stable" && (
+                      <span className="text-sm text-gray-400 font-semibold">
+                        → Stable
+                      </span>
+                    )}
                   </div>
                   <p className="text-xs text-gray-500 mt-1">ppm</p>
                 </div>
                 <div className="bg-[#0c1220]/50 border border-[#00be64]/40 rounded-xl p-5 text-center hover:border-[#00be64] transition-colors">
-                  <p className="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wide">pH Level</p>
+                  <p className="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wide">
+                    pH Level
+                  </p>
                   <div className="flex items-baseline justify-center gap-2">
-                    <p className="text-3xl font-bold text-[#00be64]">{recentPh ?? "--"}</p>
-                    {phTrend.trend === "up" && <span className="text-sm text-red-400 font-semibold">↑ +{phTrend.percentChange}%</span>}
-                    {phTrend.trend === "down" && <span className="text-sm text-blue-400 font-semibold">↓ {phTrend.percentChange}%</span>}
-                    {phTrend.trend === "stable" && <span className="text-sm text-gray-400 font-semibold">→ Stable</span>}
+                    <p className="text-3xl font-bold text-[#00be64]">
+                      {recentPh ?? "--"}
+                    </p>
+                    {phTrend.trend === "up" && (
+                      <span className="text-sm text-red-400 font-semibold">
+                        ↑ +{phTrend.percentChange}%
+                      </span>
+                    )}
+                    {phTrend.trend === "down" && (
+                      <span className="text-sm text-blue-400 font-semibold">
+                        ↓ {phTrend.percentChange}%
+                      </span>
+                    )}
+                    {phTrend.trend === "stable" && (
+                      <span className="text-sm text-gray-400 font-semibold">
+                        → Stable
+                      </span>
+                    )}
                   </div>
                   <p className="text-xs text-gray-500 mt-1">pH</p>
                 </div>
@@ -676,18 +795,28 @@ function DeviceViewContent() {
                           : "bg-orange-950/30 border-l-orange-500 border border-orange-500/20"
                       }`}
                     >
-                      <div className={`mt-0.5 text-lg font-bold flex-shrink-0 ${
-                        alert.severity === "critical" ? "text-red-400" : "text-orange-400"
-                      }`}>
+                      <div
+                        className={`mt-0.5 text-lg font-bold flex-shrink-0 ${
+                          alert.severity === "critical"
+                            ? "text-red-400"
+                            : "text-orange-400"
+                        }`}
+                      >
                         ⚠
                       </div>
                       <div className="flex-grow">
-                        <p className={`text-sm font-bold ${
-                          alert.severity === "critical" ? "text-red-300" : "text-orange-300"
-                        }`}>
+                        <p
+                          className={`text-sm font-bold ${
+                            alert.severity === "critical"
+                              ? "text-red-300"
+                              : "text-orange-300"
+                          }`}
+                        >
                           {alert.type}
                         </p>
-                        <p className="text-xs text-gray-300 mt-1">{alert.message}</p>
+                        <p className="text-xs text-gray-300 mt-1">
+                          {alert.message}
+                        </p>
                       </div>
                     </div>
                   ))}
@@ -696,8 +825,13 @@ function DeviceViewContent() {
                 <div className="flex items-center gap-3 p-4 bg-green-950/20 border border-green-500/20 rounded-lg">
                   <div className="text-lg font-bold text-green-400">✓</div>
                   <div>
-                    <p className="text-sm font-bold text-green-300">All Systems Normal</p>
-                    <p className="text-xs text-gray-400 mt-1">All sensor readings are within optimal ranges for {paddockType || "default"} crop.</p>
+                    <p className="text-sm font-bold text-green-300">
+                      All Systems Normal
+                    </p>
+                    <p className="text-xs text-gray-400 mt-1">
+                      All sensor readings are within optimal ranges for{" "}
+                      {paddockType || "default"} crop.
+                    </p>
                   </div>
                 </div>
               )}
@@ -707,21 +841,29 @@ function DeviceViewContent() {
           {/* RIGHT COLUMN - Summary Info */}
           <div className="space-y-6">
             <div className="bg-gradient-to-br from-[#121829] to-[#0f1318] border border-[#00be64]/30 rounded-2xl p-6 shadow-lg">
-              <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-4">Device Info</h3>
+              <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-4">
+                Device Info
+              </h3>
               <div className="space-y-4">
                 <div>
                   <p className="text-xs text-gray-500 mb-1">Node ID</p>
-                  <p className="font-mono text-sm text-[#00be64] break-all">{moistureData?.node_id || phData?.node_id || nodeId}</p>
+                  <p className="font-mono text-sm text-[#00be64] break-all">
+                    {moistureData?.node_id || phData?.node_id || nodeId}
+                  </p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-500 mb-1">Paddock ID</p>
-                  <p className="font-mono text-sm text-[#00be64]">{moistureData?.paddock_id || phData?.paddock_id}</p>
+                  <p className="font-mono text-sm text-[#00be64]">
+                    {moistureData?.paddock_id || phData?.paddock_id}
+                  </p>
                 </div>
               </div>
             </div>
 
             <div className="bg-gradient-to-br from-green-500/10 to-green-500/5 border border-green-500/30 rounded-2xl p-6 shadow-lg">
-              <h3 className="text-sm font-semibold text-green-300 uppercase tracking-wide mb-3">Data Status</h3>
+              <h3 className="text-sm font-semibold text-green-300 uppercase tracking-wide mb-3">
+                Data Status
+              </h3>
               <div className="space-y-2 text-sm">
                 <div className="flex items-center gap-2">
                   <span className="w-2 h-2 bg-green-400 rounded-full"></span>

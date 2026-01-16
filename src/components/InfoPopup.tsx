@@ -39,7 +39,7 @@ export default function InfoPopup({
     <div className="relative" ref={popupRef}>
       <button
         onClick={() => setShowInfo(!showInfo)}
-        className="w-6 h-6 rounded-full border-2 border-gray-400 text-gray-400 hover:border-[#00be64] hover:text-[#00be64] transition-all flex items-center justify-center text-sm font-bold"
+        className="w-4 h-4 rounded-full border-2 border-gray-400 text-gray-400 hover:border-[#00be64] hover:text-[#00be64] transition-all flex items-center justify-center text-sm font-bold"
         aria-label={ariaLabel}
       >
         ?
