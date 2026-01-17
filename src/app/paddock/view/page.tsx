@@ -428,7 +428,7 @@ export default function Page() {
             />
             <label className="block text-sm font-semibold mb-2 text-white">
               Paddock Type
-            </label>
+            </label>''
             <select
               value={newPaddockType}
               onChange={(e) => setNewPaddockType(e.target.value as PaddockType)}
