@@ -194,7 +194,7 @@ export default function SignupPage() {
                 </label>
               </div>
 
-              <div className="flex items-start">
+              {/* <div className="flex items-start">
                 <input
                   id="marketing"
                   type="checkbox"
@@ -205,7 +205,7 @@ export default function SignupPage() {
                 <label htmlFor="marketing" className="ml-2 text-sm text-gray-300">
                   I'd like to receive updates, promotions, and news via email (optional)
                 </label>
-              </div>
+              </div> */}
             </div>
 
             <button
