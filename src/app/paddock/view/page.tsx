@@ -30,7 +30,7 @@ export default function Page() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [devices, setDevices] = useState<Device[]>([]);
   const [nodeLocations, setNodeLocations] = useState<
-    Array<{ node_id: string; node_name: string; lat: number; lng: number }>
+    Array<{ node_id: string; node_name: string; lat: number; lon: number }>
   >([]);
   const [sensorAverages, setSensorAverages] = useState<{
     [key: string]: number;
@@ -126,6 +126,36 @@ export default function Page() {
     return 0;
   };
 
+  const fetchDevices = async () => {
+    if (!paddockId) return;
+
+    try {
+      const token = localStorage.getItem("token") || "";
+      const result = await getPaddockDevices(paddockId, token);
+      if (result.success) {
+        const mapped: Device[] = result.devices.map((d: any) => ({
+          node_id: d.node_id,
+          node_name: d.node_name || "",
+          battery: d.battery,
+          lat: d.lat,
+          lon: d.lon,
+        }));
+        setDevices(mapped);
+
+        // Update node locations with mock GPS data
+        const locations = mapped.map((device, index) => ({
+          node_id: device.node_id,
+          node_name: device.node_name,
+          lat: device.lat || 37.7749 + index * 0.001,
+          lon: device.lon || -122.4194 + index * 0.001,
+        }));
+        setNodeLocations(locations);
+      }
+    } catch (err) {
+      console.error("Failed to fetch devices:", err);
+    }
+  };
+
   useEffect(() => {
     if (!paddockId) return;
 
@@ -137,27 +167,7 @@ export default function Page() {
         const token = localStorage.getItem("token") || "";
 
         // Fetch devices
-        const devicesResult = await getPaddockDevices(paddockId, token);
-        if (!devicesResult.success) {
-          throw new Error(devicesResult.message);
-        }
-
-        const mapped: Device[] = devicesResult.devices.map((d: any) => ({
-          node_id: d.node_id,
-          node_name: d.node_name || "",
-          battery: d.battery,
-        }));
-
-        setDevices(mapped);
-
-        // Generate mock GPS coordinates for each device
-        const locations = mapped.map((device, index) => ({
-          node_id: device.node_id,
-          node_name: device.node_name,
-          lat: 51.505 + index * 0.005,
-          lng: -0.09 + index * 0.005,
-        }));
-        setNodeLocations(locations);
+        await fetchDevices();
 
         // Fetch sensor averages
         const averagesResult = await getPaddockSensorAverages(paddockId, token);
@@ -362,34 +372,7 @@ export default function Page() {
           onClose={() => setIsModalOpen(false)}
           paddockId={Number(paddockId)}
           devices={devices}
-          onSuccess={() => {
-            const fetchDevices = async () => {
-              try {
-                const token = localStorage.getItem("token") || "";
-                const result = await getPaddockDevices(paddockId, token);
-                if (result.success) {
-                  const mapped: Device[] = result.devices.map((d: any) => ({
-                    node_id: d.node_id,
-                    node_name: d.node_name || "",
-                    battery: d.battery,
-                  }));
-                  setDevices(mapped);
-
-                  // Update node locations with mock GPS data
-                  const locations = mapped.map((device, index) => ({
-                    node_id: device.node_id,
-                    node_name: device.node_name,
-                    lat: 51.505 + index * 0.005,
-                    lng: -0.09 + index * 0.005,
-                  }));
-                  setNodeLocations(locations);
-                }
-              } catch (err) {
-                console.error("Failed to refresh devices:", err);
-              }
-            };
-            fetchDevices();
-          }}
+          onSuccess={fetchDevices}
         />
       )}
 
