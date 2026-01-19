@@ -17,6 +17,8 @@ import {
 } from "@/lib/paddock";
 import toast from "react-hot-toast";
 import RegisterDeviceModal from "@/components/RegisterDeviceModal";
+import EditPaddockModal from "@/components/EditPaddockModal";
+import DeletePaddockModal from "@/components/DeletePaddockModal";
 import RecentAverages from "@/components/RecentAverages";
 
 // Lazy-load map component
@@ -37,8 +39,6 @@ export default function Page() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [newPaddockName, setNewPaddockName] = useState("");
-  const [editError, setEditError] = useState<string | null>(null);
   const [paddockId, setPaddockId] = useState<string | null>(null);
   const [paddockName, setPaddockName] = useState<string>("");
   const [paddockType, setPaddockType] = useState<PaddockType>("default");
@@ -184,52 +184,27 @@ export default function Page() {
     }
   };
 
-  const handleEditPaddock = async () => {
-    setEditError(null);
+  const handleEditPaddock = async (newName: string, newType: PaddockType) => {
+    if (!paddockId) throw new Error("No paddock selected");
 
-    if (!newPaddockName.trim()) {
-      setEditError("Paddock name cannot be empty");
-      return;
-    }
+    const token = localStorage.getItem("token") || "";
+    const result = await updatePaddockName(paddockId, newName, newType, token);
 
-    if (
-      newPaddockName.trim() === paddockName &&
-      newPaddockType === paddockType
-    ) {
-      setEditError("No changes made");
-      return;
-    }
-
-    if (!paddockId) return;
-
-    try {
-      const token = localStorage.getItem("token") || "";
-      const result = await updatePaddockName(
-        paddockId,
-        newPaddockName.trim(),
-        newPaddockType,
-        token,
+    if (result.success) {
+      sessionStorage.setItem(
+        "paddockData",
+        JSON.stringify({
+          paddockId: paddockId,
+          paddockName: newName,
+          paddockType: newType,
+        }),
       );
 
-      if (result.success) {
-        sessionStorage.setItem(
-          "paddockData",
-          JSON.stringify({
-            paddockId: paddockId,
-            paddockName: newPaddockName.trim(),
-            paddockType: newPaddockType,
-          }),
-        );
-
-        setPaddockName(newPaddockName.trim());
-        setPaddockType(newPaddockType);
-        setIsEditModalOpen(false);
-        setEditError(null);
-      } else {
-        setEditError(result.message);
-      }
-    } catch (err: any) {
-      setEditError(err.message);
+      setPaddockName(newName);
+      setPaddockType(newType);
+      setIsEditModalOpen(false);
+    } else {
+      throw new Error(result.message);
     }
   };
 
@@ -310,12 +285,7 @@ export default function Page() {
 
                 <div className="flex items-center gap-3">
                   <button
-                    onClick={() => {
-                      setNewPaddockName(paddockName || "");
-                      setNewPaddockType(paddockType);
-                      setEditError(null);
-                      setIsEditModalOpen(true);
-                    }}
+                    onClick={() => setIsEditModalOpen(true)}
                     className="p-2.5 bg-[#00be64]/20 hover:bg-[#00be64]/30 rounded-lg transition-all group"
                     title="Edit paddock"
                   >
@@ -423,111 +393,22 @@ export default function Page() {
         />
       )}
 
-      {isEditModalOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-[#121829] border border-[#00be64]/30 rounded-2xl p-6 w-full max-w-md">
-            <h2 className="text-2xl font-bold mb-4">Edit Paddock Name</h2>
-            <input
-              type="text"
-              value={newPaddockName}
-              onChange={(e) => {
-                setNewPaddockName(e.target.value);
-                setEditError(null);
-              }}
-              className="w-full px-4 py-2 bg-[#0c1220] border border-gray-700 rounded-lg text-white focus:outline-none focus:border-[#00be64] mb-4"
-              placeholder="Enter paddock name"
-            />
-            <label className="block text-sm font-semibold mb-2 text-white">
-              Paddock Type
-            </label>
-            ''
-            <select
-              value={newPaddockType}
-              onChange={(e) => setNewPaddockType(e.target.value as PaddockType)}
-              className="w-full px-4 py-2 bg-[#0c1220] border border-gray-700 rounded-lg text-white focus:outline-none focus:border-[#00be64] mb-2"
-            >
-              <option value="default">Default</option>
-              <option value="wheat">Wheat</option>
-              <option value="barley">Barley</option>
-              <option value="fruit">Fruit</option>
-              <option value="wine">Wine</option>
-              <option value="other">Other</option>
-            </select>
-            {editError && (
-              <p className="text-red-500 text-sm mb-4">{editError}</p>
-            )}
-            <div className="flex gap-3 justify-end mt-4">
-              <button
-                onClick={() => {
-                  setIsEditModalOpen(false);
-                  setEditError(null);
-                }}
-                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-all"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleEditPaddock}
-                className="px-4 py-2 bg-[#00be64] hover:bg-[#009e53] rounded-lg transition-all"
-              >
-                Save
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <EditPaddockModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        currentName={paddockName}
+        currentType={paddockType}
+        onSave={handleEditPaddock}
+      />
 
-      {isDeleteModalOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-          onClick={() => !deleteLoading && setIsDeleteModalOpen(false)}
-        >
-          <div
-            className="bg-[#121829] border border-red-500/30 rounded-2xl p-8 w-full max-w-lg"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-12 h-12 bg-red-500/20 rounded-full flex items-center justify-center">
-                <MdDelete size={24} color="#ef4444" />
-              </div>
-              <h2 className="text-2xl font-bold text-red-500">
-                Delete Paddock
-              </h2>
-            </div>
-            <p className="text-white text-lg mb-3">
-              Are you sure you want to delete{" "}
-              <span className="font-semibold text-[#00be64]">
-                {paddockName || `Paddock #${paddockId}`}
-              </span>
-              ?
-            </p>
-            <p className="text-gray-400 mb-8 leading-relaxed">
-              This will unlink all devices from this paddock. This action cannot
-              be undone.
-            </p>
-            <div className="flex gap-4 justify-end">
-              <button
-                onClick={() => setIsDeleteModalOpen(false)}
-                disabled={deleteLoading}
-                className="px-6 py-3 bg-gray-700 hover:bg-gray-600 rounded-lg transition-all font-medium"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleDeletePaddock}
-                disabled={deleteLoading}
-                className={`px-6 py-3 rounded-lg transition-all font-medium ${
-                  deleteLoading
-                    ? "bg-red-500/50 cursor-not-allowed"
-                    : "bg-red-500 hover:bg-red-600"
-                }`}
-              >
-                {deleteLoading ? "Deleting..." : "Delete Paddock"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <DeletePaddockModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        paddockName={paddockName}
+        paddockId={paddockId || ""}
+        onDelete={handleDeletePaddock}
+        loading={deleteLoading}
+      />
     </main>
   );
 }
