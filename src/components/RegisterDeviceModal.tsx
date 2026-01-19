@@ -3,12 +3,14 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { updateDevice, UpdateDeviceRequest } from "@/lib/device";
+import { Device } from "./DeviceTable";
 
 interface RegisterDeviceModalProps {
   isOpen: boolean;
   onClose: () => void;
   paddockId: number;
   onSuccess?: () => void;
+  devices?: Device[];
 }
 
 export default function RegisterDeviceModal({
@@ -16,6 +18,7 @@ export default function RegisterDeviceModal({
   onClose,
   paddockId,
   onSuccess,
+  devices = [],
 }: RegisterDeviceModalProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -25,6 +28,26 @@ export default function RegisterDeviceModal({
   const handleRegisterDevice = async () => {
     if (!nodeId.trim()) {
       toast.error("Node ID is required");
+      return;
+    }
+
+    // Check for duplicate node name
+    if (
+      nodeName.trim() &&
+      devices.some(
+        (device) =>
+          device.node_name.toLowerCase() === nodeName.trim().toLowerCase(),
+      )
+    ) {
+      toast.error("A device with this name already exists in this paddock");
+      return;
+    }
+
+    // Check for duplicate node ID
+    if (devices.some((device) => device.node_id === nodeId.trim())) {
+      toast.error(
+        "A device with this Node ID is already registered in this paddock",
+      );
       return;
     }
 

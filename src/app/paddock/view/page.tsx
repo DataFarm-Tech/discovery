@@ -27,8 +27,12 @@ const DeviceMap = dynamic(() => import("@/components/DeviceMap"), {
 export default function Page() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [devices, setDevices] = useState<Device[]>([]);
-  const [nodeLocations, setNodeLocations] = useState<Array<{ node_id: string; node_name: string; lat: number; lng: number }>>([]);
-  const [sensorAverages, setSensorAverages] = useState<{ [key: string]: number }>({});
+  const [nodeLocations, setNodeLocations] = useState<
+    Array<{ node_id: string; node_name: string; lat: number; lng: number }>
+  >([]);
+  const [sensorAverages, setSensorAverages] = useState<{
+    [key: string]: number;
+  }>({});
   const [soilHealthScore, setSoilHealthScore] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -57,7 +61,9 @@ export default function Page() {
   }, []);
 
   // Function to compute soil health score from sensor averages
-  const computeSoilHealthScore = (averages: { [key: string]: number }): number => {
+  const computeSoilHealthScore = (averages: {
+    [key: string]: number;
+  }): number => {
     let score = 0;
     let weightSum = 0;
 
@@ -108,8 +114,8 @@ export default function Page() {
       } else {
         moistureScore = Math.max(0, 50 - Math.abs(moisture - 50) * 2);
       }
-      score += moistureScore * 0.30;
-      weightSum += 0.30;
+      score += moistureScore * 0.3;
+      weightSum += 0.3;
     }
 
     // Normalize score if we have some data
@@ -129,7 +135,7 @@ export default function Page() {
 
       try {
         const token = localStorage.getItem("token") || "";
-        
+
         // Fetch devices
         const devicesResult = await getPaddockDevices(paddockId, token);
         if (!devicesResult.success) {
@@ -148,8 +154,8 @@ export default function Page() {
         const locations = mapped.map((device, index) => ({
           node_id: device.node_id,
           node_name: device.node_name,
-          lat: 51.505 + (index * 0.005),
-          lng: -0.09 + (index * 0.005),
+          lat: 51.505 + index * 0.005,
+          lng: -0.09 + index * 0.005,
         }));
         setNodeLocations(locations);
 
@@ -157,7 +163,9 @@ export default function Page() {
         const averagesResult = await getPaddockSensorAverages(paddockId, token);
         if (averagesResult.success && averagesResult.sensor_averages) {
           setSensorAverages(averagesResult.sensor_averages);
-          const computedScore = computeSoilHealthScore(averagesResult.sensor_averages);
+          const computedScore = computeSoilHealthScore(
+            averagesResult.sensor_averages,
+          );
           setSoilHealthScore(computedScore);
         }
       } catch (err: any) {
@@ -200,7 +208,7 @@ export default function Page() {
         paddockId,
         newPaddockName.trim(),
         newPaddockType,
-        token
+        token,
       );
 
       if (result.success) {
@@ -210,7 +218,7 @@ export default function Page() {
             paddockId: paddockId,
             paddockName: newPaddockName.trim(),
             paddockType: newPaddockType,
-          })
+          }),
         );
 
         setPaddockName(newPaddockName.trim());
@@ -353,7 +361,9 @@ export default function Page() {
             {/* DEVICE MAP */}
             {!loading && !error && nodeLocations.length > 0 && (
               <section className="bg-[#121829] border border-[#00be64]/30 rounded-2xl shadow-xl p-6 w-full">
-                <h2 className="text-2xl font-semibold mb-6">Device Locations</h2>
+                <h2 className="text-2xl font-semibold mb-6">
+                  Device Locations
+                </h2>
                 <div className="rounded-xl overflow-hidden h-[500px] w-full">
                   <DeviceMap nodes={nodeLocations} />
                 </div>
@@ -381,6 +391,7 @@ export default function Page() {
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
           paddockId={Number(paddockId)}
+          devices={devices}
           onSuccess={() => {
             const fetchDevices = async () => {
               try {
@@ -398,8 +409,8 @@ export default function Page() {
                   const locations = mapped.map((device, index) => ({
                     node_id: device.node_id,
                     node_name: device.node_name,
-                    lat: 51.505 + (index * 0.005),
-                    lng: -0.09 + (index * 0.005),
+                    lat: 51.505 + index * 0.005,
+                    lng: -0.09 + index * 0.005,
                   }));
                   setNodeLocations(locations);
                 }
@@ -428,7 +439,8 @@ export default function Page() {
             />
             <label className="block text-sm font-semibold mb-2 text-white">
               Paddock Type
-            </label>''
+            </label>
+            ''
             <select
               value={newPaddockType}
               onChange={(e) => setNewPaddockType(e.target.value as PaddockType)}
