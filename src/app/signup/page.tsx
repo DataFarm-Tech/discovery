@@ -5,6 +5,20 @@ import toast from 'react-hot-toast';
 import { signupUser } from '@/lib/auth/signup';
 import Link from 'next/link';
 
+// Simple password strength (0-4 score)
+const getPasswordStrength = (pwd: string): number => {
+  let score = 0;
+  if (pwd.length >= 8) score++;
+  if (pwd.length >= 12) score++;
+  if (/[a-z]/.test(pwd) && /[A-Z]/.test(pwd)) score++;
+  if (/[0-9]/.test(pwd)) score++;
+  if (/[^A-Za-z0-9]/.test(pwd)) score++;
+  return Math.min(4, score);
+};
+
+const validateEmail = (email: string): boolean => {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+};
 
 export default function SignupPage() {
   const [firstName, setFirstName] = useState('');
@@ -13,18 +27,40 @@ export default function SignupPage() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [acceptedTerms, setAcceptedTerms] = useState(false);
-  const [marketingConsent, setMarketingConsent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
+  
+  // Error states
+  const [emailError, setEmailError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [confirmPasswordError, setConfirmPasswordError] = useState('');
+  const [passwordStrength, setPasswordStrength] = useState(0);
 
   const handleSignup = async () => {
+    setEmailError('');
+    setPasswordError('');
+    setConfirmPasswordError('');
+
     if (!firstName || !lastName || !email || !password) {
       toast.error('Please fill in all fields.');
       return;
     }
 
+    if (!validateEmail(email)) {
+      setEmailError('Please enter a valid email address');
+      toast.error('Please enter a valid email address');
+      return;
+    }
+
+    if (passwordStrength < 2) {
+      setPasswordError('Password is too weak');
+      toast.error('Password is too weak');
+      return;
+    }
+
     if (password !== confirmPassword) {
+      setConfirmPasswordError('Passwords do not match');
       toast.error('Passwords do not match!');
       return;
     }
@@ -53,6 +89,32 @@ export default function SignupPage() {
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       handleSignup();
+    }
+  };
+
+  const handlePasswordChange = (value: string) => {
+    setPassword(value);
+    const strength = getPasswordStrength(value);
+    setPasswordStrength(strength);
+    setPasswordError(value && strength < 2 ? 'Password is too weak' : '');
+  };
+
+  // Real-time confirm password validation
+  const handleConfirmPasswordChange = (value: string) => {
+    setConfirmPassword(value);
+    if (value && password) {
+      setConfirmPasswordError(value !== password ? 'Passwords do not match' : '');
+    } else {
+      setConfirmPasswordError('');
+    }
+  };
+
+  // Real-time email validation
+  const handleEmailBlur = () => {
+    if (email && !validateEmail(email)) {
+      setEmailError('Please enter a valid email address');
+    } else {
+      setEmailError('');
     }
   };
 
@@ -86,9 +148,10 @@ export default function SignupPage() {
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
                   onKeyPress={handleKeyPress}
+                  disabled={loading}
                   required
                   placeholder="John"
-                  className="w-full p-3 rounded-md border border-green-500 bg-gray-800 text-white outline-none focus:ring-2 focus:ring-green-500"
+                  className="w-full p-3 rounded-md border border-green-500 bg-gray-800 text-white outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50"
                 />
               </div>
               <div>
@@ -101,9 +164,10 @@ export default function SignupPage() {
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
                   onKeyPress={handleKeyPress}
+                  disabled={loading}
                   required
                   placeholder="Doe"
-                  className="w-full p-3 rounded-md border border-green-500 bg-gray-800 text-white outline-none focus:ring-2 focus:ring-green-500"
+                  className="w-full p-3 rounded-md border border-green-500 bg-gray-800 text-white outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50"
                 />
               </div>
             </div>
@@ -117,11 +181,16 @@ export default function SignupPage() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                onBlur={handleEmailBlur}
                 onKeyPress={handleKeyPress}
+                disabled={loading}
                 required
                 placeholder="you@example.com"
-                className="w-full p-3 rounded-md border border-green-500 bg-gray-800 text-white outline-none focus:ring-2 focus:ring-green-500"
+                className={`w-full p-3 rounded-md border ${emailError ? 'border-red-500' : 'border-green-500'} bg-gray-800 text-white outline-none focus:ring-2 ${emailError ? 'focus:ring-red-500' : 'focus:ring-green-500'} disabled:opacity-50`}
               />
+              {emailError && (
+                <p className="text-red-400 text-sm mt-1">{emailError}</p>
+              )}
             </div>
 
             <div>
@@ -132,12 +201,44 @@ export default function SignupPage() {
                 id="password"
                 type="password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => handlePasswordChange(e.target.value)}
                 onKeyPress={handleKeyPress}
+                disabled={loading}
                 required
                 placeholder="••••••••"
-                className="w-full p-3 rounded-md border border-green-500 bg-gray-800 text-white outline-none focus:ring-2 focus:ring-green-500"
+                className={`w-full p-3 rounded-md border ${passwordError ? 'border-red-500' : 'border-green-500'} bg-gray-800 text-white outline-none focus:ring-2 ${passwordError ? 'focus:ring-red-500' : 'focus:ring-green-500'} disabled:opacity-50`}
               />
+              
+              {password && (
+                <div className="mt-2">
+                  <div className="flex gap-1 mb-1">
+                    {[1, 2, 3, 4].map((level) => (
+                      <div
+                        key={level}
+                        className={`h-1 flex-1 rounded ${
+                          level <= passwordStrength
+                            ? passwordStrength <= 1 ? 'bg-red-500'
+                            : passwordStrength === 2 ? 'bg-yellow-500'
+                            : passwordStrength === 3 ? 'bg-blue-500'
+                            : 'bg-green-500'
+                            : 'bg-gray-600'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                  <p className={`text-xs ${
+                    passwordStrength <= 1 ? 'text-red-400' :
+                    passwordStrength === 2 ? 'text-yellow-400' :
+                    passwordStrength === 3 ? 'text-blue-400' : 'text-green-400'
+                  }`}>
+                    {['Very Weak', 'Weak', 'Fair', 'Good', 'Strong'][passwordStrength]}
+                  </p>
+                </div>
+              )}
+              
+              {passwordError && (
+                <p className="text-red-400 text-sm mt-1">{passwordError}</p>
+              )}
             </div>
 
             <div>
@@ -148,12 +249,38 @@ export default function SignupPage() {
                 id="confirmPassword"
                 type="password"
                 value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
+                onChange={(e) => handleConfirmPasswordChange(e.target.value)}
                 onKeyPress={handleKeyPress}
+                disabled={loading}
                 required
                 placeholder="••••••••"
-                className="w-full p-3 rounded-md border border-green-500 bg-gray-800 text-white outline-none focus:ring-2 focus:ring-green-500"
+                className={`w-full p-3 rounded-md border ${confirmPasswordError ? 'border-red-500' : 'border-green-500'} bg-gray-800 text-white outline-none focus:ring-2 ${confirmPasswordError ? 'focus:ring-red-500' : 'focus:ring-green-500'} disabled:opacity-50`}
               />
+              {confirmPasswordError && (
+                <p className="text-red-400 text-sm mt-1">{confirmPasswordError}</p>
+              )}
+              {!confirmPasswordError && confirmPassword && password === confirmPassword && (
+                <p className="text-green-400 text-sm mt-1">✓ Passwords match</p>
+              )}
+            </div>
+
+            {/* Password Requirements Info */}
+            <div className="bg-gray-800 border border-gray-700 rounded-md p-3">
+              <p className="text-xs text-gray-400 font-semibold mb-2">Password tips:</p>
+              <ul className="text-xs text-gray-400 space-y-1">
+                <li className={password.length >= 8 ? 'text-green-400' : ''}>
+                  {password.length >= 8 ? '✓' : '○'} At least 8 characters (12+ recommended)
+                </li>
+                <li className={/[A-Z]/.test(password) && /[a-z]/.test(password) ? 'text-green-400' : ''}>
+                  {/[A-Z]/.test(password) && /[a-z]/.test(password) ? '✓' : '○'} Mix of uppercase and lowercase
+                </li>
+                <li className={/[0-9]/.test(password) ? 'text-green-400' : ''}>
+                  {/[0-9]/.test(password) ? '✓' : '○'} Include numbers
+                </li>
+                <li className={/[^A-Za-z0-9]/.test(password) ? 'text-green-400' : ''}>
+                  {/[^A-Za-z0-9]/.test(password) ? '✓' : '○'} Add symbols (!@#$%)
+                </li>
+              </ul>
             </div>
 
             {/* Legal Agreements */}
@@ -164,8 +291,9 @@ export default function SignupPage() {
                   type="checkbox"
                   checked={acceptedTerms}
                   onChange={(e) => setAcceptedTerms(e.target.checked)}
+                  disabled={loading}
                   required
-                  className="mt-1 h-4 w-4 rounded border-green-500 bg-gray-800 text-green-500 focus:ring-2 focus:ring-green-500"
+                  className="mt-1 h-4 w-4 rounded border-green-500 bg-gray-800 text-green-500 focus:ring-2 focus:ring-green-500 disabled:opacity-50"
                 />
                 <label htmlFor="terms" className="ml-2 text-sm text-gray-300">
                   I agree to the{' '}
@@ -193,19 +321,6 @@ export default function SignupPage() {
                   <span className="text-red-400">*</span>
                 </label>
               </div>
-
-              {/* <div className="flex items-start">
-                <input
-                  id="marketing"
-                  type="checkbox"
-                  checked={marketingConsent}
-                  onChange={(e) => setMarketingConsent(e.target.checked)}
-                  className="mt-1 h-4 w-4 rounded border-green-500 bg-gray-800 text-green-500 focus:ring-2 focus:ring-green-500"
-                />
-                <label htmlFor="marketing" className="ml-2 text-sm text-gray-300">
-                  I'd like to receive updates, promotions, and news via email (optional)
-                </label>
-              </div> */}
             </div>
 
             <button
