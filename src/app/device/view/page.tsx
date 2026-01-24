@@ -134,7 +134,7 @@ function DeviceViewContent() {
 
   // Get optimal sensor value based on crop type
   function getOptimalValue(
-    sensorType: "moisture" | "ph" | "temperature" | "nitrogen"
+    sensorType: "moisture" | "ph" | "temperature" | "nitrogen",
   ): number {
     const optimalValues: Record<string, Record<string, number>> = {
       default: { moisture: 50, ph: 6.5, temperature: 20, nitrogen: 100 },
@@ -151,7 +151,7 @@ function DeviceViewContent() {
 
   // Get optimal ranges for sensor alerts
   function getOptimalRange(
-    sensorType: "moisture" | "ph" | "temperature" | "nitrogen"
+    sensorType: "moisture" | "ph" | "temperature" | "nitrogen",
   ): { min: number; max: number } {
     const ranges: Record<
       string,
@@ -333,16 +333,16 @@ function DeviceViewContent() {
 
         const moisture = await getDeviceData(
           { nodeId, readingType: "moisture" },
-          token
+          token,
         );
         const ph = await getDeviceData({ nodeId, readingType: "ph" }, token);
         const temperature = await getDeviceData(
           { nodeId, readingType: "temperature" },
-          token
+          token,
         );
         const nitrogen = await getDeviceData(
           { nodeId, readingType: "nitrogen" },
-          token
+          token,
         );
 
         if (moisture.success && moisture.node) {
@@ -358,7 +358,7 @@ function DeviceViewContent() {
               }/paddock/${moisture.node.paddock_id}`,
               {
                 headers: { Authorization: `Bearer ${token}` },
-              }
+              },
             );
             if (paddockResponse.ok) {
               const paddockData = await paddockResponse.json();
@@ -405,7 +405,7 @@ function DeviceViewContent() {
     ];
     if (all.length === 0) return null;
     return all.reduce((a, b) =>
-      new Date(a.timestamp) > new Date(b.timestamp) ? a : b
+      new Date(a.timestamp) > new Date(b.timestamp) ? a : b,
     ).timestamp;
   })();
 
@@ -416,8 +416,8 @@ function DeviceViewContent() {
         moistureData.readings.reduce((latest, reading) =>
           new Date(reading.timestamp) > new Date(latest.timestamp)
             ? reading
-            : latest
-        ).reading_val
+            : latest,
+        ).reading_val,
       ).toFixed(1)
     : null;
 
@@ -426,8 +426,8 @@ function DeviceViewContent() {
         phData.readings.reduce((latest, reading) =>
           new Date(reading.timestamp) > new Date(latest.timestamp)
             ? reading
-            : latest
-        ).reading_val
+            : latest,
+        ).reading_val,
       ).toFixed(1)
     : null;
 
@@ -436,8 +436,8 @@ function DeviceViewContent() {
         temperatureData.readings.reduce((latest, reading) =>
           new Date(reading.timestamp) > new Date(latest.timestamp)
             ? reading
-            : latest
-        ).reading_val
+            : latest,
+        ).reading_val,
       ).toFixed(1)
     : null;
 
@@ -446,8 +446,8 @@ function DeviceViewContent() {
         nitrogenData.readings.reduce((latest, reading) =>
           new Date(reading.timestamp) > new Date(latest.timestamp)
             ? reading
-            : latest
-        ).reading_val
+            : latest,
+        ).reading_val,
       ).toFixed(1)
     : null;
 
@@ -503,28 +503,28 @@ function DeviceViewContent() {
           y: Number(r.reading_val),
         })) || []
       : selectedGraph === "ph"
-      ? filterDataByTimePeriod(phData?.readings)?.map((r) => ({
-          x: r.timestamp,
-          y: Number(r.reading_val),
-        })) || []
-      : selectedGraph === "temperature"
-      ? filterDataByTimePeriod(temperatureData?.readings)?.map((r) => ({
-          x: r.timestamp,
-          y: Number(r.reading_val),
-        })) || []
-      : filterDataByTimePeriod(nitrogenData?.readings)?.map((r) => ({
-          x: r.timestamp,
-          y: Number(r.reading_val),
-        })) || [];
+        ? filterDataByTimePeriod(phData?.readings)?.map((r) => ({
+            x: r.timestamp,
+            y: Number(r.reading_val),
+          })) || []
+        : selectedGraph === "temperature"
+          ? filterDataByTimePeriod(temperatureData?.readings)?.map((r) => ({
+              x: r.timestamp,
+              y: Number(r.reading_val),
+            })) || []
+          : filterDataByTimePeriod(nitrogenData?.readings)?.map((r) => ({
+              x: r.timestamp,
+              y: Number(r.reading_val),
+            })) || [];
 
   const graphTitle =
     selectedGraph === "moisture"
       ? "Moisture Levels"
       : selectedGraph === "ph"
-      ? "pH Levels"
-      : selectedGraph === "temperature"
-      ? "Temperature"
-      : "Nitrogen";
+        ? "pH Levels"
+        : selectedGraph === "temperature"
+          ? "Temperature"
+          : "Nitrogen";
 
   return (
     <div className="min-h-screen bg-[#0c1220] text-white">
@@ -562,42 +562,6 @@ function DeviceViewContent() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* LEFT COLUMN - Main Content */}
           <div className="lg:col-span-2 space-y-6">
-            {/* STATUS & LAST UPDATED */}
-            <div className="bg-gradient-to-br from-[#121829] to-[#0f1318] border border-[#00be64]/30 rounded-2xl p-6 shadow-lg">
-              <div className="grid grid-cols-2 gap-6">
-                <div>
-                  <p className="text-sm text-gray-400 mb-2">Status</p>
-                  <div className="flex items-center gap-3">
-                    <span
-                      className={`inline-block w-3 h-3 rounded-full animate-pulse ${
-                        status.color === "green" ? "bg-green-400" : "bg-red-500"
-                      }`}
-                    />
-                    <span
-                      className={`text-lg font-semibold ${
-                        status.color === "green"
-                          ? "text-green-400"
-                          : "text-red-500"
-                      }`}
-                    >
-                      {status.label}
-                    </span>
-                  </div>
-                </div>
-                {lastUpdated && (
-                  <div>
-                    <p className="text-sm text-gray-400 mb-2">Last Updated</p>
-                    <p className="text-lg font-semibold text-[#00be64]">
-                      {timeAgo(lastUpdated)}
-                    </p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      {formatTimestamp(lastUpdated)}
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
-
             {/* GRAPH SECTION */}
             <section className="bg-gradient-to-br from-[#121829] to-[#0f1318] border border-[#00be64]/30 rounded-2xl shadow-lg p-6">
               <div className="mb-6">
@@ -860,18 +824,64 @@ function DeviceViewContent() {
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-green-500/10 to-green-500/5 border border-green-500/30 rounded-2xl p-6 shadow-lg">
-              <h3 className="text-sm font-semibold text-green-300 uppercase tracking-wide mb-3">
-                Data Status
+            <div
+              className={`bg-gradient-to-br rounded-2xl p-6 shadow-lg border ${
+                status.color === "green"
+                  ? "from-green-500/10 to-green-500/5 border-green-500/30"
+                  : "from-red-500/10 to-red-500/5 border-red-500/30"
+              }`}
+            >
+              <h3
+                className={`text-sm font-semibold uppercase tracking-wide mb-4 ${
+                  status.color === "green" ? "text-green-300" : "text-red-300"
+                }`}
+              >
+                Device Status
               </h3>
-              <div className="space-y-2 text-sm">
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 bg-green-400 rounded-full"></span>
-                  <span className="text-gray-300">Readings available</span>
+              <div className="space-y-4">
+                <div>
+                  <p className="text-xs text-gray-400 mb-2">Status</p>
+                  <div className="flex items-center gap-3">
+                    <span
+                      className={`inline-block w-3 h-3 rounded-full animate-pulse ${
+                        status.color === "green" ? "bg-green-400" : "bg-red-500"
+                      }`}
+                    />
+                    <span
+                      className={`text-lg font-semibold ${
+                        status.color === "green"
+                          ? "text-green-400"
+                          : "text-red-500"
+                      }`}
+                    >
+                      {status.label}
+                    </span>
+                  </div>
                 </div>
-                <div className="text-xs text-gray-500 mt-3 pt-3 border-t border-green-500/20">
-                  Last update: {lastUpdated ? timeAgo(lastUpdated) : "N/A"}
+
+                <div className="pt-3 border-t border-white/10">
+                  <p className="text-xs text-gray-400 mb-2">
+                    Data Availability
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 bg-green-400 rounded-full"></span>
+                    <span className="text-sm text-gray-300">
+                      Readings available
+                    </span>
+                  </div>
                 </div>
+
+                {lastUpdated && (
+                  <div className="pt-3 border-t border-white/10">
+                    <p className="text-xs text-gray-400 mb-2">Last Updated</p>
+                    <p className="text-base font-semibold text-[#00be64]">
+                      {timeAgo(lastUpdated)}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {formatTimestamp(lastUpdated)}
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
