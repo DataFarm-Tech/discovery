@@ -354,11 +354,11 @@ export default function Page() {
 
                 {/* DEVICE MAP */}
                 {nodeLocations.length > 0 && (
-                  <section className="bg-[#121829] border border-[#00be64]/30 rounded-2xl shadow-xl p-6 w-full">
+                  <section className="bg-[#121829] border border-[#00be64]/30 rounded-2xl shadow-xl p-6 w-full relative z-0">
                     <h2 className="text-2xl font-semibold mb-6">
                       Device Locations
                     </h2>
-                    <div className="rounded-xl overflow-hidden h-[500px] w-full">
+                    <div className="rounded-xl overflow-hidden h-[500px] w-full relative z-0">
                       <DeviceMap nodes={nodeLocations} />
                     </div>
                   </section>
