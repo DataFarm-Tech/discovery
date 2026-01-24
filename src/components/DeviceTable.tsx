@@ -7,6 +7,8 @@ export interface Device {
   node_id: string;
   node_name: string;
   battery?: number;
+  lat?: number;
+  lon?: number;
 }
 
 export default function DeviceTable({
@@ -44,7 +46,7 @@ export default function DeviceTable({
           </p>
         </div>
       ) : (
-        <div className="max-h-[420px] overflow-y-auto pr-2 space-y-3">
+        <div className="h-[500px] overflow-y-auto pr-2 space-y-3">
           {devices.map((d) => (
             <div
               key={d.node_id}
@@ -72,8 +74,8 @@ export default function DeviceTable({
                       d.battery > 60
                         ? "text-[#00be64]"
                         : d.battery > 30
-                        ? "text-yellow-400"
-                        : "text-red-500"
+                          ? "text-yellow-400"
+                          : "text-red-500"
                     }`}
                   >
                     {d.battery}%
@@ -85,8 +87,8 @@ export default function DeviceTable({
                         d.battery > 60
                           ? "bg-[#00be64]"
                           : d.battery > 30
-                          ? "bg-yellow-400"
-                          : "bg-red-500"
+                            ? "bg-yellow-400"
+                            : "bg-red-500"
                       }`}
                       style={{ width: `${d.battery}%` }}
                     />
