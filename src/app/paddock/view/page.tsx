@@ -270,7 +270,7 @@ export default function Page() {
 
       <div className="flex-1 overflow-y-auto flex flex-col items-center pt-6">
         {paddockId ? (
-          <div className="w-full max-w-5xl space-y-8">
+          <div className="w-full max-w-7xl space-y-8">
             <button
               onClick={() => router.push("/dashboard")}
               className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors group text-lg"
@@ -338,27 +338,32 @@ export default function Page() {
 
             <RecentAverages paddockId={paddockId} />
 
-            {/* DEVICE MAP */}
-            {!loading && !error && nodeLocations.length > 0 && (
-              <section className="bg-[#121829] border border-[#00be64]/30 rounded-2xl shadow-xl p-6 w-full">
-                <h2 className="text-2xl font-semibold mb-6">
-                  Device Locations
-                </h2>
-                <div className="rounded-xl overflow-hidden h-[500px] w-full">
-                  <DeviceMap nodes={nodeLocations} />
-                </div>
-              </section>
-            )}
-
             {loading && <p className="text-gray-400">Loading devices...</p>}
             {error && <p className="text-red-500">{error}</p>}
 
             {!loading && !error && (
-              <DeviceTable
-                devices={devices}
-                onAddDevice={handleAddDevice}
-                onDeviceClick={handleDeviceClick}
-              />
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full">
+                {/* DEVICE TABLE */}
+                <div className="w-full">
+                  <DeviceTable
+                    devices={devices}
+                    onAddDevice={handleAddDevice}
+                    onDeviceClick={handleDeviceClick}
+                  />
+                </div>
+
+                {/* DEVICE MAP */}
+                {nodeLocations.length > 0 && (
+                  <section className="bg-[#121829] border border-[#00be64]/30 rounded-2xl shadow-xl p-6 w-full">
+                    <h2 className="text-2xl font-semibold mb-6">
+                      Device Locations
+                    </h2>
+                    <div className="rounded-xl overflow-hidden h-[500px] w-full">
+                      <DeviceMap nodes={nodeLocations} />
+                    </div>
+                  </section>
+                )}
+              </div>
             )}
           </div>
         ) : (

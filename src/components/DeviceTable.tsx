@@ -46,7 +46,7 @@ export default function DeviceTable({
           </p>
         </div>
       ) : (
-        <div className="max-h-[420px] overflow-y-auto pr-2 space-y-3">
+        <div className="h-[500px] overflow-y-auto pr-2 space-y-3">
           {devices.map((d) => (
             <div
               key={d.node_id}
