@@ -18,6 +18,9 @@ export interface UpdateDeviceRequest {
 
   /** Paddock the device belongs to. */
   paddock_id: number;
+
+  /** SecretKey */
+  secret_key: string;
 }
 
 /**

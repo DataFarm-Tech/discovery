@@ -1,19 +1,25 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation'; // Import router
+import { useRouter } from 'next/navigation';
 import { loginUser, LoginResponse } from '@/lib/auth/login';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
+import { Eye, EyeOff } from 'lucide-react';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const router = useRouter(); // Initialize router
+  const [showPassword, setShowPassword] = useState(false);
+  const router = useRouter();
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleLogin = async () => {
+    if (!email || !password) {
+      toast.error('Please fill in all fields');
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -33,15 +39,20 @@ export default function LoginPage() {
 
       toast.success('Login successful! Redirecting...');
 
-      // Use Next.js router instead of window.location
       setTimeout(() => {
         router.push('/dashboard');
-        router.refresh(); // Force a refresh to ensure auth state updates
+        router.refresh();
       }, 1500);
     } catch (error) {
       console.error('Login error:', error);
       toast.error('An error occurred during login');
       setLoading(false);
+    }
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleLogin();
     }
   };
 
@@ -62,7 +73,7 @@ export default function LoginPage() {
           Let's Get Farming!
         </h1>
 
-        <form onSubmit={handleLogin} className="space-y-5">
+        <div className="space-y-5">
           <div>
             <label htmlFor="email" className="block font-semibold mb-2 text-white">
               Email
@@ -72,9 +83,11 @@ export default function LoginPage() {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              onKeyPress={handleKeyPress}
+              disabled={loading}
               required
               placeholder="you@example.com"
-              className="w-full p-3 rounded-md border border-green-500 bg-gray-800 text-white outline-none focus:ring-2 focus:ring-green-500"
+              className="w-full p-3 rounded-md border border-green-500 bg-gray-800 text-white outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50"
             />
           </div>
 
@@ -82,19 +95,36 @@ export default function LoginPage() {
             <label htmlFor="password" className="block font-semibold mb-2 text-white">
               Password
             </label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              placeholder="••••••••"
-              className="w-full p-3 rounded-md border border-green-500 bg-gray-800 text-white outline-none focus:ring-2 focus:ring-green-500"
-            />
+            <div className="relative">
+              <input
+                id="password"
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                onKeyPress={handleKeyPress}
+                disabled={loading}
+                required
+                placeholder="••••••••"
+                className="w-full p-3 pr-12 rounded-md border border-green-500 bg-gray-800 text-white outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                disabled={loading}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-300 transition-colors disabled:opacity-50"
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? (
+                  <EyeOff className="w-5 h-5" />
+                ) : (
+                  <Eye className="w-5 h-5" />
+                )}
+              </button>
+            </div>
           </div>
 
           <button
-            type="submit"
+            onClick={handleLogin}
             disabled={loading}
             className={`w-full py-3 rounded-md font-semibold text-white transition-colors ${
               loading ? 'bg-green-700 cursor-not-allowed' : 'bg-green-500 hover:bg-green-600'
@@ -102,7 +132,7 @@ export default function LoginPage() {
           >
             {loading ? 'Logging in...' : 'Login'}
           </button>
-        </form>
+        </div>
 
         <p className="text-center text-sm mt-6 text-white">
           Don't have an account?{' '}

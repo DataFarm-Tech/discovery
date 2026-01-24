@@ -3,12 +3,14 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { updateDevice, UpdateDeviceRequest } from "@/lib/device";
+import { Device } from "./DeviceTable";
 
 interface RegisterDeviceModalProps {
   isOpen: boolean;
   onClose: () => void;
   paddockId: number;
   onSuccess?: () => void;
+  devices?: Device[];
 }
 
 export default function RegisterDeviceModal({
@@ -16,15 +18,42 @@ export default function RegisterDeviceModal({
   onClose,
   paddockId,
   onSuccess,
+  devices = [],
 }: RegisterDeviceModalProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [nodeId, setNodeId] = useState("");
   const [nodeName, setNodeName] = useState("");
+  const [secretKey, setSecretKey] = useState("");
 
   const handleRegisterDevice = async () => {
     if (!nodeId.trim()) {
       toast.error("Node ID is required");
+      return;
+    }
+
+    if (!secretKey.trim()) {
+      toast.error("Key is required");
+      return;
+    }
+
+    // Check for duplicate node name
+    if (
+      nodeName.trim() &&
+      devices.some(
+        (device) =>
+          device.node_name.toLowerCase() === nodeName.trim().toLowerCase(),
+      )
+    ) {
+      toast.error("A device with this name already exists in this paddock");
+      return;
+    }
+
+    // Check for duplicate node ID
+    if (devices.some((device) => device.node_id === nodeId.trim())) {
+      toast.error(
+        "A device with this Node ID is already registered in this paddock",
+      );
       return;
     }
 
@@ -41,6 +70,7 @@ export default function RegisterDeviceModal({
         node_id: nodeId.trim(),
         node_name: nodeName.trim(),
         paddock_id: paddockId,
+        secret_key: secretKey
       };
 
       const result = await updateDevice(deviceData, token);
@@ -126,6 +156,25 @@ export default function RegisterDeviceModal({
               onChange={(e) => setNodeId(e.target.value)}
               onKeyPress={handleKeyPress}
               placeholder="Enter Node ID"
+              className="w-full px-4 py-3 bg-[#0c1220] border border-gray-700 rounded-lg text-white focus:outline-none focus:border-[#00be64] transition-colors"
+              disabled={loading}
+            />
+          </div>
+
+          <div>
+            <label
+              htmlFor="secretKey"
+              className="block text-sm font-semibold mb-2 text-white"
+            >
+              Key <span className="text-red-500">*</span>
+            </label>
+            <input
+              id="secretKey"
+              type="text"
+              value={secretKey}
+              onChange={(e) => setSecretKey(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder="Enter Key"
               className="w-full px-4 py-3 bg-[#0c1220] border border-gray-700 rounded-lg text-white focus:outline-none focus:border-[#00be64] transition-colors"
               disabled={loading}
             />
