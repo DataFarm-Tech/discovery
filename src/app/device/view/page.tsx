@@ -562,67 +562,64 @@ function DeviceViewContent() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* LEFT COLUMN - Main Content */}
           <div className="lg:col-span-2 space-y-6">
-            {/* GRAPH SECTION */}
-            <section className="bg-gradient-to-br from-[#121829] to-[#0f1318] border border-[#00be64]/30 rounded-2xl shadow-lg p-6">
-              <div className="mb-6">
-                <h2 className="text-xl font-bold flex items-center gap-2 mb-4">
-                  <span className="w-1 h-6 bg-[#00be64] rounded-full"></span>
-                  {graphTitle}
-                </h2>
-
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                  <div className="flex items-center gap-2">
-                    <label className="text-sm text-gray-400">
-                      Time Period:
-                    </label>
-                    <select
-                      value={timePeriod}
-                      onChange={(e) =>
-                        setTimePeriod(e.target.value as typeof timePeriod)
-                      }
-                      className="px-3 py-2 text-sm bg-[#0c1220] border border-[#00be64]/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-[#00be64] cursor-pointer hover:border-[#00be64] transition [&>option]:bg-[#0c1220] [&>option]:text-white"
+            {/* CRITICAL ALERTS SECTION */}
+            <div className="bg-gradient-to-br from-[#1a0f0f] to-[#0f0a0a] border border-red-500/30 rounded-2xl p-6 shadow-lg">
+              <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+                <span className="w-1 h-6 bg-red-500 rounded-full"></span>
+                <span className="text-red-400">Alerts</span>
+              </h2>
+              {getCriticalAlerts().length > 0 ? (
+                <div className="space-y-3">
+                  {getCriticalAlerts().map((alert, index) => (
+                    <div
+                      key={index}
+                      className={`p-4 rounded-lg border-l-4 flex items-start gap-3 ${
+                        alert.severity === "critical"
+                          ? "bg-red-950/30 border-l-red-500 border border-red-500/20"
+                          : "bg-orange-950/30 border-l-orange-500 border border-orange-500/20"
+                      }`}
                     >
-                      <option value="week">Past Week</option>
-                      <option value="month">Past Month</option>
-                      <option value="6months">Past 6 Months</option>
-                      <option value="year">Past Year</option>
-                      <option value="all">All Time</option>
-                    </select>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <label className="text-sm text-gray-400">Graph Type:</label>
-                    <select
-                      value={selectedGraph}
-                      onChange={(e) =>
-                        setSelectedGraph(e.target.value as typeof selectedGraph)
-                      }
-                      className="px-3 py-2 text-sm bg-[#0c1220] border border-[#00be64]/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-[#00be64] cursor-pointer hover:border-[#00be64] transition [&>option]:bg-[#0c1220] [&>option]:text-white"
-                    >
-                      <option value="moisture">Moisture</option>
-                      <option value="temperature">Temperature</option>
-                      <option value="nitrogen">Nitrogen</option>
-                      <option value="ph">pH</option>
-                    </select>
-                    <button
-                      onClick={exportToCSV}
-                      className="px-4 py-2 text-sm bg-[#00be64] text-black font-semibold rounded-lg hover:bg-[#00d975] transition-colors shadow-lg shadow-[#00be64]/20"
-                    >
-                      Export CSV
-                    </button>
+                      <div
+                        className={`mt-0.5 text-lg font-bold flex-shrink-0 ${
+                          alert.severity === "critical"
+                            ? "text-red-400"
+                            : "text-orange-400"
+                        }`}
+                      >
+                        ⚠
+                      </div>
+                      <div className="flex-grow">
+                        <p
+                          className={`text-sm font-bold ${
+                            alert.severity === "critical"
+                              ? "text-red-300"
+                              : "text-orange-300"
+                          }`}
+                        >
+                          {alert.type}
+                        </p>
+                        <p className="text-xs text-gray-300 mt-1">
+                          {alert.message}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex items-center gap-3 p-4 bg-green-950/20 border border-green-500/20 rounded-lg">
+                  <div className="text-lg font-bold text-green-400">✓</div>
+                  <div>
+                    <p className="text-sm font-bold text-green-300">
+                      All Systems Normal
+                    </p>
+                    <p className="text-xs text-gray-400 mt-1">
+                      All sensor readings are within optimal ranges for{" "}
+                      {paddockType || "default"} crop.
+                    </p>
                   </div>
                 </div>
-              </div>
-
-              <div className="w-full h-[400px] rounded-xl overflow-hidden bg-[#0c1220]/50">
-                <Graph
-                  title={graphTitle}
-                  data={graphData}
-                  timePeriod={timePeriod}
-                  optimalValue={getOptimalValue(selectedGraph)}
-                />
-              </div>
-            </section>
+              )}
+            </div>
 
             {/* LATEST READINGS */}
             <div className="bg-gradient-to-br from-[#121829] to-[#0f1318] border border-[#00be64]/30 rounded-2xl p-6 shadow-lg">
@@ -742,64 +739,67 @@ function DeviceViewContent() {
               </div>
             </div>
 
-            {/* CRITICAL ALERTS SECTION */}
-            <div className="bg-gradient-to-br from-[#1a0f0f] to-[#0f0a0a] border border-red-500/30 rounded-2xl p-6 shadow-lg">
-              <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-                <span className="w-1 h-6 bg-red-500 rounded-full"></span>
-                <span className="text-red-400">Alerts</span>
-              </h2>
-              {getCriticalAlerts().length > 0 ? (
-                <div className="space-y-3">
-                  {getCriticalAlerts().map((alert, index) => (
-                    <div
-                      key={index}
-                      className={`p-4 rounded-lg border-l-4 flex items-start gap-3 ${
-                        alert.severity === "critical"
-                          ? "bg-red-950/30 border-l-red-500 border border-red-500/20"
-                          : "bg-orange-950/30 border-l-orange-500 border border-orange-500/20"
-                      }`}
+            {/* GRAPH SECTION */}
+            <section className="bg-gradient-to-br from-[#121829] to-[#0f1318] border border-[#00be64]/30 rounded-2xl shadow-lg p-6">
+              <div className="mb-6">
+                <h2 className="text-xl font-bold flex items-center gap-2 mb-4">
+                  <span className="w-1 h-6 bg-[#00be64] rounded-full"></span>
+                  {graphTitle}
+                </h2>
+
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm text-gray-400">
+                      Time Period:
+                    </label>
+                    <select
+                      value={timePeriod}
+                      onChange={(e) =>
+                        setTimePeriod(e.target.value as typeof timePeriod)
+                      }
+                      className="px-3 py-2 text-sm bg-[#0c1220] border border-[#00be64]/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-[#00be64] cursor-pointer hover:border-[#00be64] transition [&>option]:bg-[#0c1220] [&>option]:text-white"
                     >
-                      <div
-                        className={`mt-0.5 text-lg font-bold flex-shrink-0 ${
-                          alert.severity === "critical"
-                            ? "text-red-400"
-                            : "text-orange-400"
-                        }`}
-                      >
-                        ⚠
-                      </div>
-                      <div className="flex-grow">
-                        <p
-                          className={`text-sm font-bold ${
-                            alert.severity === "critical"
-                              ? "text-red-300"
-                              : "text-orange-300"
-                          }`}
-                        >
-                          {alert.type}
-                        </p>
-                        <p className="text-xs text-gray-300 mt-1">
-                          {alert.message}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="flex items-center gap-3 p-4 bg-green-950/20 border border-green-500/20 rounded-lg">
-                  <div className="text-lg font-bold text-green-400">✓</div>
-                  <div>
-                    <p className="text-sm font-bold text-green-300">
-                      All Systems Normal
-                    </p>
-                    <p className="text-xs text-gray-400 mt-1">
-                      All sensor readings are within optimal ranges for{" "}
-                      {paddockType || "default"} crop.
-                    </p>
+                      <option value="week">Past Week</option>
+                      <option value="month">Past Month</option>
+                      <option value="6months">Past 6 Months</option>
+                      <option value="year">Past Year</option>
+                      <option value="all">All Time</option>
+                    </select>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm text-gray-400">Graph Type:</label>
+                    <select
+                      value={selectedGraph}
+                      onChange={(e) =>
+                        setSelectedGraph(e.target.value as typeof selectedGraph)
+                      }
+                      className="px-3 py-2 text-sm bg-[#0c1220] border border-[#00be64]/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-[#00be64] cursor-pointer hover:border-[#00be64] transition [&>option]:bg-[#0c1220] [&>option]:text-white"
+                    >
+                      <option value="moisture">Moisture</option>
+                      <option value="temperature">Temperature</option>
+                      <option value="nitrogen">Nitrogen</option>
+                      <option value="ph">pH</option>
+                    </select>
+                    <button
+                      onClick={exportToCSV}
+                      className="px-4 py-2 text-sm bg-[#00be64] text-black font-semibold rounded-lg hover:bg-[#00d975] transition-colors shadow-lg shadow-[#00be64]/20"
+                    >
+                      Export CSV
+                    </button>
                   </div>
                 </div>
-              )}
-            </div>
+              </div>
+
+              <div className="w-full h-[400px] rounded-xl overflow-hidden bg-[#0c1220]/50">
+                <Graph
+                  title={graphTitle}
+                  data={graphData}
+                  timePeriod={timePeriod}
+                  optimalValue={getOptimalValue(selectedGraph)}
+                />
+              </div>
+            </section>
           </div>
 
           {/* RIGHT COLUMN - Summary Info */}
