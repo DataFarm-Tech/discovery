@@ -16,9 +16,9 @@ import {
   getPaddockSensorAverages,
 } from "@/lib/paddock";
 import toast from "react-hot-toast";
-import RegisterDeviceModal from "@/components/RegisterDeviceModal";
-import EditPaddockModal from "@/components/EditPaddockModal";
-import DeletePaddockModal from "@/components/DeletePaddockModal";
+import RegisterDeviceModal from "@/components/modals/RegisterDeviceModal";
+import EditPaddockModal from "@/components/modals/EditPaddockModal";
+import DeletePaddockModal from "@/components/modals/DeletePaddockModal";
 import RecentAverages from "@/components/RecentAverages";
 
 // Lazy-load map component

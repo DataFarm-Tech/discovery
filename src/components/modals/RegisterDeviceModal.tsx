@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { updateDevice, UpdateDeviceRequest } from "@/lib/device";
-import { Device } from "./DeviceTable";
+import { Device } from "../DeviceTable";
 
 interface RegisterDeviceModalProps {
   isOpen: boolean;
