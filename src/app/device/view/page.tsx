@@ -362,22 +362,22 @@ function DeviceViewContent() {
           setMoistureData(moisture.node);
           setMoistureTrend(calculateTrend(moisture.node.readings));
           // Capture paddock ID for fetching paddock type
-          if (moisture.node?.paddock_id) {
-            setPaddockId(moisture.node.paddock_id);
-            // Fetch paddock info to get crop type
-            const paddockResponse = await fetch(
-              `${
-                process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
-              }/paddock/${moisture.node.paddock_id}`,
-              {
-                headers: { Authorization: `Bearer ${token}` },
-              },
-            );
-            if (paddockResponse.ok) {
-              const paddockData = await paddockResponse.json();
-              setPaddockType(paddockData.paddock_type || "default");
-            }
-          }
+          // if (moisture.node?.paddock_id) {
+          //   setPaddockId(moisture.node.paddock_id);
+          //   // Fetch paddock info to get crop type
+          //   const paddockResponse = await fetch(
+          //     `${
+          //       process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
+          //     }/paddock/${moisture.node.paddock_id}`,
+          //     {
+          //       headers: { Authorization: `Bearer ${token}` },
+          //     },
+          //   );
+          //   if (paddockResponse.ok) {
+          //     const paddockData = await paddockResponse.json();
+          //     setPaddockType(paddockData.paddock_type || "default");
+          //   }
+          // }
         }
         if (ph.success && ph.node) {
           setPhData(ph.node);
@@ -557,30 +557,14 @@ function DeviceViewContent() {
       <div className="flex-1 overflow-y-auto flex flex-col items-center pt-6">
         <div className="w-full max-w-7xl space-y-8">
           <button
-            onClick={() => {
-              if (paddockId) {
-                sessionStorage.setItem(
-                  "paddockData",
-                  JSON.stringify({
-                    paddockId: paddockId,
-                    paddockName: "",
-                    paddockType: paddockType,
-                  }),
-                );
-                router.push("/paddock/view");
-              } else {
-                router.push("/dashboard");
-              }
-            }}
+            onClick={() => router.back()}
             className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors group text-lg"
           >
             <MdArrowBack
               size={24}
               className="group-hover:-translate-x-1 transition-transform"
             />
-            <span>
-              {paddockId ? "Back to Paddock View" : "Back to Dashboard"}
-            </span>
+            <span>Back to Paddock </span>
           </button>
 
           <section className="bg-[#121829] border border-[#00be64]/30 rounded-2xl shadow-xl p-6">
