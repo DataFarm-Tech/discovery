@@ -24,10 +24,16 @@ export default function RegisterDeviceModal({
   const [loading, setLoading] = useState(false);
   const [nodeId, setNodeId] = useState("");
   const [nodeName, setNodeName] = useState("");
+  const [secretKey, setSecretKey] = useState("");
 
   const handleRegisterDevice = async () => {
     if (!nodeId.trim()) {
       toast.error("Node ID is required");
+      return;
+    }
+
+    if (!secretKey.trim()) {
+      toast.error("Key is required");
       return;
     }
 
@@ -64,6 +70,7 @@ export default function RegisterDeviceModal({
         node_id: nodeId.trim(),
         node_name: nodeName.trim(),
         paddock_id: paddockId,
+        secret_key: secretKey
       };
 
       const result = await updateDevice(deviceData, token);
@@ -149,6 +156,25 @@ export default function RegisterDeviceModal({
               onChange={(e) => setNodeId(e.target.value)}
               onKeyPress={handleKeyPress}
               placeholder="Enter Node ID"
+              className="w-full px-4 py-3 bg-[#0c1220] border border-gray-700 rounded-lg text-white focus:outline-none focus:border-[#00be64] transition-colors"
+              disabled={loading}
+            />
+          </div>
+
+          <div>
+            <label
+              htmlFor="secretKey"
+              className="block text-sm font-semibold mb-2 text-white"
+            >
+              Key <span className="text-red-500">*</span>
+            </label>
+            <input
+              id="secretKey"
+              type="text"
+              value={secretKey}
+              onChange={(e) => setSecretKey(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder="Enter Key"
               className="w-full px-4 py-3 bg-[#0c1220] border border-gray-700 rounded-lg text-white focus:outline-none focus:border-[#00be64] transition-colors"
               disabled={loading}
             />
