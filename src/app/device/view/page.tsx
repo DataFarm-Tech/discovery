@@ -8,6 +8,7 @@ import InfoPopup from "@/components/InfoPopup";
 import { MdDelete, MdEdit, MdArrowBack } from "react-icons/md";
 import DashboardHeader from "@/components/DashboardHeader";
 import Sidebar from "@/components/Sidebar";
+import DeleteDeviceModal from "@/components/modals/DeleteDeviceModal";
 
 // Hard-coded battery level
 const BATTERY_PERCENT = 87;
@@ -41,6 +42,8 @@ function DeviceViewContent() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [devices, setDevices] = useState<any[]>([]);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
   const [moistureTrend, setMoistureTrend] = useState<{
     trend: "up" | "down" | "stable" | "no-data";
@@ -305,6 +308,76 @@ function DeviceViewContent() {
     }
   };
 
+  // Fetch device data - extracted for reuse
+  const fetchDeviceData = async () => {
+    if (!nodeId) {
+      setError("No device selected.");
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) throw new Error("You must be logged in.");
+
+      const moisture = await getDeviceData(
+        { nodeId, readingType: "moisture" },
+        token,
+      );
+      const ph = await getDeviceData({ nodeId, readingType: "ph" }, token);
+      const temperature = await getDeviceData(
+        { nodeId, readingType: "temperature" },
+        token,
+      );
+      const nitrogen = await getDeviceData(
+        { nodeId, readingType: "nitrogen" },
+        token,
+      );
+
+      if (moisture.success && moisture.node) {
+        setMoistureData(moisture.node);
+        setMoistureTrend(calculateTrend(moisture.node.readings));
+      }
+      if (ph.success && ph.node) {
+        setPhData(ph.node);
+        setPhTrend(calculateTrend(ph.node.readings));
+      }
+      if (temperature.success && temperature.node) {
+        setTemperatureData(temperature.node);
+        setTemperatureTrend(calculateTrend(temperature.node.readings));
+      }
+      if (nitrogen.success && nitrogen.node) {
+        setNitrogenData(nitrogen.node);
+        setNitrogenTrend(calculateTrend(nitrogen.node.readings));
+      }
+
+      if (
+        !moisture.success &&
+        !ph.success &&
+        !temperature.success &&
+        !nitrogen.success
+      )
+        throw new Error("Failed to load readings.");
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEditSuccess = () => {
+    // Refresh the page data without full reload
+    fetchDeviceData();
+  };
+
+  const handleDeleteSuccess = () => {
+    // Navigate back to previous page
+    router.back();
+  };
+
   // CSV EXPORTER
   const exportToCSV = () => {
     const data =
@@ -330,83 +403,7 @@ function DeviceViewContent() {
   };
 
   useEffect(() => {
-    if (!nodeId) {
-      setError("No device selected.");
-      setLoading(false);
-      return;
-    }
-
-    const fetchBoth = async () => {
-      setLoading(true);
-      setError(null);
-
-      try {
-        const token = localStorage.getItem("token");
-        if (!token) throw new Error("You must be logged in.");
-
-        const moisture = await getDeviceData(
-          { nodeId, readingType: "moisture" },
-          token,
-        );
-        const ph = await getDeviceData({ nodeId, readingType: "ph" }, token);
-        const temperature = await getDeviceData(
-          { nodeId, readingType: "temperature" },
-          token,
-        );
-        const nitrogen = await getDeviceData(
-          { nodeId, readingType: "nitrogen" },
-          token,
-        );
-
-        if (moisture.success && moisture.node) {
-          setMoistureData(moisture.node);
-          setMoistureTrend(calculateTrend(moisture.node.readings));
-          // Capture paddock ID for fetching paddock type
-          // if (moisture.node?.paddock_id) {
-          //   setPaddockId(moisture.node.paddock_id);
-          //   // Fetch paddock info to get crop type
-          //   const paddockResponse = await fetch(
-          //     `${
-          //       process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
-          //     }/paddock/${moisture.node.paddock_id}`,
-          //     {
-          //       headers: { Authorization: `Bearer ${token}` },
-          //     },
-          //   );
-          //   if (paddockResponse.ok) {
-          //     const paddockData = await paddockResponse.json();
-          //     setPaddockType(paddockData.paddock_type || "default");
-          //   }
-          // }
-        }
-        if (ph.success && ph.node) {
-          setPhData(ph.node);
-          setPhTrend(calculateTrend(ph.node.readings));
-        }
-        if (temperature.success && temperature.node) {
-          setTemperatureData(temperature.node);
-          setTemperatureTrend(calculateTrend(temperature.node.readings));
-        }
-        if (nitrogen.success && nitrogen.node) {
-          setNitrogenData(nitrogen.node);
-          setNitrogenTrend(calculateTrend(nitrogen.node.readings));
-        }
-
-        if (
-          !moisture.success &&
-          !ph.success &&
-          !temperature.success &&
-          !nitrogen.success
-        )
-          throw new Error("Failed to load readings.");
-      } catch (err: any) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchBoth();
+    fetchDeviceData();
   }, [nodeId]);
 
   const lastUpdated = (() => {
@@ -583,9 +580,7 @@ function DeviceViewContent() {
 
               <div className="flex items-center gap-3">
                 <button
-                  onClick={() => {
-                    /* TODO: Implement edit device name */
-                  }}
+                  onClick={() => setIsEditModalOpen(true)}
                   className="p-2.5 bg-[#00be64]/20 hover:bg-[#00be64]/30 rounded-lg transition-all group"
                   title="Edit device"
                 >
@@ -597,9 +592,7 @@ function DeviceViewContent() {
                 </button>
 
                 <button
-                  onClick={() => {
-                    /* TODO: Implement remove device */
-                  }}
+                  onClick={() => setIsDeleteModalOpen(true)}
                   className="p-2.5 bg-red-500/20 hover:bg-red-500/30 rounded-lg transition-all group"
                   title="Remove device"
                 >
@@ -947,6 +940,14 @@ function DeviceViewContent() {
           </div>
         </div>
       </div>
+
+      <DeleteDeviceModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        nodeId={nodeId || ""}
+        nodeName={moistureData?.node_name || phData?.node_name || "Device"}
+        onSuccess={handleDeleteSuccess}
+      />
     </main>
   );
 }

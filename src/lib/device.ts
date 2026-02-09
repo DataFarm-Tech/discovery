@@ -172,3 +172,75 @@ export async function updateDevice(
     };
   }
 }
+
+/**
+ * Request payload for editing a device name.
+ */
+export interface EditDeviceNameRequest {
+  /** Unique identifier of the device (node). */
+  node_id: string;
+
+  /** New name for the device. */
+  node_name: string;
+}
+
+/**
+ * Response for device name edit requests.
+ */
+export interface EditDeviceNameResponse {
+  success: boolean;
+  message: string;
+}
+
+/**
+ * Response for device unlink requests.
+ */
+export interface UnlinkDeviceResponse {
+  success: boolean;
+  message: string;
+}
+
+/**
+ * Unlinks a device from the user's account.
+ *
+ * @param nodeId - Unique identifier of the device (node) to unlink.
+ * @param token - JWT authentication token.
+ *
+ * @returns A promise resolving to an UnlinkDeviceResponse.
+ *
+ * The backend endpoint:
+ *   PATCH /device/unlink/{node_id}
+ */
+export async function unlinkDevice(
+  nodeId: string,
+  token: string
+): Promise<UnlinkDeviceResponse> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/device/unlink/${nodeId}`, {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return {
+        success: false,
+        message: data.message || data.detail || "Failed to unlink device",
+      };
+    }
+
+    return {
+      success: true,
+      message: data.message || "Device unlinked successfully",
+    };
+  } catch (error) {
+    console.error("Error unlinking device:", error);
+    return {
+      success: false,
+      message: "An error occurred. Please try again.",
+    };
+  }
+}
