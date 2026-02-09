@@ -193,6 +193,56 @@ export interface EditDeviceNameResponse {
 }
 
 /**
+ * Edits the name of a device.
+ *
+ * @param request - Object containing node_id and new node_name.
+ * @param token - JWT authentication token.
+ *
+ * @returns A promise resolving to an EditDeviceNameResponse.
+ *
+ * The backend endpoint:
+ *   PATCH /device/edit-name/{node_id}
+ */
+export async function editDeviceName(
+  request: EditDeviceNameRequest,
+  token: string
+): Promise<EditDeviceNameResponse> {
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/device/edit-name/${request.node_id}`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ node_name: request.node_name }),
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return {
+        success: false,
+        message: data.message || data.detail || "Failed to update device name",
+      };
+    }
+
+    return {
+      success: true,
+      message: data.message || "Device name updated successfully",
+    };
+  } catch (error) {
+    console.error("Error updating device name:", error);
+    return {
+      success: false,
+      message: "An error occurred. Please try again.",
+    };
+  }
+}
+
+/**
  * Response for device unlink requests.
  */
 export interface UnlinkDeviceResponse {

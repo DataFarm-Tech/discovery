@@ -3,11 +3,16 @@
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Graph from "@/components/Graph";
-import { getDeviceData, DeviceDataResponse } from "@/lib/device";
+import {
+  getDeviceData,
+  DeviceDataResponse,
+  editDeviceName,
+} from "@/lib/device";
 import InfoPopup from "@/components/InfoPopup";
 import { MdDelete, MdEdit, MdArrowBack } from "react-icons/md";
 import DashboardHeader from "@/components/DashboardHeader";
 import Sidebar from "@/components/Sidebar";
+import EditDeviceNameModal from "@/components/modals/EditDeviceNameModal";
 import DeleteDeviceModal from "@/components/modals/DeleteDeviceModal";
 
 // Hard-coded battery level
@@ -308,6 +313,23 @@ function DeviceViewContent() {
     }
   };
 
+  const handleEditSubmit = async (newName: string) => {
+    const token = localStorage.getItem("token");
+    if (!token) throw new Error("You must be logged in.");
+    if (!nodeId) throw new Error("No device selected.");
+
+    const result = await editDeviceName(
+      { node_id: nodeId, node_name: newName },
+      token,
+    );
+
+    if (!result.success) {
+      throw new Error(result.message);
+    }
+
+    await fetchDeviceData();
+  };
+
   // Fetch device data - extracted for reuse
   const fetchDeviceData = async () => {
     if (!nodeId) {
@@ -370,7 +392,7 @@ function DeviceViewContent() {
 
   const handleEditSuccess = () => {
     // Refresh the page data without full reload
-    fetchDeviceData();
+    // fetchDeviceData();
   };
 
   const handleDeleteSuccess = () => {
@@ -404,7 +426,7 @@ function DeviceViewContent() {
 
   useEffect(() => {
     fetchDeviceData();
-  }, [nodeId]);
+  }, []);
 
   const lastUpdated = (() => {
     const all = [
@@ -940,6 +962,13 @@ function DeviceViewContent() {
           </div>
         </div>
       </div>
+
+      <EditDeviceNameModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        currentName={moistureData?.node_name || phData?.node_name || "Device"}
+        onSubmit={handleEditSubmit}
+      />
 
       <DeleteDeviceModal
         isOpen={isDeleteModalOpen}
