@@ -1,16 +1,26 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import Graph from "@/components/Graph";
-import { getDeviceData, DeviceDataResponse } from "@/lib/device";
+import {
+  getDeviceData,
+  DeviceDataResponse,
+  editDeviceName,
+} from "@/lib/device";
 import InfoPopup from "@/components/InfoPopup";
+import { MdDelete, MdEdit, MdArrowBack } from "react-icons/md";
+import DashboardHeader from "@/components/DashboardHeader";
+import Sidebar from "@/components/Sidebar";
+import EditDeviceNameModal from "@/components/modals/EditDeviceNameModal";
+import DeleteDeviceModal from "@/components/modals/DeleteDeviceModal";
 
 // Hard-coded battery level
 const BATTERY_PERCENT = 87;
 
 function DeviceViewContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const nodeId = searchParams.get("nodeId");
 
   const [moistureData, setMoistureData] = useState<
@@ -34,6 +44,11 @@ function DeviceViewContent() {
   const [error, setError] = useState<string | null>(null);
   const [paddockType, setPaddockType] = useState<string>("default");
   const [paddockId, setPaddockId] = useState<number | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [devices, setDevices] = useState<any[]>([]);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
   const [moistureTrend, setMoistureTrend] = useState<{
     trend: "up" | "down" | "stable" | "no-data";
@@ -292,6 +307,99 @@ function DeviceViewContent() {
     return alerts;
   }
 
+  const handleSearchItemSelect = (item: any) => {
+    if (item.node_id) {
+      router.push(`/device/view?nodeId=${item.node_id}`);
+    }
+  };
+
+  const handleEditSubmit = async (newName: string) => {
+    const token = localStorage.getItem("token");
+    if (!token) throw new Error("You must be logged in.");
+    if (!nodeId) throw new Error("No device selected.");
+
+    const result = await editDeviceName(
+      { node_id: nodeId, node_name: newName },
+      token,
+    );
+
+    if (!result.success) {
+      throw new Error(result.message);
+    }
+
+    await fetchDeviceData();
+  };
+
+  // Fetch device data - extracted for reuse
+  const fetchDeviceData = async () => {
+    if (!nodeId) {
+      setError("No device selected.");
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) throw new Error("You must be logged in.");
+
+      const moisture = await getDeviceData(
+        { nodeId, readingType: "moisture" },
+        token,
+      );
+      const ph = await getDeviceData({ nodeId, readingType: "ph" }, token);
+      const temperature = await getDeviceData(
+        { nodeId, readingType: "temperature" },
+        token,
+      );
+      const nitrogen = await getDeviceData(
+        { nodeId, readingType: "nitrogen" },
+        token,
+      );
+
+      if (moisture.success && moisture.node) {
+        setMoistureData(moisture.node);
+        setMoistureTrend(calculateTrend(moisture.node.readings));
+      }
+      if (ph.success && ph.node) {
+        setPhData(ph.node);
+        setPhTrend(calculateTrend(ph.node.readings));
+      }
+      if (temperature.success && temperature.node) {
+        setTemperatureData(temperature.node);
+        setTemperatureTrend(calculateTrend(temperature.node.readings));
+      }
+      if (nitrogen.success && nitrogen.node) {
+        setNitrogenData(nitrogen.node);
+        setNitrogenTrend(calculateTrend(nitrogen.node.readings));
+      }
+
+      if (
+        !moisture.success &&
+        !ph.success &&
+        !temperature.success &&
+        !nitrogen.success
+      )
+        throw new Error("Failed to load readings.");
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEditSuccess = () => {
+    // Refresh the page data without full reload
+    // fetchDeviceData();
+  };
+
+  const handleDeleteSuccess = () => {
+    // Navigate back to previous page
+    router.back();
+  };
+
   // CSV EXPORTER
   const exportToCSV = () => {
     const data =
@@ -317,84 +425,8 @@ function DeviceViewContent() {
   };
 
   useEffect(() => {
-    if (!nodeId) {
-      setError("No device selected.");
-      setLoading(false);
-      return;
-    }
-
-    const fetchBoth = async () => {
-      setLoading(true);
-      setError(null);
-
-      try {
-        const token = localStorage.getItem("token");
-        if (!token) throw new Error("You must be logged in.");
-
-        const moisture = await getDeviceData(
-          { nodeId, readingType: "moisture" },
-          token,
-        );
-        const ph = await getDeviceData({ nodeId, readingType: "ph" }, token);
-        const temperature = await getDeviceData(
-          { nodeId, readingType: "temperature" },
-          token,
-        );
-        const nitrogen = await getDeviceData(
-          { nodeId, readingType: "nitrogen" },
-          token,
-        );
-
-        if (moisture.success && moisture.node) {
-          setMoistureData(moisture.node);
-          setMoistureTrend(calculateTrend(moisture.node.readings));
-          // Capture paddock ID for fetching paddock type
-          if (moisture.node?.paddock_id) {
-            setPaddockId(moisture.node.paddock_id);
-            // Fetch paddock info to get crop type
-            const paddockResponse = await fetch(
-              `${
-                process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
-              }/paddock/${moisture.node.paddock_id}`,
-              {
-                headers: { Authorization: `Bearer ${token}` },
-              },
-            );
-            if (paddockResponse.ok) {
-              const paddockData = await paddockResponse.json();
-              setPaddockType(paddockData.paddock_type || "default");
-            }
-          }
-        }
-        if (ph.success && ph.node) {
-          setPhData(ph.node);
-          setPhTrend(calculateTrend(ph.node.readings));
-        }
-        if (temperature.success && temperature.node) {
-          setTemperatureData(temperature.node);
-          setTemperatureTrend(calculateTrend(temperature.node.readings));
-        }
-        if (nitrogen.success && nitrogen.node) {
-          setNitrogenData(nitrogen.node);
-          setNitrogenTrend(calculateTrend(nitrogen.node.readings));
-        }
-
-        if (
-          !moisture.success &&
-          !ph.success &&
-          !temperature.success &&
-          !nitrogen.success
-        )
-          throw new Error("Failed to load readings.");
-      } catch (err: any) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchBoth();
-  }, [nodeId]);
+    fetchDeviceData();
+  }, []);
 
   const lastUpdated = (() => {
     const all = [
@@ -527,367 +559,425 @@ function DeviceViewContent() {
           : "Nitrogen";
 
   return (
-    <div className="min-h-screen bg-[#0c1220] text-white">
-      {/* Header */}
-      <div className="sticky top-0 z-40 bg-gradient-to-b from-[#0c1220] via-[#0c1220] to-transparent border-b border-[#00be64]/20 backdrop-blur-sm">
-        <div className="px-8 py-6">
-          <button
-            onClick={() => window.history.back()}
-            className="inline-flex items-center gap-2 text-gray-400 hover:text-white transition-colors group mb-4"
-          >
-            <span className="text-xl group-hover:-translate-x-1 transition-transform">
-              ←
-            </span>
-            <span>Back</span>
-          </button>
-          <div className="flex items-center justify-between">
-            <h1 className="text-4xl font-bold tracking-tight">
-              {moistureData?.node_name || phData?.node_name || "Device"}
-            </h1>
-            {/* <div className="flex items-center gap-4">
-              <div className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                status.color === "green" 
-                  ? "bg-green-500/20 text-green-300 border border-green-500/30" 
-                  : "bg-red-500/20 text-red-300 border border-red-500/30"
-              }`}>
-                {status.label}
-              </div>
-            </div> */}
-          </div>
-        </div>
-      </div>
+    <main className="h-screen overflow-hidden bg-[#0c1220] px-6 py-6 text-white relative flex flex-col">
+      <DashboardHeader
+        userName="Lucas"
+        menuOpen={menuOpen}
+        setMenuOpen={setMenuOpen}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        paddocks={[]}
+        devices={devices}
+        onSearchItemSelect={handleSearchItemSelect}
+      />
 
-      {/* Main Content */}
-      <div className="px-8 py-8 max-w-7xl mx-auto">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* LEFT COLUMN - Main Content */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* CRITICAL ALERTS SECTION */}
-            <div className="bg-gradient-to-br from-[#1a0f0f] to-[#0f0a0a] border border-red-500/30 rounded-2xl p-6 shadow-lg">
-              <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-                <span className="w-1 h-6 bg-red-500 rounded-full"></span>
-                <span className="text-red-400">Alerts</span>
-              </h2>
-              {getCriticalAlerts().length > 0 ? (
-                <div className="space-y-3">
-                  {getCriticalAlerts().map((alert, index) => (
-                    <div
-                      key={index}
-                      className={`p-4 rounded-lg border-l-4 flex items-start gap-3 ${
-                        alert.severity === "critical"
-                          ? "bg-red-950/30 border-l-red-500 border border-red-500/20"
-                          : "bg-orange-950/30 border-l-orange-500 border border-orange-500/20"
-                      }`}
-                    >
+      <Sidebar menuOpen={menuOpen} setMenuOpen={setMenuOpen} />
+
+      <div className="flex-1 overflow-y-auto flex flex-col items-center pt-6">
+        <div className="w-full max-w-7xl space-y-8">
+          <button
+            onClick={() => router.back()}
+            className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors group text-lg"
+          >
+            <MdArrowBack
+              size={24}
+              className="group-hover:-translate-x-1 transition-transform"
+            />
+            <span>Back to Paddock </span>
+          </button>
+
+          <section className="bg-[#121829] border border-[#00be64]/30 rounded-2xl shadow-xl p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-3xl font-bold text-white">
+                  {moistureData?.node_name || phData?.node_name || "Device"}
+                </h1>
+                <p className="text-gray-400 text-sm mt-1">
+                  Node ID:{" "}
+                  <span className="font-mono text-[#00be64]">
+                    {moistureData?.node_id || phData?.node_id || nodeId}
+                  </span>
+                </p>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setIsEditModalOpen(true)}
+                  className="p-2.5 bg-[#00be64]/20 hover:bg-[#00be64]/30 rounded-lg transition-all group"
+                  title="Edit device"
+                >
+                  <MdEdit
+                    size={20}
+                    color="#00be64"
+                    className="group-hover:scale-110 transition-transform"
+                  />
+                </button>
+
+                <button
+                  onClick={() => setIsDeleteModalOpen(true)}
+                  className="p-2.5 bg-red-500/20 hover:bg-red-500/30 rounded-lg transition-all group"
+                  title="Remove device"
+                >
+                  <MdDelete
+                    size={20}
+                    color="#ef4444"
+                    className="group-hover:scale-110 transition-transform"
+                  />
+                </button>
+              </div>
+            </div>
+          </section>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* LEFT COLUMN - Main Content */}
+            <div className="lg:col-span-2 space-y-6">
+              {/* CRITICAL ALERTS SECTION */}
+              <div className="bg-gradient-to-br from-[#1a0f0f] to-[#0f0a0a] border border-red-500/30 rounded-2xl p-6 shadow-lg">
+                <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+                  <span className="w-1 h-6 bg-red-500 rounded-full"></span>
+                  <span className="text-red-400">Alerts</span>
+                </h2>
+                {getCriticalAlerts().length > 0 ? (
+                  <div className="space-y-3">
+                    {getCriticalAlerts().map((alert, index) => (
                       <div
-                        className={`mt-0.5 text-lg font-bold flex-shrink-0 ${
+                        key={index}
+                        className={`p-4 rounded-lg border-l-4 flex items-start gap-3 ${
                           alert.severity === "critical"
-                            ? "text-red-400"
-                            : "text-orange-400"
+                            ? "bg-red-950/30 border-l-red-500 border border-red-500/20"
+                            : "bg-orange-950/30 border-l-orange-500 border border-orange-500/20"
                         }`}
                       >
-                        ⚠
-                      </div>
-                      <div className="flex-grow">
-                        <p
-                          className={`text-sm font-bold ${
+                        <div
+                          className={`mt-0.5 text-lg font-bold flex-shrink-0 ${
                             alert.severity === "critical"
-                              ? "text-red-300"
-                              : "text-orange-300"
+                              ? "text-red-400"
+                              : "text-orange-400"
                           }`}
                         >
-                          {alert.type}
-                        </p>
-                        <p className="text-xs text-gray-300 mt-1">
-                          {alert.message}
-                        </p>
+                          ⚠
+                        </div>
+                        <div className="flex-grow">
+                          <p
+                            className={`text-sm font-bold ${
+                              alert.severity === "critical"
+                                ? "text-red-300"
+                                : "text-orange-300"
+                            }`}
+                          >
+                            {alert.type}
+                          </p>
+                          <p className="text-xs text-gray-300 mt-1">
+                            {alert.message}
+                          </p>
+                        </div>
                       </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-3 p-4 bg-green-950/20 border border-green-500/20 rounded-lg">
+                    <div className="text-lg font-bold text-green-400">✓</div>
+                    <div>
+                      <p className="text-sm font-bold text-green-300">
+                        All Systems Normal
+                      </p>
+                      <p className="text-xs text-gray-400 mt-1">
+                        All sensor readings are within optimal ranges for{" "}
+                        {paddockType || "default"} crop.
+                      </p>
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="flex items-center gap-3 p-4 bg-green-950/20 border border-green-500/20 rounded-lg">
-                  <div className="text-lg font-bold text-green-400">✓</div>
-                  <div>
-                    <p className="text-sm font-bold text-green-300">
-                      All Systems Normal
-                    </p>
-                    <p className="text-xs text-gray-400 mt-1">
-                      All sensor readings are within optimal ranges for{" "}
-                      {paddockType || "default"} crop.
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* LATEST READINGS */}
-            <div className="bg-gradient-to-br from-[#121829] to-[#0f1318] border border-[#00be64]/30 rounded-2xl p-6 shadow-lg">
-              <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
-                <span className="w-1 h-6 bg-[#00be64] rounded-full"></span>
-                Latest Readings
-                <InfoPopup
-                  title="Latest Readings"
-                  description="Shows the most recent sensor values from your device. The percentage indicates the change from the previous reading period, calculated by comparing the latest reading with the previous one."
-                />
-              </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="bg-[#0c1220]/50 border border-[#00be64]/40 rounded-xl p-5 text-center hover:border-[#00be64] transition-colors">
-                  <p className="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wide">
-                    Moisture
-                  </p>
-                  <div className="flex items-baseline justify-center gap-2">
-                    <p className="text-3xl font-bold text-[#00be64]">
-                      {recentMoisture ?? "--"}
-                    </p>
-                    {moistureTrend.trend === "up" && (
-                      <span className="text-sm text-green-400 font-semibold">
-                        ↑ +{moistureTrend.percentChange}%
-                      </span>
-                    )}
-                    {moistureTrend.trend === "down" && (
-                      <span className="text-sm text-orange-400 font-semibold">
-                        ↓ {moistureTrend.percentChange}%
-                      </span>
-                    )}
-                    {moistureTrend.trend === "stable" && (
-                      <span className="text-sm text-gray-400 font-semibold">
-                        → Stable
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-xs text-gray-500 mt-1">%</p>
-                </div>
-                <div className="bg-[#0c1220]/50 border border-[#00be64]/40 rounded-xl p-5 text-center hover:border-[#00be64] transition-colors">
-                  <p className="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wide">
-                    Temperature
-                  </p>
-                  <div className="flex items-baseline justify-center gap-2">
-                    <p className="text-3xl font-bold text-[#00be64]">
-                      {recentTemperature ?? "--"}
-                    </p>
-                    {temperatureTrend.trend === "up" && (
-                      <span className="text-sm text-red-400 font-semibold">
-                        ↑ +{temperatureTrend.percentChange}%
-                      </span>
-                    )}
-                    {temperatureTrend.trend === "down" && (
-                      <span className="text-sm text-blue-400 font-semibold">
-                        ↓ {temperatureTrend.percentChange}%
-                      </span>
-                    )}
-                    {temperatureTrend.trend === "stable" && (
-                      <span className="text-sm text-gray-400 font-semibold">
-                        → Stable
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-xs text-gray-500 mt-1">°C</p>
-                </div>
-                <div className="bg-[#0c1220]/50 border border-[#00be64]/40 rounded-xl p-5 text-center hover:border-[#00be64] transition-colors">
-                  <p className="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wide">
-                    Nitrogen
-                  </p>
-                  <div className="flex items-baseline justify-center gap-2">
-                    <p className="text-3xl font-bold text-[#00be64]">
-                      {recentNitrogen ?? "--"}
-                    </p>
-                    {nitrogenTrend.trend === "up" && (
-                      <span className="text-sm text-green-400 font-semibold">
-                        ↑ +{nitrogenTrend.percentChange}%
-                      </span>
-                    )}
-                    {nitrogenTrend.trend === "down" && (
-                      <span className="text-sm text-orange-400 font-semibold">
-                        ↓ {nitrogenTrend.percentChange}%
-                      </span>
-                    )}
-                    {nitrogenTrend.trend === "stable" && (
-                      <span className="text-sm text-gray-400 font-semibold">
-                        → Stable
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-xs text-gray-500 mt-1">ppm</p>
-                </div>
-                <div className="bg-[#0c1220]/50 border border-[#00be64]/40 rounded-xl p-5 text-center hover:border-[#00be64] transition-colors">
-                  <p className="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wide">
-                    pH Level
-                  </p>
-                  <div className="flex items-baseline justify-center gap-2">
-                    <p className="text-3xl font-bold text-[#00be64]">
-                      {recentPh ?? "--"}
-                    </p>
-                    {phTrend.trend === "up" && (
-                      <span className="text-sm text-red-400 font-semibold">
-                        ↑ +{phTrend.percentChange}%
-                      </span>
-                    )}
-                    {phTrend.trend === "down" && (
-                      <span className="text-sm text-blue-400 font-semibold">
-                        ↓ {phTrend.percentChange}%
-                      </span>
-                    )}
-                    {phTrend.trend === "stable" && (
-                      <span className="text-sm text-gray-400 font-semibold">
-                        → Stable
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-xs text-gray-500 mt-1">pH</p>
-                </div>
-              </div>
-            </div>
-
-            {/* GRAPH SECTION */}
-            <section className="bg-gradient-to-br from-[#121829] to-[#0f1318] border border-[#00be64]/30 rounded-2xl shadow-lg p-6">
-              <div className="mb-6">
-                <h2 className="text-xl font-bold flex items-center gap-2 mb-4">
-                  <span className="w-1 h-6 bg-[#00be64] rounded-full"></span>
-                  {graphTitle}
-                </h2>
-
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                  <div className="flex items-center gap-2">
-                    <label className="text-sm text-gray-400">
-                      Time Period:
-                    </label>
-                    <select
-                      value={timePeriod}
-                      onChange={(e) =>
-                        setTimePeriod(e.target.value as typeof timePeriod)
-                      }
-                      className="px-3 py-2 text-sm bg-[#0c1220] border border-[#00be64]/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-[#00be64] cursor-pointer hover:border-[#00be64] transition [&>option]:bg-[#0c1220] [&>option]:text-white"
-                    >
-                      <option value="week">Past Week</option>
-                      <option value="month">Past Month</option>
-                      <option value="6months">Past 6 Months</option>
-                      <option value="year">Past Year</option>
-                      <option value="all">All Time</option>
-                    </select>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <label className="text-sm text-gray-400">Graph Type:</label>
-                    <select
-                      value={selectedGraph}
-                      onChange={(e) =>
-                        setSelectedGraph(e.target.value as typeof selectedGraph)
-                      }
-                      className="px-3 py-2 text-sm bg-[#0c1220] border border-[#00be64]/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-[#00be64] cursor-pointer hover:border-[#00be64] transition [&>option]:bg-[#0c1220] [&>option]:text-white"
-                    >
-                      <option value="moisture">Moisture</option>
-                      <option value="temperature">Temperature</option>
-                      <option value="nitrogen">Nitrogen</option>
-                      <option value="ph">pH</option>
-                    </select>
-                    <button
-                      onClick={exportToCSV}
-                      className="px-4 py-2 text-sm bg-[#00be64] text-black font-semibold rounded-lg hover:bg-[#00d975] transition-colors shadow-lg shadow-[#00be64]/20"
-                    >
-                      Export CSV
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              <div className="w-full h-[400px] rounded-xl overflow-hidden bg-[#0c1220]/50">
-                <Graph
-                  title={graphTitle}
-                  data={graphData}
-                  timePeriod={timePeriod}
-                  optimalValue={getOptimalValue(selectedGraph)}
-                />
-              </div>
-            </section>
-          </div>
-
-          {/* RIGHT COLUMN - Summary Info */}
-          <div className="space-y-6">
-            <div className="bg-gradient-to-br from-[#121829] to-[#0f1318] border border-[#00be64]/30 rounded-2xl p-6 shadow-lg">
-              <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-4">
-                Device Info
-              </h3>
-              <div className="space-y-4">
-                <div>
-                  <p className="text-xs text-gray-500 mb-1">Node ID</p>
-                  <p className="font-mono text-sm text-[#00be64] break-all">
-                    {moistureData?.node_id || phData?.node_id || nodeId}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500 mb-1">Paddock ID</p>
-                  <p className="font-mono text-sm text-[#00be64]">
-                    {moistureData?.paddock_id || phData?.paddock_id}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div
-              className={`bg-gradient-to-br rounded-2xl p-6 shadow-lg border ${
-                status.color === "green"
-                  ? "from-green-500/10 to-green-500/5 border-green-500/30"
-                  : "from-red-500/10 to-red-500/5 border-red-500/30"
-              }`}
-            >
-              <h3
-                className={`text-sm font-semibold uppercase tracking-wide mb-4 ${
-                  status.color === "green" ? "text-green-300" : "text-red-300"
-                }`}
-              >
-                Device Status
-              </h3>
-              <div className="space-y-4">
-                <div>
-                  <p className="text-xs text-gray-400 mb-2">Status</p>
-                  <div className="flex items-center gap-3">
-                    <span
-                      className={`inline-block w-3 h-3 rounded-full animate-pulse ${
-                        status.color === "green" ? "bg-green-400" : "bg-red-500"
-                      }`}
-                    />
-                    <span
-                      className={`text-lg font-semibold ${
-                        status.color === "green"
-                          ? "text-green-400"
-                          : "text-red-500"
-                      }`}
-                    >
-                      {status.label}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="pt-3 border-t border-white/10">
-                  <p className="text-xs text-gray-400 mb-2">
-                    Data Availability
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 bg-green-400 rounded-full"></span>
-                    <span className="text-sm text-gray-300">
-                      Readings available
-                    </span>
-                  </div>
-                </div>
-
-                {lastUpdated && (
-                  <div className="pt-3 border-t border-white/10">
-                    <p className="text-xs text-gray-400 mb-2">Last Updated</p>
-                    <p className="text-base font-semibold text-[#00be64]">
-                      {timeAgo(lastUpdated)}
-                    </p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      {formatTimestamp(lastUpdated)}
-                    </p>
                   </div>
                 )}
               </div>
+
+              {/* LATEST READINGS */}
+              <div className="bg-gradient-to-br from-[#121829] to-[#0f1318] border border-[#00be64]/30 rounded-2xl p-6 shadow-lg">
+                <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
+                  <span className="w-1 h-6 bg-[#00be64] rounded-full"></span>
+                  Latest Readings
+                  <InfoPopup
+                    title="Latest Readings"
+                    description="Shows the most recent sensor values from your device. The percentage indicates the change from the previous reading period, calculated by comparing the latest reading with the previous one."
+                  />
+                </h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="bg-[#0c1220]/50 border border-[#00be64]/40 rounded-xl p-5 text-center hover:border-[#00be64] transition-colors">
+                    <p className="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wide">
+                      Moisture
+                    </p>
+                    <div className="flex items-baseline justify-center gap-2">
+                      <p className="text-3xl font-bold text-[#00be64]">
+                        {recentMoisture ?? "--"}
+                      </p>
+                      {moistureTrend.trend === "up" && (
+                        <span className="text-sm text-green-400 font-semibold">
+                          ↑ +{moistureTrend.percentChange}%
+                        </span>
+                      )}
+                      {moistureTrend.trend === "down" && (
+                        <span className="text-sm text-orange-400 font-semibold">
+                          ↓ {moistureTrend.percentChange}%
+                        </span>
+                      )}
+                      {moistureTrend.trend === "stable" && (
+                        <span className="text-sm text-gray-400 font-semibold">
+                          → Stable
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">%</p>
+                  </div>
+                  <div className="bg-[#0c1220]/50 border border-[#00be64]/40 rounded-xl p-5 text-center hover:border-[#00be64] transition-colors">
+                    <p className="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wide">
+                      Temperature
+                    </p>
+                    <div className="flex items-baseline justify-center gap-2">
+                      <p className="text-3xl font-bold text-[#00be64]">
+                        {recentTemperature ?? "--"}
+                      </p>
+                      {temperatureTrend.trend === "up" && (
+                        <span className="text-sm text-red-400 font-semibold">
+                          ↑ +{temperatureTrend.percentChange}%
+                        </span>
+                      )}
+                      {temperatureTrend.trend === "down" && (
+                        <span className="text-sm text-blue-400 font-semibold">
+                          ↓ {temperatureTrend.percentChange}%
+                        </span>
+                      )}
+                      {temperatureTrend.trend === "stable" && (
+                        <span className="text-sm text-gray-400 font-semibold">
+                          → Stable
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">°C</p>
+                  </div>
+                  <div className="bg-[#0c1220]/50 border border-[#00be64]/40 rounded-xl p-5 text-center hover:border-[#00be64] transition-colors">
+                    <p className="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wide">
+                      Nitrogen
+                    </p>
+                    <div className="flex items-baseline justify-center gap-2">
+                      <p className="text-3xl font-bold text-[#00be64]">
+                        {recentNitrogen ?? "--"}
+                      </p>
+                      {nitrogenTrend.trend === "up" && (
+                        <span className="text-sm text-green-400 font-semibold">
+                          ↑ +{nitrogenTrend.percentChange}%
+                        </span>
+                      )}
+                      {nitrogenTrend.trend === "down" && (
+                        <span className="text-sm text-orange-400 font-semibold">
+                          ↓ {nitrogenTrend.percentChange}%
+                        </span>
+                      )}
+                      {nitrogenTrend.trend === "stable" && (
+                        <span className="text-sm text-gray-400 font-semibold">
+                          → Stable
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">ppm</p>
+                  </div>
+                  <div className="bg-[#0c1220]/50 border border-[#00be64]/40 rounded-xl p-5 text-center hover:border-[#00be64] transition-colors">
+                    <p className="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wide">
+                      pH Level
+                    </p>
+                    <div className="flex items-baseline justify-center gap-2">
+                      <p className="text-3xl font-bold text-[#00be64]">
+                        {recentPh ?? "--"}
+                      </p>
+                      {phTrend.trend === "up" && (
+                        <span className="text-sm text-red-400 font-semibold">
+                          ↑ +{phTrend.percentChange}%
+                        </span>
+                      )}
+                      {phTrend.trend === "down" && (
+                        <span className="text-sm text-blue-400 font-semibold">
+                          ↓ {phTrend.percentChange}%
+                        </span>
+                      )}
+                      {phTrend.trend === "stable" && (
+                        <span className="text-sm text-gray-400 font-semibold">
+                          → Stable
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">pH</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* GRAPH SECTION */}
+              <section className="bg-gradient-to-br from-[#121829] to-[#0f1318] border border-[#00be64]/30 rounded-2xl shadow-lg p-6">
+                <div className="mb-6">
+                  <h2 className="text-xl font-bold flex items-center gap-2 mb-4">
+                    <span className="w-1 h-6 bg-[#00be64] rounded-full"></span>
+                    {graphTitle}
+                  </h2>
+
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div className="flex items-center gap-2">
+                      <label className="text-sm text-gray-400">
+                        Time Period:
+                      </label>
+                      <select
+                        value={timePeriod}
+                        onChange={(e) =>
+                          setTimePeriod(e.target.value as typeof timePeriod)
+                        }
+                        className="px-3 py-2 text-sm bg-[#0c1220] border border-[#00be64]/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-[#00be64] cursor-pointer hover:border-[#00be64] transition [&>option]:bg-[#0c1220] [&>option]:text-white"
+                      >
+                        <option value="week">Past Week</option>
+                        <option value="month">Past Month</option>
+                        <option value="6months">Past 6 Months</option>
+                        <option value="year">Past Year</option>
+                        <option value="all">All Time</option>
+                      </select>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <label className="text-sm text-gray-400">
+                        Graph Type:
+                      </label>
+                      <select
+                        value={selectedGraph}
+                        onChange={(e) =>
+                          setSelectedGraph(
+                            e.target.value as typeof selectedGraph,
+                          )
+                        }
+                        className="px-3 py-2 text-sm bg-[#0c1220] border border-[#00be64]/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-[#00be64] cursor-pointer hover:border-[#00be64] transition [&>option]:bg-[#0c1220] [&>option]:text-white"
+                      >
+                        <option value="moisture">Moisture</option>
+                        <option value="temperature">Temperature</option>
+                        <option value="nitrogen">Nitrogen</option>
+                        <option value="ph">pH</option>
+                      </select>
+                      <button
+                        onClick={exportToCSV}
+                        className="px-4 py-2 text-sm bg-[#00be64] text-black font-semibold rounded-lg hover:bg-[#00d975] transition-colors shadow-lg shadow-[#00be64]/20"
+                      >
+                        Export CSV
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="w-full h-[400px] rounded-xl overflow-hidden bg-[#0c1220]/50">
+                  <Graph
+                    title={graphTitle}
+                    data={graphData}
+                    timePeriod={timePeriod}
+                    optimalValue={getOptimalValue(selectedGraph)}
+                  />
+                </div>
+              </section>
+            </div>
+
+            {/* RIGHT COLUMN - Summary Info */}
+            <div className="space-y-6">
+              <div className="bg-gradient-to-br from-[#121829] to-[#0f1318] border border-[#00be64]/30 rounded-2xl p-6 shadow-lg">
+                <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-4">
+                  Device Info
+                </h3>
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Node ID</p>
+                    <p className="font-mono text-sm text-[#00be64] break-all">
+                      {moistureData?.node_id || phData?.node_id || nodeId}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Paddock ID</p>
+                    <p className="font-mono text-sm text-[#00be64]">
+                      {moistureData?.paddock_id || phData?.paddock_id}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div
+                className={`bg-gradient-to-br rounded-2xl p-6 shadow-lg border ${
+                  status.color === "green"
+                    ? "from-green-500/10 to-green-500/5 border-green-500/30"
+                    : "from-red-500/10 to-red-500/5 border-red-500/30"
+                }`}
+              >
+                <h3
+                  className={`text-sm font-semibold uppercase tracking-wide mb-4 ${
+                    status.color === "green" ? "text-green-300" : "text-red-300"
+                  }`}
+                >
+                  Device Status
+                </h3>
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-xs text-gray-400 mb-2">Status</p>
+                    <div className="flex items-center gap-3">
+                      <span
+                        className={`inline-block w-3 h-3 rounded-full animate-pulse ${
+                          status.color === "green"
+                            ? "bg-green-400"
+                            : "bg-red-500"
+                        }`}
+                      />
+                      <span
+                        className={`text-lg font-semibold ${
+                          status.color === "green"
+                            ? "text-green-400"
+                            : "text-red-500"
+                        }`}
+                      >
+                        {status.label}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="pt-3 border-t border-white/10">
+                    <p className="text-xs text-gray-400 mb-2">
+                      Data Availability
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 bg-green-400 rounded-full"></span>
+                      <span className="text-sm text-gray-300">
+                        Readings available
+                      </span>
+                    </div>
+                  </div>
+
+                  {lastUpdated && (
+                    <div className="pt-3 border-t border-white/10">
+                      <p className="text-xs text-gray-400 mb-2">Last Updated</p>
+                      <p className="text-base font-semibold text-[#00be64]">
+                        {timeAgo(lastUpdated)}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {formatTimestamp(lastUpdated)}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
+
+      <EditDeviceNameModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        currentName={moistureData?.node_name || phData?.node_name || "Device"}
+        onSubmit={handleEditSubmit}
+      />
+
+      <DeleteDeviceModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        nodeId={nodeId || ""}
+        nodeName={moistureData?.node_name || phData?.node_name || "Device"}
+        onSuccess={handleDeleteSuccess}
+      />
+    </main>
   );
 }
 

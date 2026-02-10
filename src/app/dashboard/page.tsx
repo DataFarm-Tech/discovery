@@ -12,7 +12,7 @@ import { Device } from "@/components/DeviceTable";
 import { Paddock } from "@/components/PaddockTable";
 import { getPaddocks } from "@/lib/paddock";
 import SoilHealthScore from "@/components/SoilHealthScore";
-import CreatePaddockModal from "@/components/CreatePaddockModal";
+import CreatePaddockModal from "@/components/modals/CreatePaddockModal";
 
 // Load DeviceMap dynamically (Leaflet needs browser APIs)
 const DeviceMap = dynamic(() => import("@/components/DeviceMap"), {
@@ -26,7 +26,7 @@ export default function DashboardPage() {
   const [paddocks, setPaddocks] = useState<Paddock[]>([]);
   const [menuOpen, setMenuOpen] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [isCreatePaddockModalOpen, setIsCreatePaddockModalOpen] =
     useState(false);
 
@@ -65,46 +65,48 @@ export default function DashboardPage() {
 
   // Handler for when a search item is clicked
   const handleSearchItemSelect = (item: any) => {
-  console.log('Selected search item:', item);
+    console.log("Selected search item:", item);
 
-  // Handle Paddock
-  if (item.paddock_id || item.id) {
-    const paddockId = item.paddock_id || item.id;
-    const paddockName = item.paddock_name || item.name || 'Unnamed Paddock';
+    // Handle Paddock
+    if (item.paddock_id || item.id) {
+      const paddockId = item.paddock_id || item.id;
+      const paddockName = item.paddock_name || item.name || "Unnamed Paddock";
 
-    sessionStorage.setItem(
-      "paddockData",
-      JSON.stringify({
-        paddockId,
-        paddockName,
-      })
-    );
-    router.push("/paddock/view");
-    setSearchQuery(''); // Optional: clear search after selection
-    return;
-  }
+      sessionStorage.setItem(
+        "paddockData",
+        JSON.stringify({
+          paddockId,
+          paddockName,
+        }),
+      );
+      router.push("/paddock/view");
+      setSearchQuery(""); // Optional: clear search after selection
+      return;
+    }
 
-  // Handle Device
-  if (item.node_id) {
-    sessionStorage.setItem(
-      "selectedDevice",
-      JSON.stringify({
-        node_id: item.node_id,
-        node_name: item.node_name || item.node_id,
-      })
-    );
-    router.push(`/device/view?nodeId=${item.node_id}`);
-    setSearchQuery(''); // Optional: clear search
-    return;
-  }
+    // Handle Device
+    if (item.node_id) {
+      sessionStorage.setItem(
+        "selectedDevice",
+        JSON.stringify({
+          node_id: item.node_id,
+          node_name: item.node_name || item.node_id,
+        }),
+      );
+      router.push(`/device/view?nodeId=${item.node_id}`);
+      setSearchQuery(""); // Optional: clear search
+      return;
+    }
 
-  // Fallback (shouldn't happen)
-  toast.error("Unable to navigate to selected item");
-};
+    // Fallback (shouldn't happen)
+    toast.error("Unable to navigate to selected item");
+  };
 
   // Filter paddocks by search query
-  const filteredPaddocks = paddocks.filter(p =>
-    (p.paddock_name || p.paddock_name || '')?.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredPaddocks = paddocks.filter((p) =>
+    (p.paddock_name || p.paddock_name || "")
+      ?.toLowerCase()
+      .includes(searchQuery.toLowerCase()),
   );
 
   return (
@@ -183,25 +185,36 @@ export default function DashboardPage() {
                 <li className="flex items-start gap-3">
                   <span className="text-[#00be64] mt-1">•</span>
                   <span>
-                    <strong className="text-white">Enhanced Paddock Management</strong> — Create, edit, and organize your paddocks with an intuitive interface
+                    <strong className="text-white">
+                      Enhanced Paddock Management
+                    </strong>{" "}
+                    — Create, edit, and organize your paddocks with an intuitive
+                    interface
                   </span>
                 </li>
                 <li className="flex items-start gap-3">
                   <span className="text-[#00be64] mt-1">•</span>
                   <span>
-                    <strong className="text-white">Real-Time Search</strong> — Quickly find paddocks and devices with our new smart search functionality
+                    <strong className="text-white">Real-Time Search</strong> —
+                    Quickly find paddocks and devices with our new smart search
+                    functionality
                   </span>
                 </li>
                 <li className="flex items-start gap-3">
                   <span className="text-[#00be64] mt-1">•</span>
                   <span>
-                    <strong className="text-white">Educational Resources</strong> — Access guides and tutorials to maximize your soil intelligence insights
+                    <strong className="text-white">
+                      Educational Resources
+                    </strong>{" "}
+                    — Access guides and tutorials to maximize your soil
+                    intelligence insights
                   </span>
                 </li>
               </ul>
 
               <p className="mt-6 text-sm text-gray-400">
-                Stay tuned for more updates as we continue to improve your Discovery experience.
+                Stay tuned for more updates as we continue to improve your
+                Discovery experience.
               </p>
             </div>
           </div>
@@ -276,7 +289,10 @@ export default function DashboardPage() {
               <p className="text-white text-center">Loading paddocks...</p>
             </div>
           ) : (
-            <PaddockTable paddocks={filteredPaddocks} onAddPaddock={handleAddPaddock} />
+            <PaddockTable
+              paddocks={filteredPaddocks}
+              onAddPaddock={handleAddPaddock}
+            />
           )}
         </section>
       </div>
