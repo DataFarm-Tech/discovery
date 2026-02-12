@@ -27,18 +27,6 @@ jobs:
           echo "LATEST_TAG=$LATEST_TAG" >> $GITHUB_ENV
 
       # ------------------------
-      # 3. Bump version (patch)
-      # ------------------------
-      - name: Bump patch version
-        id: bump
-        run: |
-          IFS='.' read -r MAJOR MINOR PATCH <<< "${LATEST_TAG#v}"
-          PATCH=$((PATCH + 1))
-          NEW_TAG="v$MAJOR.$MINOR.$PATCH"
-          echo "NEW_TAG=$NEW_TAG" >> $GITHUB_ENV
-          echo "Bumped version to $NEW_TAG"
-
-      # ------------------------
       # 4. Create and push new tag
       # ------------------------
       - name: Create new tag
