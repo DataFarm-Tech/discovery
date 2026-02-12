@@ -16,7 +16,9 @@ import {
   getPaddockSensorAverages,
 } from "@/lib/paddock";
 import toast from "react-hot-toast";
-import RegisterDeviceModal from "@/components/RegisterDeviceModal";
+import RegisterDeviceModal from "@/components/modals/RegisterDeviceModal";
+import EditPaddockModal from "@/components/modals/EditPaddockModal";
+import DeletePaddockModal from "@/components/modals/DeletePaddockModal";
 import RecentAverages from "@/components/RecentAverages";
 
 // Lazy-load map component
@@ -27,14 +29,16 @@ const DeviceMap = dynamic(() => import("@/components/DeviceMap"), {
 export default function Page() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [devices, setDevices] = useState<Device[]>([]);
-  const [nodeLocations, setNodeLocations] = useState<Array<{ node_id: string; node_name: string; lat: number; lng: number }>>([]);
-  const [sensorAverages, setSensorAverages] = useState<{ [key: string]: number }>({});
+  const [nodeLocations, setNodeLocations] = useState<
+    Array<{ node_id: string; node_name: string; lat: number; lon: number }>
+  >([]);
+  const [sensorAverages, setSensorAverages] = useState<{
+    [key: string]: number;
+  }>({});
   const [soilHealthScore, setSoilHealthScore] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [newPaddockName, setNewPaddockName] = useState("");
-  const [editError, setEditError] = useState<string | null>(null);
   const [paddockId, setPaddockId] = useState<string | null>(null);
   const [paddockName, setPaddockName] = useState<string>("");
   const [paddockType, setPaddockType] = useState<PaddockType>("default");
@@ -57,7 +61,9 @@ export default function Page() {
   }, []);
 
   // Function to compute soil health score from sensor averages
-  const computeSoilHealthScore = (averages: { [key: string]: number }): number => {
+  const computeSoilHealthScore = (averages: {
+    [key: string]: number;
+  }): number => {
     let score = 0;
     let weightSum = 0;
 
@@ -108,8 +114,8 @@ export default function Page() {
       } else {
         moistureScore = Math.max(0, 50 - Math.abs(moisture - 50) * 2);
       }
-      score += moistureScore * 0.30;
-      weightSum += 0.30;
+      score += moistureScore * 0.3;
+      weightSum += 0.3;
     }
 
     // Normalize score if we have some data
@@ -118,6 +124,36 @@ export default function Page() {
     }
 
     return 0;
+  };
+
+  const fetchDevices = async () => {
+    if (!paddockId) return;
+
+    try {
+      const token = localStorage.getItem("token") || "";
+      const result = await getPaddockDevices(paddockId, token);
+      if (result.success) {
+        const mapped: Device[] = result.devices.map((d: any) => ({
+          node_id: d.node_id,
+          node_name: d.node_name || "",
+          battery: d.battery,
+          lat: d.lat,
+          lon: d.lon,
+        }));
+        setDevices(mapped);
+
+        // Update node locations with mock GPS data
+        const locations = mapped.map((device, index) => ({
+          node_id: device.node_id,
+          node_name: device.node_name,
+          lat: device.lat || 37.7749 + index * 0.001,
+          lon: device.lon || -122.4194 + index * 0.001,
+        }));
+        setNodeLocations(locations);
+      }
+    } catch (err) {
+      console.error("Failed to fetch devices:", err);
+    }
   };
 
   useEffect(() => {
@@ -129,35 +165,17 @@ export default function Page() {
 
       try {
         const token = localStorage.getItem("token") || "";
-        
+
         // Fetch devices
-        const devicesResult = await getPaddockDevices(paddockId, token);
-        if (!devicesResult.success) {
-          throw new Error(devicesResult.message);
-        }
-
-        const mapped: Device[] = devicesResult.devices.map((d: any) => ({
-          node_id: d.node_id,
-          node_name: d.node_name || "",
-          battery: d.battery,
-        }));
-
-        setDevices(mapped);
-
-        // Generate mock GPS coordinates for each device
-        const locations = mapped.map((device, index) => ({
-          node_id: device.node_id,
-          node_name: device.node_name,
-          lat: 51.505 + (index * 0.005),
-          lng: -0.09 + (index * 0.005),
-        }));
-        setNodeLocations(locations);
+        await fetchDevices();
 
         // Fetch sensor averages
         const averagesResult = await getPaddockSensorAverages(paddockId, token);
         if (averagesResult.success && averagesResult.sensor_averages) {
           setSensorAverages(averagesResult.sensor_averages);
-          const computedScore = computeSoilHealthScore(averagesResult.sensor_averages);
+          const computedScore = computeSoilHealthScore(
+            averagesResult.sensor_averages,
+          );
           setSoilHealthScore(computedScore);
         }
       } catch (err: any) {
@@ -176,52 +194,27 @@ export default function Page() {
     }
   };
 
-  const handleEditPaddock = async () => {
-    setEditError(null);
+  const handleEditPaddock = async (newName: string, newType: PaddockType) => {
+    if (!paddockId) throw new Error("No paddock selected");
 
-    if (!newPaddockName.trim()) {
-      setEditError("Paddock name cannot be empty");
-      return;
-    }
+    const token = localStorage.getItem("token") || "";
+    const result = await updatePaddockName(paddockId, newName, newType, token);
 
-    if (
-      newPaddockName.trim() === paddockName &&
-      newPaddockType === paddockType
-    ) {
-      setEditError("No changes made");
-      return;
-    }
-
-    if (!paddockId) return;
-
-    try {
-      const token = localStorage.getItem("token") || "";
-      const result = await updatePaddockName(
-        paddockId,
-        newPaddockName.trim(),
-        newPaddockType,
-        token
+    if (result.success) {
+      sessionStorage.setItem(
+        "paddockData",
+        JSON.stringify({
+          paddockId: paddockId,
+          paddockName: newName,
+          paddockType: newType,
+        }),
       );
 
-      if (result.success) {
-        sessionStorage.setItem(
-          "paddockData",
-          JSON.stringify({
-            paddockId: paddockId,
-            paddockName: newPaddockName.trim(),
-            paddockType: newPaddockType,
-          })
-        );
-
-        setPaddockName(newPaddockName.trim());
-        setPaddockType(newPaddockType);
-        setIsEditModalOpen(false);
-        setEditError(null);
-      } else {
-        setEditError(result.message);
-      }
-    } catch (err: any) {
-      setEditError(err.message);
+      setPaddockName(newName);
+      setPaddockType(newType);
+      setIsEditModalOpen(false);
+    } else {
+      throw new Error(result.message);
     }
   };
 
@@ -277,7 +270,7 @@ export default function Page() {
 
       <div className="flex-1 overflow-y-auto flex flex-col items-center pt-6">
         {paddockId ? (
-          <div className="w-full max-w-5xl space-y-8">
+          <div className="w-full max-w-7xl space-y-8">
             <button
               onClick={() => router.push("/dashboard")}
               className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors group text-lg"
@@ -302,12 +295,7 @@ export default function Page() {
 
                 <div className="flex items-center gap-3">
                   <button
-                    onClick={() => {
-                      setNewPaddockName(paddockName || "");
-                      setNewPaddockType(paddockType);
-                      setEditError(null);
-                      setIsEditModalOpen(true);
-                    }}
+                    onClick={() => setIsEditModalOpen(true)}
                     className="p-2.5 bg-[#00be64]/20 hover:bg-[#00be64]/30 rounded-lg transition-all group"
                     title="Edit paddock"
                   >
@@ -350,25 +338,32 @@ export default function Page() {
 
             <RecentAverages paddockId={paddockId} />
 
-            {/* DEVICE MAP */}
-            {!loading && !error && nodeLocations.length > 0 && (
-              <section className="bg-[#121829] border border-[#00be64]/30 rounded-2xl shadow-xl p-6 w-full">
-                <h2 className="text-2xl font-semibold mb-6">Device Locations</h2>
-                <div className="rounded-xl overflow-hidden h-[500px] w-full">
-                  <DeviceMap nodes={nodeLocations} />
-                </div>
-              </section>
-            )}
-
             {loading && <p className="text-gray-400">Loading devices...</p>}
             {error && <p className="text-red-500">{error}</p>}
 
             {!loading && !error && (
-              <DeviceTable
-                devices={devices}
-                onAddDevice={handleAddDevice}
-                onDeviceClick={handleDeviceClick}
-              />
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full">
+                {/* DEVICE TABLE */}
+                <div className="w-full">
+                  <DeviceTable
+                    devices={devices}
+                    onAddDevice={handleAddDevice}
+                    onDeviceClick={handleDeviceClick}
+                  />
+                </div>
+
+                {/* DEVICE MAP */}
+                {nodeLocations.length > 0 && (
+                  <section className="bg-[#121829] border border-[#00be64]/30 rounded-2xl shadow-xl p-6 w-full relative z-0">
+                    <h2 className="text-2xl font-semibold mb-6">
+                      Device Locations
+                    </h2>
+                    <div className="rounded-xl overflow-hidden h-[500px] w-full relative z-0">
+                      <DeviceMap nodes={nodeLocations} />
+                    </div>
+                  </section>
+                )}
+              </div>
             )}
           </div>
         ) : (
@@ -381,141 +376,27 @@ export default function Page() {
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
           paddockId={Number(paddockId)}
-          onSuccess={() => {
-            const fetchDevices = async () => {
-              try {
-                const token = localStorage.getItem("token") || "";
-                const result = await getPaddockDevices(paddockId, token);
-                if (result.success) {
-                  const mapped: Device[] = result.devices.map((d: any) => ({
-                    node_id: d.node_id,
-                    node_name: d.node_name || "",
-                    battery: d.battery,
-                  }));
-                  setDevices(mapped);
-
-                  // Update node locations with mock GPS data
-                  const locations = mapped.map((device, index) => ({
-                    node_id: device.node_id,
-                    node_name: device.node_name,
-                    lat: 51.505 + (index * 0.005),
-                    lng: -0.09 + (index * 0.005),
-                  }));
-                  setNodeLocations(locations);
-                }
-              } catch (err) {
-                console.error("Failed to refresh devices:", err);
-              }
-            };
-            fetchDevices();
-          }}
+          devices={devices}
+          onSuccess={fetchDevices}
         />
       )}
 
-      {isEditModalOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-[#121829] border border-[#00be64]/30 rounded-2xl p-6 w-full max-w-md">
-            <h2 className="text-2xl font-bold mb-4">Edit Paddock Name</h2>
-            <input
-              type="text"
-              value={newPaddockName}
-              onChange={(e) => {
-                setNewPaddockName(e.target.value);
-                setEditError(null);
-              }}
-              className="w-full px-4 py-2 bg-[#0c1220] border border-gray-700 rounded-lg text-white focus:outline-none focus:border-[#00be64] mb-4"
-              placeholder="Enter paddock name"
-            />
-            <label className="block text-sm font-semibold mb-2 text-white">
-              Paddock Type
-            </label>
-            <select
-              value={newPaddockType}
-              onChange={(e) => setNewPaddockType(e.target.value as PaddockType)}
-              className="w-full px-4 py-2 bg-[#0c1220] border border-gray-700 rounded-lg text-white focus:outline-none focus:border-[#00be64] mb-2"
-            >
-              <option value="default">Default</option>
-              <option value="wheat">Wheat</option>
-              <option value="barley">Barley</option>
-              <option value="fruit">Fruit</option>
-              <option value="wine">Wine</option>
-              <option value="other">Other</option>
-            </select>
-            {editError && (
-              <p className="text-red-500 text-sm mb-4">{editError}</p>
-            )}
-            <div className="flex gap-3 justify-end mt-4">
-              <button
-                onClick={() => {
-                  setIsEditModalOpen(false);
-                  setEditError(null);
-                }}
-                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-all"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleEditPaddock}
-                className="px-4 py-2 bg-[#00be64] hover:bg-[#009e53] rounded-lg transition-all"
-              >
-                Save
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <EditPaddockModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        currentName={paddockName}
+        currentType={paddockType}
+        onSave={handleEditPaddock}
+      />
 
-      {isDeleteModalOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-          onClick={() => !deleteLoading && setIsDeleteModalOpen(false)}
-        >
-          <div
-            className="bg-[#121829] border border-red-500/30 rounded-2xl p-8 w-full max-w-lg"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-12 h-12 bg-red-500/20 rounded-full flex items-center justify-center">
-                <MdDelete size={24} color="#ef4444" />
-              </div>
-              <h2 className="text-2xl font-bold text-red-500">
-                Delete Paddock
-              </h2>
-            </div>
-            <p className="text-white text-lg mb-3">
-              Are you sure you want to delete{" "}
-              <span className="font-semibold text-[#00be64]">
-                {paddockName || `Paddock #${paddockId}`}
-              </span>
-              ?
-            </p>
-            <p className="text-gray-400 mb-8 leading-relaxed">
-              This will unlink all devices from this paddock. This action cannot
-              be undone.
-            </p>
-            <div className="flex gap-4 justify-end">
-              <button
-                onClick={() => setIsDeleteModalOpen(false)}
-                disabled={deleteLoading}
-                className="px-6 py-3 bg-gray-700 hover:bg-gray-600 rounded-lg transition-all font-medium"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleDeletePaddock}
-                disabled={deleteLoading}
-                className={`px-6 py-3 rounded-lg transition-all font-medium ${
-                  deleteLoading
-                    ? "bg-red-500/50 cursor-not-allowed"
-                    : "bg-red-500 hover:bg-red-600"
-                }`}
-              >
-                {deleteLoading ? "Deleting..." : "Delete Paddock"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <DeletePaddockModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        paddockName={paddockName}
+        paddockId={paddockId || ""}
+        onDelete={handleDeletePaddock}
+        loading={deleteLoading}
+      />
     </main>
   );
 }

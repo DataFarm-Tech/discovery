@@ -3,12 +3,14 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { updateDevice, UpdateDeviceRequest } from "@/lib/device";
+import { Device } from "../DeviceTable";
 
 interface RegisterDeviceModalProps {
   isOpen: boolean;
   onClose: () => void;
   paddockId: number;
   onSuccess?: () => void;
+  devices?: Device[];
 }
 
 export default function RegisterDeviceModal({
@@ -16,15 +18,42 @@ export default function RegisterDeviceModal({
   onClose,
   paddockId,
   onSuccess,
+  devices = [],
 }: RegisterDeviceModalProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [nodeId, setNodeId] = useState("");
-  const [nodeName, setNodeName] = useState("");
+  const [deviceName, setDeviceName] = useState("");
+  const [secretKey, setSecretKey] = useState("");
 
   const handleRegisterDevice = async () => {
     if (!nodeId.trim()) {
       toast.error("Node ID is required");
+      return;
+    }
+
+    if (!secretKey.trim()) {
+      toast.error("Key is required");
+      return;
+    }
+
+    // Check for duplicate node name
+    if (
+      deviceName.trim() &&
+      devices.some(
+        (device) =>
+          device.node_name.toLowerCase() === deviceName.trim().toLowerCase(),
+      )
+    ) {
+      toast.error("A device with this name already exists in this paddock");
+      return;
+    }
+
+    // Check for duplicate node ID
+    if (devices.some((device) => device.node_id === nodeId.trim())) {
+      toast.error(
+        "A device with this Node ID is already registered in this paddock",
+      );
       return;
     }
 
@@ -39,8 +68,9 @@ export default function RegisterDeviceModal({
 
       const deviceData: UpdateDeviceRequest = {
         node_id: nodeId.trim(),
-        node_name: nodeName.trim(),
+        node_name: deviceName.trim(),
         paddock_id: paddockId,
+        secret_key: secretKey,
       };
 
       const result = await updateDevice(deviceData, token);
@@ -52,7 +82,7 @@ export default function RegisterDeviceModal({
 
       toast.success(result.message);
       setNodeId("");
-      setNodeName("");
+      setDeviceName("");
       onClose();
 
       if (onSuccess) {
@@ -133,16 +163,35 @@ export default function RegisterDeviceModal({
 
           <div>
             <label
-              htmlFor="nodeName"
+              htmlFor="secretKey"
+              className="block text-sm font-semibold mb-2 text-white"
+            >
+              Key <span className="text-red-500">*</span>
+            </label>
+            <input
+              id="secretKey"
+              type="text"
+              value={secretKey}
+              onChange={(e) => setSecretKey(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder="Enter Key"
+              className="w-full px-4 py-3 bg-[#0c1220] border border-gray-700 rounded-lg text-white focus:outline-none focus:border-[#00be64] transition-colors"
+              disabled={loading}
+            />
+          </div>
+
+          <div>
+            <label
+              htmlFor="deviceName"
               className="block text-sm font-semibold mb-2 text-white"
             >
               Node Name <span className="text-gray-500">(optional)</span>
             </label>
             <input
-              id="nodeName"
+              id="deviceName"
               type="text"
-              value={nodeName}
-              onChange={(e) => setNodeName(e.target.value)}
+              value={deviceName}
+              onChange={(e) => setDeviceName(e.target.value)}
               onKeyPress={handleKeyPress}
               placeholder="Enter Node Name"
               className="w-full px-4 py-3 bg-[#0c1220] border border-gray-700 rounded-lg text-white focus:outline-none focus:border-[#00be64] transition-colors"

@@ -7,7 +7,8 @@ import "leaflet/dist/leaflet.css";
 // Fix Leaflet's broken default icon paths
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
-  iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+  iconRetinaUrl:
+    "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
   iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
   shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
 });
@@ -16,7 +17,7 @@ export interface NodeLocation {
   node_id: string;
   node_name: string;
   lat: number;
-  lng: number;
+  lon: number;
 }
 
 interface DeviceMapProps {
@@ -42,14 +43,11 @@ export default function DeviceMap({ nodes }: DeviceMapProps) {
         fadeAnimation: true,
       }).setView([51.505, -0.09], 15);
 
-      L.tileLayer(
-        "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-        {
-          attribution: "&copy; OpenStreetMap contributors",
-          minZoom: 3,
-          maxZoom: 19,
-        }
-      ).addTo(leafletMap.current);
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: "&copy; OpenStreetMap contributors",
+        minZoom: 3,
+        maxZoom: 19,
+      }).addTo(leafletMap.current);
 
       return () => {
         if (leafletMap.current) {
@@ -62,27 +60,24 @@ export default function DeviceMap({ nodes }: DeviceMapProps) {
     // Create map with Google-like behavior
     const firstNode = nodes[0];
     leafletMap.current = L.map(mapRef.current, {
-      zoomControl: true,      // Google-style zoom buttons
-      scrollWheelZoom: true,  // Smooth zooming
+      zoomControl: true, // Google-style zoom buttons
+      scrollWheelZoom: true, // Smooth zooming
       dragging: true,
       inertia: true,
       zoomAnimation: true,
       fadeAnimation: true,
-    }).setView([firstNode.lat, firstNode.lng], 13);
+    }).setView([firstNode.lat, firstNode.lon], 13);
 
     // Google Maps–like street tiles (safe to use)
-    L.tileLayer(
-      "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-      {
-        attribution: "&copy; OpenStreetMap contributors",
-        minZoom: 3,
-        maxZoom: 19,
-      }
-    ).addTo(leafletMap.current);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: "&copy; OpenStreetMap contributors",
+      minZoom: 3,
+      maxZoom: 19,
+    }).addTo(leafletMap.current);
 
     // Add markers for all nodes
     const markers = nodes.map((node) => {
-      return L.marker([node.lat, node.lng])
+      return L.marker([node.lat, node.lon])
         .addTo(leafletMap.current!)
         .bindPopup(`<strong>${node.node_name}</strong><br>ID: ${node.node_id}`);
     });
