@@ -33,8 +33,14 @@ function DeviceViewContent() {
   const [nitrogenData, setNitrogenData] = useState<
     DeviceDataResponse["node"] | null
   >(null);
+  const [potassiumData, setPotassiumData] = useState<
+    DeviceDataResponse["node"] | null
+  >(null);
+  const [phosphorusData, setPhosphorusData] = useState<
+    DeviceDataResponse["node"] | null
+  >(null);
   const [selectedGraph, setSelectedGraph] = useState<
-    "moisture" | "ph" | "temperature" | "nitrogen"
+    "moisture" | "ph" | "temperature" | "nitrogen" | "potassium" | "phosphorus"
   >("moisture");
   const [timePeriod, setTimePeriod] = useState<
     "week" | "month" | "6months" | "year" | "all"
@@ -63,6 +69,14 @@ function DeviceViewContent() {
     percentChange: number;
   }>({ trend: "no-data", percentChange: 0 });
   const [phTrend, setPhTrend] = useState<{
+    trend: "up" | "down" | "stable" | "no-data";
+    percentChange: number;
+  }>({ trend: "no-data", percentChange: 0 });
+  const [potassiumTrend, setPotassiumTrend] = useState<{
+    trend: "up" | "down" | "stable" | "no-data";
+    percentChange: number;
+  }>({ trend: "no-data", percentChange: 0 });
+  const [phosphorusTrend, setPhosphorusTrend] = useState<{
     trend: "up" | "down" | "stable" | "no-data";
     percentChange: number;
   }>({ trend: "no-data", percentChange: 0 });
@@ -149,15 +163,63 @@ function DeviceViewContent() {
 
   // Get optimal sensor value based on crop type
   function getOptimalValue(
-    sensorType: "moisture" | "ph" | "temperature" | "nitrogen",
+    sensorType:
+      | "moisture"
+      | "ph"
+      | "temperature"
+      | "nitrogen"
+      | "potassium"
+      | "phosphorus",
   ): number {
     const optimalValues: Record<string, Record<string, number>> = {
-      default: { moisture: 50, ph: 6.5, temperature: 20, nitrogen: 100 },
-      wheat: { moisture: 45, ph: 6.5, temperature: 18, nitrogen: 120 },
-      barley: { moisture: 45, ph: 6.5, temperature: 18, nitrogen: 110 },
-      fruit: { moisture: 55, ph: 6.8, temperature: 22, nitrogen: 90 },
-      wine: { moisture: 40, ph: 7.0, temperature: 20, nitrogen: 80 },
-      other: { moisture: 50, ph: 6.5, temperature: 20, nitrogen: 100 },
+      default: {
+        moisture: 50,
+        ph: 6.5,
+        temperature: 20,
+        nitrogen: 100,
+        potassium: 30,
+        phosphorus: 50,
+      },
+      wheat: {
+        moisture: 45,
+        ph: 6.5,
+        temperature: 18,
+        nitrogen: 120,
+        potassium: 30,
+        phosphorus: 60,
+      },
+      barley: {
+        moisture: 45,
+        ph: 6.5,
+        temperature: 18,
+        nitrogen: 110,
+        potassium: 30,
+        phosphorus: 55,
+      },
+      fruit: {
+        moisture: 55,
+        ph: 6.8,
+        temperature: 22,
+        nitrogen: 90,
+        potassium: 30,
+        phosphorus: 70,
+      },
+      wine: {
+        moisture: 40,
+        ph: 7.0,
+        temperature: 20,
+        nitrogen: 80,
+        potassium: 30,
+        phosphorus: 45,
+      },
+      other: {
+        moisture: 50,
+        ph: 6.5,
+        temperature: 20,
+        nitrogen: 100,
+        potassium: 30,
+        phosphorus: 50,
+      },
     };
 
     const cropOptimal = optimalValues[paddockType] || optimalValues["default"];
@@ -166,7 +228,13 @@ function DeviceViewContent() {
 
   // Get optimal ranges for sensor alerts
   function getOptimalRange(
-    sensorType: "moisture" | "ph" | "temperature" | "nitrogen",
+    sensorType:
+      | "moisture"
+      | "ph"
+      | "temperature"
+      | "nitrogen"
+      | "potassium"
+      | "phosphorus",
   ): { min: number; max: number } {
     const ranges: Record<
       string,
@@ -177,36 +245,48 @@ function DeviceViewContent() {
         ph: { min: 6.0, max: 7.0 },
         temperature: { min: 15, max: 25 },
         nitrogen: { min: 80, max: 120 },
+        potassium: { min: 120, max: 180 },
+        phosphorus: { min: 40, max: 60 },
       },
       wheat: {
         moisture: { min: 35, max: 55 },
         ph: { min: 6.0, max: 7.0 },
         temperature: { min: 15, max: 22 },
         nitrogen: { min: 100, max: 140 },
+        potassium: { min: 150, max: 210 },
+        phosphorus: { min: 50, max: 70 },
       },
       barley: {
         moisture: { min: 35, max: 55 },
         ph: { min: 6.0, max: 7.0 },
         temperature: { min: 15, max: 22 },
         nitrogen: { min: 90, max: 130 },
+        potassium: { min: 140, max: 200 },
+        phosphorus: { min: 45, max: 65 },
       },
       fruit: {
         moisture: { min: 50, max: 70 },
         ph: { min: 6.5, max: 7.5 },
         temperature: { min: 18, max: 26 },
         nitrogen: { min: 70, max: 110 },
+        potassium: { min: 170, max: 230 },
+        phosphorus: { min: 60, max: 80 },
       },
       wine: {
         moisture: { min: 30, max: 50 },
         ph: { min: 6.5, max: 7.5 },
         temperature: { min: 15, max: 25 },
         nitrogen: { min: 60, max: 100 },
+        potassium: { min: 130, max: 190 },
+        phosphorus: { min: 35, max: 55 },
       },
       other: {
         moisture: { min: 40, max: 60 },
         ph: { min: 6.0, max: 7.0 },
         temperature: { min: 15, max: 25 },
         nitrogen: { min: 80, max: 120 },
+        potassium: { min: 120, max: 180 },
+        phosphorus: { min: 40, max: 60 },
       },
     };
 
@@ -231,6 +311,8 @@ function DeviceViewContent() {
     const temperature = recentTemperature ? Number(recentTemperature) : null;
     const ph = recentPh ? Number(recentPh) : null;
     const nitrogen = recentNitrogen ? Number(recentNitrogen) : null;
+    const potassium = recentPotassium ? Number(recentPotassium) : null;
+    const phosphorus = recentPhosphorus ? Number(recentPhosphorus) : null;
 
     // Moisture alerts
     if (moisture !== null) {
@@ -304,6 +386,46 @@ function DeviceViewContent() {
       }
     }
 
+    // Potassium alerts
+    if (potassium !== null) {
+      const potassiumRange = getOptimalRange("potassium");
+      if (potassium < potassiumRange.min) {
+        alerts.push({
+          type: "Potassium",
+          message: `Potassium levels are low (${potassium} ppm). Supplement recommended.`,
+          severity:
+            potassium < potassiumRange.min * 0.7 ? "critical" : "warning",
+        });
+      } else if (potassium > potassiumRange.max) {
+        alerts.push({
+          type: "Potassium",
+          message: `Potassium levels are high (${potassium} ppm). May affect soil balance.`,
+          severity:
+            potassium > potassiumRange.max * 1.3 ? "critical" : "warning",
+        });
+      }
+    }
+
+    // Phosphorus alerts
+    if (phosphorus !== null) {
+      const phosphorusRange = getOptimalRange("phosphorus");
+      if (phosphorus < phosphorusRange.min) {
+        alerts.push({
+          type: "Phosphorus",
+          message: `Phosphorus levels are low (${phosphorus} ppm). Consider phosphate fertilizer.`,
+          severity:
+            phosphorus < phosphorusRange.min * 0.7 ? "critical" : "warning",
+        });
+      } else if (phosphorus > phosphorusRange.max) {
+        alerts.push({
+          type: "Phosphorus",
+          message: `Phosphorus levels are high (${phosphorus} ppm). Risk of eutrophication.`,
+          severity:
+            phosphorus > phosphorusRange.max * 1.3 ? "critical" : "warning",
+        });
+      }
+    }
+
     return alerts;
   }
 
@@ -358,6 +480,14 @@ function DeviceViewContent() {
         { nodeId, readingType: "nitrogen" },
         token,
       );
+      const potassium = await getDeviceData(
+        { nodeId, readingType: "potassium" },
+        token,
+      );
+      const phosphorus = await getDeviceData(
+        { nodeId, readingType: "phosphorus" },
+        token,
+      );
 
       if (moisture.success && moisture.node) {
         setMoistureData(moisture.node);
@@ -374,6 +504,14 @@ function DeviceViewContent() {
       if (nitrogen.success && nitrogen.node) {
         setNitrogenData(nitrogen.node);
         setNitrogenTrend(calculateTrend(nitrogen.node.readings));
+      }
+      if (potassium.success && potassium.node) {
+        setPotassiumData(potassium.node);
+        setPotassiumTrend(calculateTrend(potassium.node.readings));
+      }
+      if (phosphorus.success && phosphorus.node) {
+        setPhosphorusData(phosphorus.node);
+        setPhosphorusTrend(calculateTrend(phosphorus.node.readings));
       }
 
       if (
@@ -434,6 +572,8 @@ function DeviceViewContent() {
       ...(phData?.readings || []),
       ...(temperatureData?.readings || []),
       ...(nitrogenData?.readings || []),
+      ...(potassiumData?.readings || []),
+      ...(phosphorusData?.readings || []),
     ];
     if (all.length === 0) return null;
     return all.reduce((a, b) =>
@@ -476,6 +616,26 @@ function DeviceViewContent() {
   const recentNitrogen = nitrogenData?.readings?.length
     ? Number(
         nitrogenData.readings.reduce((latest, reading) =>
+          new Date(reading.timestamp) > new Date(latest.timestamp)
+            ? reading
+            : latest,
+        ).reading_val,
+      ).toFixed(1)
+    : null;
+
+  const recentPotassium = potassiumData?.readings?.length
+    ? Number(
+        potassiumData.readings.reduce((latest, reading) =>
+          new Date(reading.timestamp) > new Date(latest.timestamp)
+            ? reading
+            : latest,
+        ).reading_val,
+      ).toFixed(1)
+    : null;
+
+  const recentPhosphorus = phosphorusData?.readings?.length
+    ? Number(
+        phosphorusData.readings.reduce((latest, reading) =>
           new Date(reading.timestamp) > new Date(latest.timestamp)
             ? reading
             : latest,
@@ -544,10 +704,20 @@ function DeviceViewContent() {
               x: r.timestamp,
               y: Number(r.reading_val),
             })) || []
-          : filterDataByTimePeriod(nitrogenData?.readings)?.map((r) => ({
-              x: r.timestamp,
-              y: Number(r.reading_val),
-            })) || [];
+          : selectedGraph === "nitrogen"
+            ? filterDataByTimePeriod(nitrogenData?.readings)?.map((r) => ({
+                x: r.timestamp,
+                y: Number(r.reading_val),
+              })) || []
+            : selectedGraph === "potassium"
+              ? filterDataByTimePeriod(potassiumData?.readings)?.map((r) => ({
+                  x: r.timestamp,
+                  y: Number(r.reading_val),
+                })) || []
+              : filterDataByTimePeriod(phosphorusData?.readings)?.map((r) => ({
+                  x: r.timestamp,
+                  y: Number(r.reading_val),
+                })) || [];
 
   const graphTitle =
     selectedGraph === "moisture"
@@ -556,7 +726,11 @@ function DeviceViewContent() {
         ? "pH Levels"
         : selectedGraph === "temperature"
           ? "Temperature"
-          : "Nitrogen";
+          : selectedGraph === "nitrogen"
+            ? "Nitrogen"
+            : selectedGraph === "potassium"
+              ? "Potassium"
+              : "Phosphorus";
 
   return (
     <main className="h-screen overflow-hidden bg-[#0c1220] px-6 py-6 text-white relative flex flex-col">
@@ -699,7 +873,7 @@ function DeviceViewContent() {
                     description="Shows the most recent sensor values from your device. The percentage indicates the change from the previous reading period, calculated by comparing the latest reading with the previous one."
                   />
                 </h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   <div className="bg-[#0c1220]/50 border border-[#00be64]/40 rounded-xl p-5 text-center hover:border-[#00be64] transition-colors">
                     <p className="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wide">
                       Moisture
@@ -804,6 +978,58 @@ function DeviceViewContent() {
                     </div>
                     <p className="text-xs text-gray-500 mt-1">pH</p>
                   </div>
+                  <div className="bg-[#0c1220]/50 border border-[#00be64]/40 rounded-xl p-5 text-center hover:border-[#00be64] transition-colors">
+                    <p className="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wide">
+                      Potassium
+                    </p>
+                    <div className="flex items-baseline justify-center gap-2">
+                      <p className="text-3xl font-bold text-[#00be64]">
+                        {recentPotassium ?? "--"}
+                      </p>
+                      {potassiumTrend.trend === "up" && (
+                        <span className="text-sm text-green-400 font-semibold">
+                          ↑ +{potassiumTrend.percentChange}%
+                        </span>
+                      )}
+                      {potassiumTrend.trend === "down" && (
+                        <span className="text-sm text-orange-400 font-semibold">
+                          ↓ {potassiumTrend.percentChange}%
+                        </span>
+                      )}
+                      {potassiumTrend.trend === "stable" && (
+                        <span className="text-sm text-gray-400 font-semibold">
+                          → Stable
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">ppm</p>
+                  </div>
+                  <div className="bg-[#0c1220]/50 border border-[#00be64]/40 rounded-xl p-5 text-center hover:border-[#00be64] transition-colors">
+                    <p className="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wide">
+                      Phosphorus
+                    </p>
+                    <div className="flex items-baseline justify-center gap-2">
+                      <p className="text-3xl font-bold text-[#00be64]">
+                        {recentPhosphorus ?? "--"}
+                      </p>
+                      {phosphorusTrend.trend === "up" && (
+                        <span className="text-sm text-green-400 font-semibold">
+                          ↑ +{phosphorusTrend.percentChange}%
+                        </span>
+                      )}
+                      {phosphorusTrend.trend === "down" && (
+                        <span className="text-sm text-orange-400 font-semibold">
+                          ↓ {phosphorusTrend.percentChange}%
+                        </span>
+                      )}
+                      {phosphorusTrend.trend === "stable" && (
+                        <span className="text-sm text-gray-400 font-semibold">
+                          → Stable
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">ppm</p>
+                  </div>
                 </div>
               </div>
 
@@ -852,6 +1078,8 @@ function DeviceViewContent() {
                         <option value="temperature">Temperature</option>
                         <option value="nitrogen">Nitrogen</option>
                         <option value="ph">pH</option>
+                        <option value="potassium">Potassium</option>
+                        <option value="phosphorus">Phosphorus</option>
                       </select>
                       <button
                         onClick={exportToCSV}
