@@ -585,62 +585,62 @@ function DeviceViewContent() {
 
   const recentMoisture = moistureData?.readings?.length
     ? Number(
-        moistureData.readings.reduce((latest, reading) =>
-          new Date(reading.timestamp) > new Date(latest.timestamp)
-            ? reading
-            : latest,
-        ).reading_val,
-      ).toFixed(1)
+      moistureData.readings.reduce((latest, reading) =>
+        new Date(reading.timestamp) > new Date(latest.timestamp)
+          ? reading
+          : latest,
+      ).reading_val,
+    ).toFixed(1)
     : null;
 
   const recentPh = phData?.readings?.length
     ? Number(
-        phData.readings.reduce((latest, reading) =>
-          new Date(reading.timestamp) > new Date(latest.timestamp)
-            ? reading
-            : latest,
-        ).reading_val,
-      ).toFixed(1)
+      phData.readings.reduce((latest, reading) =>
+        new Date(reading.timestamp) > new Date(latest.timestamp)
+          ? reading
+          : latest,
+      ).reading_val,
+    ).toFixed(1)
     : null;
 
   const recentTemperature = temperatureData?.readings?.length
     ? Number(
-        temperatureData.readings.reduce((latest, reading) =>
-          new Date(reading.timestamp) > new Date(latest.timestamp)
-            ? reading
-            : latest,
-        ).reading_val,
-      ).toFixed(1)
+      temperatureData.readings.reduce((latest, reading) =>
+        new Date(reading.timestamp) > new Date(latest.timestamp)
+          ? reading
+          : latest,
+      ).reading_val,
+    ).toFixed(1)
     : null;
 
   const recentNitrogen = nitrogenData?.readings?.length
     ? Number(
-        nitrogenData.readings.reduce((latest, reading) =>
-          new Date(reading.timestamp) > new Date(latest.timestamp)
-            ? reading
-            : latest,
-        ).reading_val,
-      ).toFixed(1)
+      nitrogenData.readings.reduce((latest, reading) =>
+        new Date(reading.timestamp) > new Date(latest.timestamp)
+          ? reading
+          : latest,
+      ).reading_val,
+    ).toFixed(1)
     : null;
 
   const recentPotassium = potassiumData?.readings?.length
     ? Number(
-        potassiumData.readings.reduce((latest, reading) =>
-          new Date(reading.timestamp) > new Date(latest.timestamp)
-            ? reading
-            : latest,
-        ).reading_val,
-      ).toFixed(1)
+      potassiumData.readings.reduce((latest, reading) =>
+        new Date(reading.timestamp) > new Date(latest.timestamp)
+          ? reading
+          : latest,
+      ).reading_val,
+    ).toFixed(1)
     : null;
 
   const recentPhosphorus = phosphorusData?.readings?.length
     ? Number(
-        phosphorusData.readings.reduce((latest, reading) =>
-          new Date(reading.timestamp) > new Date(latest.timestamp)
-            ? reading
-            : latest,
-        ).reading_val,
-      ).toFixed(1)
+      phosphorusData.readings.reduce((latest, reading) =>
+        new Date(reading.timestamp) > new Date(latest.timestamp)
+          ? reading
+          : latest,
+      ).reading_val,
+    ).toFixed(1)
     : null;
 
   if (loading) {
@@ -691,33 +691,33 @@ function DeviceViewContent() {
   const graphData =
     selectedGraph === "moisture"
       ? filterDataByTimePeriod(moistureData?.readings)?.map((r) => ({
+        x: r.timestamp,
+        y: Number(r.reading_val),
+      })) || []
+      : selectedGraph === "ph"
+        ? filterDataByTimePeriod(phData?.readings)?.map((r) => ({
           x: r.timestamp,
           y: Number(r.reading_val),
         })) || []
-      : selectedGraph === "ph"
-        ? filterDataByTimePeriod(phData?.readings)?.map((r) => ({
+        : selectedGraph === "temperature"
+          ? filterDataByTimePeriod(temperatureData?.readings)?.map((r) => ({
             x: r.timestamp,
             y: Number(r.reading_val),
           })) || []
-        : selectedGraph === "temperature"
-          ? filterDataByTimePeriod(temperatureData?.readings)?.map((r) => ({
+          : selectedGraph === "nitrogen"
+            ? filterDataByTimePeriod(nitrogenData?.readings)?.map((r) => ({
               x: r.timestamp,
               y: Number(r.reading_val),
             })) || []
-          : selectedGraph === "nitrogen"
-            ? filterDataByTimePeriod(nitrogenData?.readings)?.map((r) => ({
+            : selectedGraph === "potassium"
+              ? filterDataByTimePeriod(potassiumData?.readings)?.map((r) => ({
                 x: r.timestamp,
                 y: Number(r.reading_val),
               })) || []
-            : selectedGraph === "potassium"
-              ? filterDataByTimePeriod(potassiumData?.readings)?.map((r) => ({
-                  x: r.timestamp,
-                  y: Number(r.reading_val),
-                })) || []
               : filterDataByTimePeriod(phosphorusData?.readings)?.map((r) => ({
-                  x: r.timestamp,
-                  y: Number(r.reading_val),
-                })) || [];
+                x: r.timestamp,
+                y: Number(r.reading_val),
+              })) || [];
 
   const graphTitle =
     selectedGraph === "moisture"
@@ -805,38 +805,35 @@ function DeviceViewContent() {
             {/* LEFT COLUMN - Main Content */}
             <div className="lg:col-span-2 space-y-6">
               {/* CRITICAL ALERTS SECTION */}
-              <div className="bg-gradient-to-br from-[#1a0f0f] to-[#0f0a0a] border border-red-500/30 rounded-2xl p-6 shadow-lg">
+              <div className="bg-gradient-to-br from-[#121829] to-[#0f1318] border border-green-500/30 rounded-2xl p-6 shadow-lg">
                 <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-                  <span className="w-1 h-6 bg-red-500 rounded-full"></span>
-                  <span className="text-red-400">Alerts</span>
+                  <span className="w-1 h-6 green-500 rounded-full"></span>
+                  <span className="text-green-300">Alerts</span>
                 </h2>
                 {getCriticalAlerts().length > 0 ? (
                   <div className="space-y-3">
                     {getCriticalAlerts().map((alert, index) => (
                       <div
                         key={index}
-                        className={`p-4 rounded-lg border-l-4 flex items-start gap-3 ${
-                          alert.severity === "critical"
+                        className={`p-4 rounded-lg border-l-4 flex items-start gap-3 ${alert.severity === "critical"
                             ? "bg-red-950/30 border-l-red-500 border border-red-500/20"
                             : "bg-orange-950/30 border-l-orange-500 border border-orange-500/20"
-                        }`}
+                          }`}
                       >
                         <div
-                          className={`mt-0.5 text-lg font-bold flex-shrink-0 ${
-                            alert.severity === "critical"
+                          className={`mt-0.5 text-lg font-bold flex-shrink-0 ${alert.severity === "critical"
                               ? "text-red-400"
                               : "text-orange-400"
-                          }`}
+                            }`}
                         >
                           ⚠
                         </div>
                         <div className="flex-grow">
                           <p
-                            className={`text-sm font-bold ${
-                              alert.severity === "critical"
+                            className={`text-sm font-bold ${alert.severity === "critical"
                                 ? "text-red-300"
                                 : "text-orange-300"
-                            }`}
+                              }`}
                           >
                             {alert.type}
                           </p>
@@ -1125,16 +1122,14 @@ function DeviceViewContent() {
               </div>
 
               <div
-                className={`bg-gradient-to-br rounded-2xl p-6 shadow-lg border ${
-                  status.color === "green"
+                className={`bg-gradient-to-br rounded-2xl p-6 shadow-lg border ${status.color === "green"
                     ? "from-green-500/10 to-green-500/5 border-green-500/30"
                     : "from-red-500/10 to-red-500/5 border-red-500/30"
-                }`}
+                  }`}
               >
                 <h3
-                  className={`text-sm font-semibold uppercase tracking-wide mb-4 ${
-                    status.color === "green" ? "text-green-300" : "text-red-300"
-                  }`}
+                  className={`text-sm font-semibold uppercase tracking-wide mb-4 ${status.color === "green" ? "text-green-300" : "text-red-300"
+                    }`}
                 >
                   Device Status
                 </h3>
@@ -1143,18 +1138,16 @@ function DeviceViewContent() {
                     <p className="text-xs text-gray-400 mb-2">Status</p>
                     <div className="flex items-center gap-3">
                       <span
-                        className={`inline-block w-3 h-3 rounded-full animate-pulse ${
-                          status.color === "green"
+                        className={`inline-block w-3 h-3 rounded-full animate-pulse ${status.color === "green"
                             ? "bg-green-400"
                             : "bg-red-500"
-                        }`}
+                          }`}
                       />
                       <span
-                        className={`text-lg font-semibold ${
-                          status.color === "green"
+                        className={`text-lg font-semibold ${status.color === "green"
                             ? "text-green-400"
                             : "text-red-500"
-                        }`}
+                          }`}
                       >
                         {status.label}
                       </span>
