@@ -12,7 +12,7 @@ import {
   getPaddockDevices,
   updatePaddockName,
   deletePaddock,
-  PaddockType,
+  cropType,
   getPaddockSensorAverages,
 } from "@/lib/paddock";
 import toast from "react-hot-toast";
@@ -39,10 +39,10 @@ export default function Page() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [paddockId, setPaddockId] = useState<string | null>(null);
   const [paddockName, setPaddockName] = useState<string>("");
-  const [paddockType, setPaddockType] = useState<PaddockType>("default");
+  const [cropType, setcropType] = useState<cropType>("default");
   const [paddockArea, setPaddockArea] = useState<string>("");
   const [plantDate, setPlantDate] = useState<string>("");
-  const [newPaddockType, setNewPaddockType] = useState<PaddockType>("default");
+  const [newcropType, setNewcropType] = useState<cropType>("default");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
@@ -53,10 +53,10 @@ export default function Page() {
   useEffect(() => {
     const data = sessionStorage.getItem("paddockData");
     if (data) {
-      const { paddockId, paddockName, paddockType, area, plant_date } = JSON.parse(data);
+      const { paddockId, paddockName, cropType, area, plant_date } = JSON.parse(data);
       setPaddockId(paddockId?.toString() || null);
       setPaddockName(paddockName || "");
-      setPaddockType(paddockType || "default");
+      setcropType(cropType || "default");
       setPaddockArea(area?.toString() || "");
       setPlantDate(plant_date || "");
     }
@@ -235,7 +235,7 @@ const formatDaysMessage = (days: number | null) => {
     }
   };
 
-  const handleEditPaddock = async (newName: string, newType: PaddockType, newArea: string) => {
+  const handleEditPaddock = async (newName: string, newType: cropType, newArea: string) => {
     if (!paddockId) throw new Error("No paddock selected");
 
     // Convert string to number
@@ -255,14 +255,14 @@ const formatDaysMessage = (days: number | null) => {
         JSON.stringify({
           paddockId: paddockId,
           paddockName: newName,
-          paddockType: newType,
+          cropType: newType,
           area: areaValue,
           plant_date: plantDate,
         }),
       );
 
       setPaddockName(newName);
-      setPaddockType(newType);
+      setcropType(newType);
       setPaddockArea(newArea);
       setIsEditModalOpen(false);
     } else {
@@ -341,9 +341,9 @@ const formatDaysMessage = (days: number | null) => {
                 <div className="flex-1">
                   <h1 className="text-3xl font-bold text-white">
                     {paddockName || `Paddock #${paddockId}`}
-                    {paddockType && (
+                    {cropType && (
                       <span className="ml-3 text-xl text-gray-400 font-normal">
-                        ({paddockType})
+                        ({cropType})
                       </span>
                     )}
                   </h1>
@@ -395,24 +395,24 @@ const formatDaysMessage = (days: number | null) => {
 
                 {/* Plant Date Card */}
                 {/* Plant Date Card */}
-<div className="bg-[#0c1220] border border-[#00be64]/20 rounded-xl p-4 flex items-center gap-4">
-  <div className="bg-[#00be64]/10 p-3 rounded-lg">
-    <svg className="w-6 h-6 text-[#00be64]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-    </svg>
-  </div>
-  <div>
-    <p className="text-gray-400 text-sm">Planted</p>
-    <p className="text-white text-lg font-semibold">
-      {formatPlantDate(plantDate)}
-    </p>
-    {daysSincePlanting !== null && (
-      <p className={`text-sm ${daysSincePlanting >= 0 ? 'text-[#00be64]' : 'text-blue-400'}`}>
-        {formatDaysMessage(daysSincePlanting)}
-      </p>
-    )}
-  </div>
-</div>
+                <div className="bg-[#0c1220] border border-[#00be64]/20 rounded-xl p-4 flex items-center gap-4">
+                  <div className="bg-[#00be64]/10 p-3 rounded-lg">
+                    <svg className="w-6 h-6 text-[#00be64]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-gray-400 text-sm">Planted</p>
+                    <p className="text-white text-lg font-semibold">
+                      {formatPlantDate(plantDate)}
+                    </p>
+                    {daysSincePlanting !== null && (
+                      <p className={`text-sm ${daysSincePlanting >= 0 ? 'text-[#00be64]' : 'text-blue-400'}`}>
+                        {formatDaysMessage(daysSincePlanting)}
+                      </p>
+                    )}
+                  </div>
+                </div>
               </div>
             </section>
 
@@ -480,7 +480,7 @@ const formatDaysMessage = (days: number | null) => {
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
         currentName={paddockName}
-        currentType={paddockType}
+        currentType={cropType}
         currentArea={paddockArea}
         onSave={handleEditPaddock}
       />

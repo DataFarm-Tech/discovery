@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-import { createPaddock, PaddockType } from "@/lib/paddock";
+import { createPaddock, cropType } from "@/lib/paddock";
 
 interface CreatePaddockModalProps {
   isOpen: boolean;
@@ -18,9 +18,11 @@ export default function CreatePaddockModal({
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [paddockName, setPaddockName] = useState("");
-  const [paddockType, setPaddockType] = useState<PaddockType>("default");
+  const [cropType, setcropType] = useState<cropType>("default");
   const [area, setArea] = useState("");
   const [plant_date, setPlantDate] = useState("");
+  const [soilType, setSoilType] = useState("");
+
 
   const handleCreatePaddock = async () => {
     // Validate area is filled
@@ -33,6 +35,11 @@ export default function CreatePaddockModal({
     const areaValue = parseFloat(area);
     if (isNaN(areaValue) || areaValue <= 0) {
       toast.error("Please enter a valid area greater than 0");
+      return;
+    }
+
+    if (!soilType || soilType.trim() === '') {
+      toast.error("Please select a soil type");
       return;
     }
 
@@ -53,9 +60,10 @@ export default function CreatePaddockModal({
 
       const result = await createPaddock(
         paddockName.trim() || null,
-        paddockType,
+        cropType,
         area,
         plant_date,
+        soilType,
         token
       );
       if (!result.success) {
@@ -66,9 +74,11 @@ export default function CreatePaddockModal({
 
       toast.success(result.message);
       setPaddockName("");
-      setPaddockType("default");
+      setcropType("default");
       setArea("");
       setPlantDate("");
+      setSoilType("");
+
       onClose();
 
       if (onSuccess) {
@@ -162,19 +172,19 @@ export default function CreatePaddockModal({
             </p>
           </div>
 
-          {/* Paddock Type */}
+          {/* Crop Type */}
           <div className="space-y-2">
             <label
-              htmlFor="paddockType"
+              htmlFor="cropType"
               className="block text-sm font-semibold text-white"
             >
-              Paddock Type
+              Crop Type
             </label>
             <div className="relative">
               <select
-                id="paddockType"
-                value={paddockType}
-                onChange={(e) => setPaddockType(e.target.value as PaddockType)}
+                id="cropType"
+                value={cropType}
+                onChange={(e) => setcropType(e.target.value as cropType)}
                 className="w-full px-4 py-3.5 bg-[#0c1220] border border-gray-700 rounded-xl text-white focus:outline-none focus:border-[#00be64] focus:ring-2 focus:ring-[#00be64]/20 transition-all duration-200 appearance-none cursor-pointer"
                 disabled={loading}
               >
@@ -194,6 +204,50 @@ export default function CreatePaddockModal({
               </div>
             </div>
           </div>
+
+
+          {/* Soil Type */}
+          <div className="space-y-2">
+            <label
+              htmlFor="soilType"
+              className="block text-sm font-semibold text-white"
+            >
+              Soil Type
+            </label>
+            <div className="relative">
+              <select
+                id="soilType"
+                value={soilType} // Replace this with a new state: soilType
+                onChange={(e) => setSoilType(e.target.value as string)}
+                className="w-full px-4 py-3.5 bg-[#0c1220] border border-gray-700 rounded-xl text-white focus:outline-none focus:border-[#00be64] focus:ring-2 focus:ring-[#00be64]/20 transition-all duration-200 appearance-none cursor-pointer"
+                disabled={loading}
+              >
+                <option value="">Select Soil Type</option>
+                <option value="Sandy">Sandy</option>
+                <option value="Loamy">Loamy</option>
+                <option value="Clay">Clay</option>
+                <option value="Silty">Silty / Alluvial</option>
+                <option value="Peaty">Peaty / Organic</option>
+                <option value="Saline">Saline / Sodic</option>
+                <option value="Calcareous">Calcareous / Lime-rich</option>
+                <option value="Podzolic">Podzolic / Acidic</option>
+                <option value="Rocky">Rocky / Stony</option>
+                <option value="Other">Other / Unknown</option>
+              </select>
+              <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+            </div>
+            <p className="text-xs text-gray-500 flex items-center gap-1.5">
+              <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+              </svg>
+              Select the soil type for the paddock
+            </p>
+          </div>
+
 
           {/* Area */}
           <div className="space-y-2">

@@ -1,15 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { PaddockType } from "@/lib/paddock";
+import { cropType } from "@/lib/paddock";
 
 interface EditPaddockModalProps {
   isOpen: boolean;
   onClose: () => void;
   currentName: string;
-  currentType: PaddockType;
+  currentType: cropType;
   currentArea: string;
-  onSave: (newName: string, newType: PaddockType, newArea: string) => Promise<void>;
+  onSave: (newName: string, newType: cropType, newArea: string) => Promise<void>;
 }
 
 export default function EditPaddockModal({
@@ -21,7 +21,7 @@ export default function EditPaddockModal({
   onSave,
 }: EditPaddockModalProps) {
   const [newPaddockName, setNewPaddockName] = useState(currentName);
-  const [newPaddockType, setNewPaddockType] = useState(currentType);
+  const [newcropType, setNewcropType] = useState(currentType);
   const [newPaddockArea, setNewPaddockArea] = useState(currentArea);
   const [editError, setEditError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -48,7 +48,7 @@ export default function EditPaddockModal({
 
     if (
       newPaddockName.trim() === currentName &&
-      newPaddockType === currentType && 
+      newcropType === currentType && 
       newPaddockArea === currentArea
     ) {
       setEditError("No changes made");
@@ -57,7 +57,7 @@ export default function EditPaddockModal({
 
     setLoading(true);
     try {
-      await onSave(newPaddockName.trim(), newPaddockType, newPaddockArea);
+      await onSave(newPaddockName.trim(), newcropType, newPaddockArea);
       onClose();
     } catch (error: any) {
       setEditError(error.message || "Failed to update paddock");
@@ -142,17 +142,17 @@ export default function EditPaddockModal({
           {/* Paddock Type */}
           <div className="space-y-2">
             <label
-              htmlFor="paddockType"
+              htmlFor="cropType"
               className="block text-sm font-semibold text-white"
             >
               Paddock Type
             </label>
             <div className="relative">
               <select
-                id="paddockType"
-                value={newPaddockType}
+                id="cropType"
+                value={newcropType}
                 onChange={(e) => {
-                  setNewPaddockType(e.target.value as PaddockType);
+                  setNewcropType(e.target.value as cropType);
                   setEditError(null);
                 }}
                 className="w-full px-4 py-3.5 bg-[#0c1220] border border-gray-700 rounded-xl text-white focus:outline-none focus:border-[#00be64] focus:ring-2 focus:ring-[#00be64]/20 transition-all duration-200 appearance-none cursor-pointer"

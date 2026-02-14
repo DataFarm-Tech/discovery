@@ -1,10 +1,10 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
-export type PaddockType = 'default' | 'Grains' | 'Legumes' | 'Fruit' |'Oil Seeds' |'Root Crops' | 'Tropical'| 'Other';
+export type cropType = 'default' | 'Grains' | 'Legumes' | 'Fruit' |'Oil Seeds' |'Root Crops' | 'Tropical'| 'Other';
 
 export interface CreatePaddockRequest {
   paddock_name: string | null;
-  paddock_type: PaddockType;
+  crop_type: cropType;
   area: number | null;
   plant_date: string;  // Required
 }
@@ -21,7 +21,7 @@ export interface PaddockApiError {
 
 export interface UpdatePaddockRequest {
   paddock_name: string;
-  paddock_type: PaddockType;
+  crop_type: cropType;
   area: number;
 }
 
@@ -31,7 +31,7 @@ export interface UpdatePaddockResponse {
   paddock?: {
     paddock_id: number;
     paddock_name: string;
-    paddock_type: PaddockType;
+    crop_type: cropType;
     area: number
   };
 }
@@ -154,7 +154,7 @@ export async function getPaddockSensorAverages(
 /**
  * Creates a new paddock
  * @param paddockName - Name of the paddock (optional)
- * @param paddockType - Type of the paddock
+ * @param cropType - Type of the paddock
  * @param area - Area in hectares (optional, as string from input)
  * @param plant_date - Plant date (REQUIRED, as string from datetime-local)
  * @param token - JWT authentication token
@@ -162,9 +162,10 @@ export async function getPaddockSensorAverages(
  */
 export async function createPaddock(
   paddockName: string | null,
-  paddockType: PaddockType,
+  cropType: cropType,
   area: string,
   plant_date: string,
+  soilType: string,
   token: string
 ): Promise<CreatePaddockResponse> {
   try {
@@ -187,9 +188,10 @@ export async function createPaddock(
       },
       body: JSON.stringify({
         paddock_name: paddockName || null,
-        paddock_type: paddockType,
+        crop_type: cropType,
         area: areaValue,
-        date_plant: plant_date  // Send as-is, required
+        date_plant: plant_date,  // Send as-is, required
+        soil_type: soilType
       }),
     });
 
@@ -258,7 +260,7 @@ export async function getPaddocks(token: string) {
  * Updates a paddock's name
  * @param paddockId - ID of the paddock to update
  * @param paddockName - New name for the paddock
- * @param paddockType - Type of the paddock
+ * @param cropType - Type of the paddock
  * @param area - Area in hectares
  * @param token - JWT authentication token
  * @returns Promise with the API response
@@ -266,7 +268,7 @@ export async function getPaddocks(token: string) {
 export async function updatePaddockName(
   paddockId: string,
   paddockName: string,
-  paddockType: PaddockType,
+  cropType: cropType,
   area: number,
   token: string
 ): Promise<UpdatePaddockResponse> {
@@ -279,7 +281,7 @@ export async function updatePaddockName(
       },
       body: JSON.stringify({
         paddock_name: paddockName,
-        paddock_type: paddockType,
+        crop_type: cropType,
         area: area
       }),
     });

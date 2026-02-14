@@ -1,13 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { PaddockType } from "@/lib/paddock";
+import { cropType } from "@/lib/paddock";
 import InfoPopup from "./InfoPopup";
 
 export interface Paddock {
   paddock_id?: number;
   paddock_name: string;
-  paddock_type?: PaddockType;
+  crop_type?: cropType;
   area?: number;
   plant_date: string;
 }
@@ -25,7 +25,7 @@ export default function PaddockTable({
       JSON.stringify({
         paddockId: paddock.paddock_id,
         paddockName: paddock.paddock_name,
-        paddockType: paddock.paddock_type,
+        cropType: paddock.crop_type,
         area: paddock.area,
         plant_date: paddock.plant_date
       })
@@ -102,9 +102,9 @@ export default function PaddockTable({
                   <div>
                     <h3 className="text-lg font-semibold text-white group-hover:text-[#00be64] transition-colors">
                       {paddock.paddock_name}
-                      {paddock.paddock_type && (
+                      {paddock.crop_type && (
                         <span className="ml-2 text-sm text-gray-400 font-normal">
-                          ({paddock.paddock_type})
+                          ({paddock.crop_type})
                         </span>
                       )}
                     </h3>
