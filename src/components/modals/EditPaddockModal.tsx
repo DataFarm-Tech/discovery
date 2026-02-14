@@ -8,7 +8,8 @@ interface EditPaddockModalProps {
   onClose: () => void;
   currentName: string;
   currentType: PaddockType;
-  onSave: (newName: string, newType: PaddockType) => Promise<void>;
+  currentArea: string;
+  onSave: (newName: string, newType: PaddockType, newArea: string) => Promise<void>;
 }
 
 export default function EditPaddockModal({
@@ -16,10 +17,12 @@ export default function EditPaddockModal({
   onClose,
   currentName,
   currentType,
+  currentArea,
   onSave,
 }: EditPaddockModalProps) {
   const [newPaddockName, setNewPaddockName] = useState(currentName);
   const [newPaddockType, setNewPaddockType] = useState(currentType);
+  const [newPaddockArea, setNewPaddockArea] = useState(currentArea);
   const [editError, setEditError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -31,9 +34,14 @@ export default function EditPaddockModal({
       return;
     }
 
+    if (!newPaddockArea) {
+      setEditError("Paddock area cannot be empty");
+      return;
+    }
+
     if (
       newPaddockName.trim() === currentName &&
-      newPaddockType === currentType
+      newPaddockType === currentType && newPaddockArea == currentArea
     ) {
       setEditError("No changes made");
       return;
@@ -41,7 +49,7 @@ export default function EditPaddockModal({
 
     setLoading(true);
     try {
-      await onSave(newPaddockName.trim(), newPaddockType);
+      await onSave(newPaddockName.trim(), newPaddockType, newPaddockArea);
       onClose();
     } catch (error: any) {
       setEditError(error.message || "Failed to update paddock");
@@ -55,7 +63,11 @@ export default function EditPaddockModal({
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
       <div className="bg-[#121829] border border-[#00be64]/30 rounded-2xl p-6 w-full max-w-md">
-        <h2 className="text-2xl font-bold mb-4">Edit Paddock Name</h2>
+        <h2 className="text-2xl font-bold mb-4">Edit Paddock</h2>
+        <label className="block text-sm font-semibold mb-2 text-white">
+          Paddock Name
+        </label>
+        
         <input
           type="text"
           value={newPaddockName}
@@ -83,6 +95,23 @@ export default function EditPaddockModal({
           <option value="wine">Wine</option>
           <option value="other">Other</option>
         </select>
+
+        <label className="block text-sm font-semibold mb-2 text-white">
+          Paddock Area
+        </label>
+
+        <input
+          type="text"
+          value={newPaddockArea}
+          onChange={(e) => {
+            setNewPaddockArea(e.target.value);
+            setEditError(null);
+          }}
+          className="w-full px-4 py-2 bg-[#0c1220] border border-gray-700 rounded-lg text-white focus:outline-none focus:border-[#00be64] mb-4"
+          placeholder="Enter paddock area"
+          disabled={loading}
+        />
+
         {editError && <p className="text-red-500 text-sm mb-4">{editError}</p>}
         <div className="flex gap-3 justify-end mt-4">
           <button

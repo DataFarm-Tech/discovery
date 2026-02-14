@@ -42,6 +42,7 @@ export default function Page() {
   const [paddockId, setPaddockId] = useState<string | null>(null);
   const [paddockName, setPaddockName] = useState<string>("");
   const [paddockType, setPaddockType] = useState<PaddockType>("default");
+  const [paddockArea, setPaddockArea] = useState<string>("");
   const [newPaddockType, setNewPaddockType] = useState<PaddockType>("default");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -194,11 +195,19 @@ export default function Page() {
     }
   };
 
-  const handleEditPaddock = async (newName: string, newType: PaddockType) => {
+const handleEditPaddock = async (newName: string, newType: PaddockType, newArea: string) => {
     if (!paddockId) throw new Error("No paddock selected");
 
+    // Convert string to number
+    const areaValue = parseFloat(newArea);
+    
+    // Validate that it's a valid number
+    if (isNaN(areaValue)) {
+      throw new Error("Area must be a valid number");
+    }
+
     const token = localStorage.getItem("token") || "";
-    const result = await updatePaddockName(paddockId, newName, newType, token);
+    const result = await updatePaddockName(paddockId, newName, newType, areaValue, token);
 
     if (result.success) {
       sessionStorage.setItem(
@@ -386,6 +395,7 @@ export default function Page() {
         onClose={() => setIsEditModalOpen(false)}
         currentName={paddockName}
         currentType={paddockType}
+        currentArea={paddockArea}
         onSave={handleEditPaddock}
       />
 
