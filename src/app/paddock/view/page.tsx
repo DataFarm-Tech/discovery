@@ -29,9 +29,7 @@ const DeviceMap = dynamic(() => import("@/components/DeviceMap"), {
 export default function Page() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [devices, setDevices] = useState<Device[]>([]);
-  const [nodeLocations, setNodeLocations] = useState<
-    Array<{ node_id: string; node_name: string; lat: number; lon: number }>
-  >([]);
+  const [nodeLocations, setNodeLocations] = useState<Array<{ node_id: string; node_name: string; lat: number; lon: number }>>([]);
   const [sensorAverages, setSensorAverages] = useState<{
     [key: string]: number;
   }>({});
@@ -43,6 +41,7 @@ export default function Page() {
   const [paddockName, setPaddockName] = useState<string>("");
   const [paddockType, setPaddockType] = useState<PaddockType>("default");
   const [paddockArea, setPaddockArea] = useState<string>("");
+  const [plantDate, setPlantDate] = useState<string>("");
   const [newPaddockType, setNewPaddockType] = useState<PaddockType>("default");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -54,12 +53,53 @@ export default function Page() {
   useEffect(() => {
     const data = sessionStorage.getItem("paddockData");
     if (data) {
-      const { paddockId, paddockName, paddockType } = JSON.parse(data);
+      const { paddockId, paddockName, paddockType, area, plant_date } = JSON.parse(data);
       setPaddockId(paddockId?.toString() || null);
       setPaddockName(paddockName || "");
       setPaddockType(paddockType || "default");
+      setPaddockArea(area?.toString() || "");
+      setPlantDate(plant_date || "");
     }
   }, []);
+
+  // Format date for display
+  const formatPlantDate = (dateString: string) => {
+    if (!dateString) return "Not set";
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      });
+    } catch {
+      return dateString;
+    }
+  };
+
+  // Calculate days since planting
+  // Calculate days since planting (can be negative for future dates)
+const getDaysSincePlanting = (dateString: string) => {
+  if (!dateString) return null;
+  try {
+    const plantDate = new Date(dateString);
+    const today = new Date();
+    // Remove Math.abs to get signed difference
+    const diffTime = today.getTime() - plantDate.getTime();
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
+  } catch {
+    return null;
+  }
+};
+
+// Format the days message
+const formatDaysMessage = (days: number | null) => {
+  if (days === null) return null;
+  if (days === 0) return "Today";
+  if (days > 0) return `${days} day${days === 1 ? '' : 's'} ago`;
+  return `in ${Math.abs(days)} day${Math.abs(days) === 1 ? '' : 's'}`;
+};
 
   // Function to compute soil health score from sensor averages
   const computeSoilHealthScore = (averages: {
@@ -195,7 +235,7 @@ export default function Page() {
     }
   };
 
-const handleEditPaddock = async (newName: string, newType: PaddockType, newArea: string) => {
+  const handleEditPaddock = async (newName: string, newType: PaddockType, newArea: string) => {
     if (!paddockId) throw new Error("No paddock selected");
 
     // Convert string to number
@@ -216,11 +256,14 @@ const handleEditPaddock = async (newName: string, newType: PaddockType, newArea:
           paddockId: paddockId,
           paddockName: newName,
           paddockType: newType,
+          area: areaValue,
+          plant_date: plantDate,
         }),
       );
 
       setPaddockName(newName);
       setPaddockType(newType);
+      setPaddockArea(newArea);
       setIsEditModalOpen(false);
     } else {
       throw new Error(result.message);
@@ -262,6 +305,8 @@ const handleEditPaddock = async (newName: string, newType: PaddockType, newArea:
     }
   };
 
+  const daysSincePlanting = getDaysSincePlanting(plantDate);
+
   return (
     <main className="h-screen overflow-hidden bg-[#0c1220] px-6 py-6 text-white relative flex flex-col">
       <DashboardHeader
@@ -292,15 +337,17 @@ const handleEditPaddock = async (newName: string, newType: PaddockType, newArea:
             </button>
 
             <section className="bg-[#121829] border border-[#00be64]/30 rounded-2xl shadow-xl p-6">
-              <div className="flex items-center justify-between">
-                <h1 className="text-3xl font-bold text-white">
-                  {paddockName || `Paddock #${paddockId}`}
-                  {paddockType && (
-                    <span className="ml-3 text-xl text-gray-400 font-normal">
-                      ({paddockType})
-                    </span>
-                  )}
-                </h1>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex-1">
+                  <h1 className="text-3xl font-bold text-white">
+                    {paddockName || `Paddock #${paddockId}`}
+                    {paddockType && (
+                      <span className="ml-3 text-xl text-gray-400 font-normal">
+                        ({paddockType})
+                      </span>
+                    )}
+                  </h1>
+                </div>
 
                 <div className="flex items-center gap-3">
                   <button
@@ -327,6 +374,45 @@ const handleEditPaddock = async (newName: string, newType: PaddockType, newArea:
                     />
                   </button>
                 </div>
+              </div>
+
+              {/* Paddock Info Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                {/* Area Card */}
+                <div className="bg-[#0c1220] border border-[#00be64]/20 rounded-xl p-4 flex items-center gap-4">
+                  <div className="bg-[#00be64]/10 p-3 rounded-lg">
+                    <svg className="w-6 h-6 text-[#00be64]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-gray-400 text-sm">Paddock Area</p>
+                    <p className="text-white text-2xl font-bold">
+                      {paddockArea ? `${paddockArea} ha` : "Not set"}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Plant Date Card */}
+                {/* Plant Date Card */}
+<div className="bg-[#0c1220] border border-[#00be64]/20 rounded-xl p-4 flex items-center gap-4">
+  <div className="bg-[#00be64]/10 p-3 rounded-lg">
+    <svg className="w-6 h-6 text-[#00be64]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+    </svg>
+  </div>
+  <div>
+    <p className="text-gray-400 text-sm">Planted</p>
+    <p className="text-white text-lg font-semibold">
+      {formatPlantDate(plantDate)}
+    </p>
+    {daysSincePlanting !== null && (
+      <p className={`text-sm ${daysSincePlanting >= 0 ? 'text-[#00be64]' : 'text-blue-400'}`}>
+        {formatDaysMessage(daysSincePlanting)}
+      </p>
+    )}
+  </div>
+</div>
               </div>
             </section>
 
