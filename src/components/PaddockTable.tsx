@@ -8,6 +8,8 @@ export interface Paddock {
   paddock_id?: number;
   paddock_name: string;
   paddock_type?: PaddockType;
+  area?: number;
+  plant_date: string;
 }
 
 export default function PaddockTable({
@@ -24,6 +26,8 @@ export default function PaddockTable({
         paddockId: paddock.paddock_id,
         paddockName: paddock.paddock_name,
         paddockType: paddock.paddock_type,
+        area: paddock.area,
+        plant_date: paddock.plant_date
       })
     );
   };

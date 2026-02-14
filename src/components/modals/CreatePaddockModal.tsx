@@ -19,8 +19,16 @@ export default function CreatePaddockModal({
   const [loading, setLoading] = useState(false);
   const [paddockName, setPaddockName] = useState("");
   const [paddockType, setPaddockType] = useState<PaddockType>("default");
+  const [area, setArea] = useState("");
+  const [plant_date, setPlantDate] = useState("");
 
   const handleCreatePaddock = async () => {
+    // Validate plant_date is filled
+    if (!plant_date || plant_date.trim() === '') {
+      toast.error("Please select a plant date");
+      return;
+    }
+
     setLoading(true);
     try {
       const token = localStorage.getItem("token");
@@ -33,6 +41,8 @@ export default function CreatePaddockModal({
       const result = await createPaddock(
         paddockName.trim() || null,
         paddockType,
+        area,
+        plant_date,
         token
       );
       if (!result.success) {
@@ -44,6 +54,8 @@ export default function CreatePaddockModal({
       toast.success(result.message);
       setPaddockName("");
       setPaddockType("default");
+      setArea("");
+      setPlantDate("");
       onClose();
 
       if (onSuccess) {
@@ -121,7 +133,7 @@ export default function CreatePaddockModal({
               disabled={loading}
             />
             <p className="text-sm text-gray-400 mt-2">
-              Leave blank to create an unnamed paddock
+              Leave blank to auto-generate a name
             </p>
           </div>
 
@@ -140,12 +152,59 @@ export default function CreatePaddockModal({
               disabled={loading}
             >
               <option value="default">Default</option>
-              <option value="wheat">Wheat</option>
-              <option value="barley">Barley</option>
-              <option value="fruit">Fruit</option>
-              <option value="wine">Wine</option>
-              <option value="other">Other</option>
+              <option value="Grains">Grains</option>
+              <option value="Legumes">Legumes</option>
+              <option value="Fruit">Fruit</option>
+              <option value="Oil Seeds">Oil Seeds</option>
+              <option value="Root Crops">Root Crops</option>
+              <option value="Tropical">Tropical</option>
+              <option value="Other">Other</option>
             </select>
+          </div>
+
+          <div>
+            <label
+              htmlFor="area"
+              className="block text-sm font-semibold mb-2 text-white"
+            >
+              Area (hectares) <span className="text-gray-500">(optional)</span>
+            </label>
+            <input
+              id="area"
+              type="number"
+              value={area}
+              onChange={(e) => setArea(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder="e.g., 50"
+              min="1"
+              step="0.1"
+              className="w-full px-4 py-3 bg-[#0c1220] border border-gray-700 rounded-lg text-white focus:outline-none focus:border-[#00be64] transition-colors"
+              disabled={loading}
+            />
+            <p className="text-sm text-gray-400 mt-2">
+              Enter the paddock area in hectares
+            </p>
+          </div>
+
+          <div>
+            <label
+              htmlFor="plant_date"
+              className="block text-sm font-semibold mb-2 text-white"
+            >
+              Plant Date <span className="text-red-500">*</span>
+            </label>
+            <input
+              id="plant_date"
+              type="datetime-local"
+              value={plant_date}
+              onChange={(e) => setPlantDate(e.target.value)}
+              required
+              className="w-full px-4 py-3 bg-[#0c1220] border border-gray-700 rounded-lg text-white focus:outline-none focus:border-[#00be64] transition-colors [color-scheme:dark]"
+              disabled={loading}
+            />
+            <p className="text-sm text-gray-400 mt-2">
+              Required: When was the crop planted?
+            </p>
           </div>
 
           <div className="flex gap-3 justify-end pt-4">
