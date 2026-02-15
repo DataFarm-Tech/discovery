@@ -291,14 +291,14 @@ export default function CreatePaddockModal({
             <button
               onClick={onClose}
               disabled={loading}
-              className="px-6 py-3 bg-gray-700/50 hover:bg-gray-700 rounded-xl text-white"
+              className="px-5 py-2 text-sm text-white/60 hover:text-white/80 border border-white/10 hover:border-white/20 hover:bg-white/5 rounded-full transition-all duration-200 active:scale-95"
             >
               Cancel
             </button>
             <button
               onClick={handleCreatePaddock}
               disabled={loading}
-              className="px-6 py-3 rounded-xl bg-[#00be64] hover:bg-[#009e53] text-white font-medium"
+              className="px-5 py-2 text-sm text-white/80 hover:text-[#00be64] border border-white/20 hover:border-[#00be64]/50 hover:bg-white/5 rounded-full transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? "Creating..." : "Create Paddock"}
             </button>

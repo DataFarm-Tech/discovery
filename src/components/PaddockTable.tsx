@@ -45,7 +45,7 @@ export default function PaddockTable({
         </div>
         <button
           onClick={onAddPaddock}
-          className="px-5 py-2.5 bg-[#00be64] text-white font-semibold rounded-lg hover:bg-[#009e53] transition-all transform hover:scale-105 shadow-md"
+          className="px-4 py-1.5 text-sm text-white/80 hover:text-[#00be64] border border-white/20 hover:border-[#00be64]/50 hover:bg-white/5 rounded-full transition-all duration-200 active:scale-95"
         >
           + Add Paddock
         </button>
@@ -59,7 +59,7 @@ export default function PaddockTable({
           </h3>
           <button
             onClick={onAddPaddock}
-            className="px-6 py-3 bg-[#00be64] text-white font-semibold rounded-lg hover:bg-[#009e53] transition-all transform hover:scale-105 shadow-lg"
+            className="px-6 py-2 text-white/80 hover:text-[#00be64] border border-white/20 hover:border-[#00be64]/50 hover:bg-white/5 rounded-full transition-all duration-200 active:scale-95"
           >
             Create Your First Paddock
           </button>
