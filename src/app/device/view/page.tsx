@@ -1080,7 +1080,7 @@ function DeviceViewContent() {
                       </select>
                       <button
                         onClick={exportToCSV}
-                        className="px-4 py-2 text-sm bg-[#00be64] text-black font-semibold rounded-lg hover:bg-[#00d975] transition-colors shadow-lg shadow-[#00be64]/20"
+                        className="px-4 py-1.5 text-sm text-white/80 hover:text-[#00be64] border border-white/20 hover:border-[#00be64]/50 hover:bg-white/5 rounded-full transition-all duration-200 active:scale-95"
                       >
                         Export CSV
                       </button>

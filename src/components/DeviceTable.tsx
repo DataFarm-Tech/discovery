@@ -31,9 +31,9 @@ export default function DeviceTable({
 
         <button
           onClick={onAddDevice}
-          className="flex items-center gap-2 px-4 py-2 bg-[#00be64] hover:bg-[#009e53] text-white rounded-lg transition-all font-semibold shadow-md hover:shadow-[#00be64]/20"
+          className="flex items-center gap-2 px-4 py-1.5 text-sm text-white/80 hover:text-[#00be64] border border-white/20 hover:border-[#00be64]/50 hover:bg-white/5 rounded-full transition-all duration-200 active:scale-95"
         >
-          <MdAdd size={20} /> Add Device
+          <MdAdd size={18} /> Add Device
         </button>
       </div>
 

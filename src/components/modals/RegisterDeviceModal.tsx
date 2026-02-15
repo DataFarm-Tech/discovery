@@ -203,18 +203,14 @@ export default function RegisterDeviceModal({
             <button
               onClick={onClose}
               disabled={loading}
-              className="px-6 py-3 bg-gray-700 hover:bg-gray-600 rounded-lg transition-all text-white font-medium"
+              className="px-5 py-2 text-sm text-white/60 hover:text-white/80 border border-white/10 hover:border-white/20 hover:bg-white/5 rounded-full transition-all duration-200 active:scale-95"
             >
               Cancel
             </button>
             <button
               onClick={handleRegisterDevice}
               disabled={loading}
-              className={`px-6 py-3 rounded-lg transition-all text-white font-medium ${
-                loading
-                  ? "bg-[#00be64]/50 cursor-not-allowed"
-                  : "bg-[#00be64] hover:bg-[#009e53]"
-              }`}
+              className="px-5 py-2 text-sm text-white/80 hover:text-[#00be64] border border-white/20 hover:border-[#00be64]/50 hover:bg-white/5 rounded-full transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? "Registering..." : "Register Device"}
             </button>
