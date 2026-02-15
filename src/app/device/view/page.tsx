@@ -48,7 +48,7 @@ function DeviceViewContent() {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [paddockType, setPaddockType] = useState<string>("default");
+  const [cropType, setcropType] = useState<string>("default");
   const [paddockId, setPaddockId] = useState<number | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -222,7 +222,7 @@ function DeviceViewContent() {
       },
     };
 
-    const cropOptimal = optimalValues[paddockType] || optimalValues["default"];
+    const cropOptimal = optimalValues[cropType] || optimalValues["default"];
     return cropOptimal[sensorType] || 50;
   }
 
@@ -290,7 +290,7 @@ function DeviceViewContent() {
       },
     };
 
-    const cropRange = ranges[paddockType] || ranges["default"];
+    const cropRange = ranges[cropType] || ranges["default"];
     return cropRange[sensorType] || { min: 0, max: 100 };
   }
 
@@ -853,7 +853,7 @@ function DeviceViewContent() {
                       </p>
                       <p className="text-xs text-gray-400 mt-1">
                         All sensor readings are within optimal ranges for{" "}
-                        {paddockType || "default"} crop.
+                        {cropType || "default"} crop.
                       </p>
                     </div>
                   </div>

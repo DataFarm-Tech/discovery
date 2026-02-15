@@ -10,7 +10,7 @@ interface SearchBarProps {
     id?: number;
     paddock_name?: string;
     name?: string;
-    paddock_type?: string;
+    crop_type?: string;
   }>;
   devices?: Array<{ node_id: string; node_name: string }>;
   onItemSelect?: (item: any) => void;
@@ -32,7 +32,7 @@ export default function SearchBar({
       id: `paddock-${p.paddock_id || p.id}`,
       name: p.paddock_name || p.name || "Unnamed Paddock",
       type: "paddock",
-      paddock_type: p.paddock_type,
+      crop_type: p.crop_type,
       data: p,
     })),
     ...devices.map((d) => ({
