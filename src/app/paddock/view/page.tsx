@@ -377,43 +377,57 @@ const formatDaysMessage = (days: number | null) => {
               </div>
 
               {/* Paddock Info Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                {/* Area Card */}
-                <div className="bg-[#0c1220] border border-[#00be64]/20 rounded-xl p-4 flex items-center gap-4">
-                  <div className="bg-[#00be64]/10 p-3 rounded-lg">
-                    <svg className="w-6 h-6 text-[#00be64]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <p className="text-gray-400 text-sm">Paddock Area</p>
-                    <p className="text-white text-2xl font-bold">
-                      {paddockArea ? `${paddockArea} ha` : "Not set"}
-                    </p>
-                  </div>
-                </div>
+<div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+  {/* Area Card */}
+  <div className="bg-[#0c1220] border border-[#00be64]/20 rounded-xl p-4 flex items-center gap-4">
+    <div className="bg-[#00be64]/10 p-3 rounded-lg">
+      <svg className="w-6 h-6 text-[#00be64]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
+      </svg>
+    </div>
+    <div>
+      <p className="text-gray-400 text-sm">Paddock Area</p>
+      <p className="text-white text-2xl font-bold">
+        {paddockArea ? `${paddockArea} ha` : "Not set"}
+      </p>
+    </div>
+  </div>
 
-                {/* Plant Date Card */}
-                {/* Plant Date Card */}
-                <div className="bg-[#0c1220] border border-[#00be64]/20 rounded-xl p-4 flex items-center gap-4">
-                  <div className="bg-[#00be64]/10 p-3 rounded-lg">
-                    <svg className="w-6 h-6 text-[#00be64]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <p className="text-gray-400 text-sm">Planted</p>
-                    <p className="text-white text-lg font-semibold">
-                      {formatPlantDate(plantDate)}
-                    </p>
-                    {daysSincePlanting !== null && (
-                      <p className={`text-sm ${daysSincePlanting >= 0 ? 'text-[#00be64]' : 'text-blue-400'}`}>
-                        {formatDaysMessage(daysSincePlanting)}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </div>
+  {/* Crop Type Card */}
+  <div className="bg-[#0c1220] border border-[#00be64]/20 rounded-xl p-4 flex items-center gap-4">
+    <div className="bg-[#00be64]/10 p-3 rounded-lg">
+      <svg className="w-6 h-6 text-[#00be64]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
+      </svg>
+    </div>
+    <div>
+      <p className="text-gray-400 text-sm">Crop Type</p>
+      <p className="text-white text-lg font-semibold">
+        {cropType && cropType !== "default" ? cropType : "Not set"}
+      </p>
+    </div>
+  </div>
+
+  {/* Plant Date Card */}
+  <div className="bg-[#0c1220] border border-[#00be64]/20 rounded-xl p-4 flex items-center gap-4">
+    <div className="bg-[#00be64]/10 p-3 rounded-lg">
+      <svg className="w-6 h-6 text-[#00be64]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+      </svg>
+    </div>
+    <div>
+      <p className="text-gray-400 text-sm">Planted</p>
+      <p className="text-white text-lg font-semibold">
+        {formatPlantDate(plantDate)}
+      </p>
+      {daysSincePlanting !== null && (
+        <p className={`text-sm ${daysSincePlanting >= 0 ? 'text-[#00be64]' : 'text-blue-400'}`}>
+          {formatDaysMessage(daysSincePlanting)}
+        </p>
+      )}
+    </div>
+  </div>
+</div>
             </section>
 
             <section className="bg-[#121829] border border-[#00be64]/30 rounded-2xl shadow-xl p-8 relative overflow-hidden">
