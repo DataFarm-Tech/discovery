@@ -33,7 +33,7 @@ export default function PaddockTable({
   };
 
   return (
-    <div className="bg-gradient-to-br from-[#121829] to-[#0f1318] border border-[#00be64]/20 rounded-2xl p-8 relative overflow-hidden hover:border-[#00be64]/40 transition-all duration-300">
+    <div className="bg-gradient-to-br from-[#121829] to-[#0f1318] border border-[#00be64]/20 rounded-2xl p-8 relative hover:border-[#00be64]/40 transition-all duration-300">
       <div className="absolute top-0 right-0 w-64 h-64 bg-[#00be64]/5 rounded-full blur-3xl -translate-y-32 translate-x-32" />
       
       <div className="relative z-10">
@@ -54,9 +54,16 @@ export default function PaddockTable({
                 />
               </svg>
             </div>
-            <div>
-              <h2 className="text-xl font-bold text-white">My Zones</h2>
-              <p className="text-gray-400 text-sm">Manage your farm areas</p>
+            <div className="flex items-center gap-2">
+              <div>
+                <h2 className="text-xl font-bold text-white">My Zones</h2>
+                <p className="text-gray-400 text-sm">Manage your farm areas</p>
+              </div>
+              <InfoPopup
+                title="What is a Zone?"
+                description="A zone is a designated area on your farm where you monitor soil health. Multiple devices can be placed within a zone to track moisture, temperature, pH, and nutrient levels. You can freely move devices between zones as your monitoring needs change."
+                ariaLabel="What is a zone?"
+              />
             </div>
           </div>
           <button

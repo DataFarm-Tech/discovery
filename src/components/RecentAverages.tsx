@@ -72,8 +72,8 @@ export default function RecentAverages({ paddockId }: RecentAveragesProps) {
 
   if (loading) {
     return (
-      <section className="bg-[#121829] border border-[#00be64]/30 rounded-2xl shadow-xl p-8 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-[#00be64]/10 to-transparent pointer-events-none" />
+      <section className="bg-gradient-to-br from-[#121829] to-[#0f1318] border border-[#00be64]/20 rounded-2xl p-8 relative hover:border-[#00be64]/40 transition-all duration-300">
+        <div className="absolute inset-0 bg-gradient-to-br from-[#00be64]/5 to-transparent pointer-events-none rounded-2xl" />
         <h2 className="text-2xl font-semibold mb-6 relative z-10">
           Recent Averages
         </h2>
@@ -84,8 +84,8 @@ export default function RecentAverages({ paddockId }: RecentAveragesProps) {
 
   if (error) {
     return (
-      <section className="bg-[#121829] border border-[#00be64]/30 rounded-2xl shadow-xl p-8 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-[#00be64]/10 to-transparent pointer-events-none" />
+      <section className="bg-gradient-to-br from-[#121829] to-[#0f1318] border border-[#00be64]/20 rounded-2xl p-8 relative hover:border-[#00be64]/40 transition-all duration-300">
+        <div className="absolute inset-0 bg-gradient-to-br from-[#00be64]/5 to-transparent pointer-events-none rounded-2xl" />
         <h2 className="text-2xl font-semibold mb-6 relative z-10">
           Recent Averages
         </h2>
@@ -97,8 +97,8 @@ export default function RecentAverages({ paddockId }: RecentAveragesProps) {
   const hasData = Object.keys(averages).length > 0;
 
   return (
-    <section className="bg-[#121829] border border-[#00be64]/30 rounded-2xl shadow-xl p-8 relative overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-br from-[#00be64]/10 to-transparent pointer-events-none" />
+    <section className="bg-gradient-to-br from-[#121829] to-[#0f1318] border border-[#00be64]/20 rounded-2xl p-8 relative hover:border-[#00be64]/40 transition-all duration-300">
+      <div className="absolute inset-0 bg-gradient-to-br from-[#00be64]/5 to-transparent pointer-events-none rounded-2xl" />
 
       <div className="relative z-10">
         <div className="flex items-center justify-between mb-6">

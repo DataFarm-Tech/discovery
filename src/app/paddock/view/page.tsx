@@ -77,29 +77,27 @@ export default function Page() {
     }
   };
 
-  // Calculate days since planting
   // Calculate days since planting (can be negative for future dates)
-const getDaysSincePlanting = (dateString: string) => {
-  if (!dateString) return null;
-  try {
-    const plantDate = new Date(dateString);
-    const today = new Date();
-    // Remove Math.abs to get signed difference
-    const diffTime = today.getTime() - plantDate.getTime();
-    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays;
-  } catch {
-    return null;
-  }
-};
+  const getDaysSincePlanting = (dateString: string) => {
+    if (!dateString) return null;
+    try {
+      const plantDate = new Date(dateString);
+      const today = new Date();
+      const diffTime = today.getTime() - plantDate.getTime();
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+      return diffDays;
+    } catch {
+      return null;
+    }
+  };
 
-// Format the days message
-const formatDaysMessage = (days: number | null) => {
-  if (days === null) return null;
-  if (days === 0) return "Today";
-  if (days > 0) return `${days} day${days === 1 ? '' : 's'} ago`;
-  return `in ${Math.abs(days)} day${Math.abs(days) === 1 ? '' : 's'}`;
-};
+  // Format the days message
+  const formatDaysMessage = (days: number | null) => {
+    if (days === null) return null;
+    if (days === 0) return "Today";
+    if (days > 0) return `${days} day${days === 1 ? '' : 's'} ago`;
+    return `in ${Math.abs(days)} day${Math.abs(days) === 1 ? '' : 's'}`;
+  };
 
   // Function to compute soil health score from sensor averages
   const computeSoilHealthScore = (averages: {
@@ -313,162 +311,195 @@ const formatDaysMessage = (days: number | null) => {
         userName="Lucas"
         menuOpen={menuOpen}
         setMenuOpen={setMenuOpen}
-        searchQuery={searchQuery}
-        setSearchQuery={setSearchQuery}
-        paddocks={[]}
-        devices={devices}
-        onSearchItemSelect={handleSearchItemSelect}
       />
 
       <Sidebar menuOpen={menuOpen} setMenuOpen={setMenuOpen} />
 
-      <div className="flex-1 overflow-y-auto flex flex-col items-center pt-6">
+      <div className="flex-1 overflow-y-auto scrollbar-hide">
         {paddockId ? (
-          <div className="w-full max-w-7xl space-y-8">
+          <div className="space-y-8 pb-6">
+            {/* Back Button */}
             <button
               onClick={() => router.push("/dashboard")}
-              className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors group text-lg"
+              className="flex items-center gap-2 px-4 py-2 text-white/80 hover:text-[#00be64] border border-white/20 hover:border-[#00be64]/50 hover:bg-white/5 rounded-full transition-all duration-200 active:scale-95 group"
             >
               <MdArrowBack
-                size={24}
+                size={20}
                 className="group-hover:-translate-x-1 transition-transform"
               />
               <span>Back to Dashboard</span>
             </button>
 
-            <section className="bg-[#121829] border border-[#00be64]/30 rounded-2xl shadow-xl p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex-1">
-                  <h1 className="text-3xl font-bold text-white">
-                    {paddockName || `Paddock #${paddockId}`}
-                    {cropType && (
-                      <span className="ml-3 text-xl text-gray-400 font-normal">
-                        ({cropType})
-                      </span>
+            {/* Zone Header */}
+            <section className="bg-gradient-to-br from-[#121829] to-[#0f1318] border border-[#00be64]/20 rounded-2xl p-8 relative overflow-hidden hover:border-[#00be64]/40 transition-all duration-300">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-[#00be64]/5 rounded-full blur-3xl -translate-y-32 translate-x-32" />
+              
+              <div className="relative z-10">
+                <div className="flex items-start justify-between mb-6">
+                  <div className="flex-1">
+                    <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#00be64]/10 border border-[#00be64]/30 rounded-full mb-4">
+                      <svg className="w-4 h-4 text-[#00be64]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                      </svg>
+                      <span className="text-xs font-medium text-[#00be64]">ZONE DETAILS</span>
+                    </div>
+                    <h1 className="text-4xl font-bold text-white mb-2">
+                      {paddockName || `Zone #${paddockId}`}
+                    </h1>
+                    {cropType && cropType !== "default" && (
+                      <p className="text-gray-400 text-lg">{cropType}</p>
                     )}
-                  </h1>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setIsEditModalOpen(true)}
+                      className="p-2.5 text-white/80 hover:text-[#00be64] border border-white/20 hover:border-[#00be64]/50 hover:bg-white/5 rounded-lg transition-all duration-200 active:scale-95 group"
+                      title="Edit zone"
+                    >
+                      <MdEdit size={20} />
+                    </button>
+
+                    <button
+                      onClick={() => setIsDeleteModalOpen(true)}
+                      className="p-2.5 text-white/80 hover:text-red-400 border border-white/20 hover:border-red-400/50 hover:bg-white/5 rounded-lg transition-all duration-200 active:scale-95 group"
+                      title="Delete zone"
+                    >
+                      <MdDelete size={20} />
+                    </button>
+                  </div>
                 </div>
 
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={() => setIsEditModalOpen(true)}
-                    className="p-2.5 bg-[#00be64]/20 hover:bg-[#00be64]/30 rounded-lg transition-all group"
-                    title="Edit paddock"
-                  >
-                    <MdEdit
-                      size={20}
-                      color="#00be64"
-                      className="group-hover:scale-110 transition-transform"
-                    />
-                  </button>
+                {/* Info Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Area Card */}
+                  <div className="bg-[#0f1318] border border-[#00be64]/10 rounded-xl p-4 flex items-center gap-4 hover:border-[#00be64]/30 transition-all">
+                    <div className="bg-[#00be64]/10 p-3 rounded-lg">
+                      <svg className="w-6 h-6 text-[#00be64]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="text-gray-400 text-sm">Area</p>
+                      <p className="text-white text-xl font-bold">
+                        {paddockArea ? `${paddockArea} ha` : "Not set"}
+                      </p>
+                    </div>
+                  </div>
 
-                  <button
-                    onClick={() => setIsDeleteModalOpen(true)}
-                    className="p-2.5 bg-red-500/20 hover:bg-red-500/30 rounded-lg transition-all group"
-                    title="Delete paddock"
-                  >
-                    <MdDelete
-                      size={20}
-                      color="#ef4444"
-                      className="group-hover:scale-110 transition-transform"
-                    />
-                  </button>
+                  {/* Crop Type Card */}
+                  <div className="bg-[#0f1318] border border-[#00be64]/10 rounded-xl p-4 flex items-center gap-4 hover:border-[#00be64]/30 transition-all">
+                    <div className="bg-[#00be64]/10 p-3 rounded-lg">
+                      <svg className="w-6 h-6 text-[#00be64]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="text-gray-400 text-sm">Crop Type</p>
+                      <p className="text-white text-xl font-bold">
+                        {cropType && cropType !== "default" ? cropType : "Not set"}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Plant Date Card */}
+                  <div className="bg-[#0f1318] border border-[#00be64]/10 rounded-xl p-4 flex items-center gap-4 hover:border-[#00be64]/30 transition-all">
+                    <div className="bg-[#00be64]/10 p-3 rounded-lg">
+                      <svg className="w-6 h-6 text-[#00be64]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="text-gray-400 text-sm">Planted</p>
+                      <p className="text-white text-base font-semibold">
+                        {formatPlantDate(plantDate)}
+                      </p>
+                      {daysSincePlanting !== null && (
+                        <p className={`text-xs ${daysSincePlanting >= 0 ? 'text-[#00be64]' : 'text-blue-400'}`}>
+                          {formatDaysMessage(daysSincePlanting)}
+                        </p>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
-
-              {/* Paddock Info Cards */}
-<div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-  {/* Area Card */}
-  <div className="bg-[#0c1220] border border-[#00be64]/20 rounded-xl p-4 flex items-center gap-4">
-    <div className="bg-[#00be64]/10 p-3 rounded-lg">
-      <svg className="w-6 h-6 text-[#00be64]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
-      </svg>
-    </div>
-    <div>
-      <p className="text-gray-400 text-sm">Paddock Zone</p>
-      <p className="text-white text-2xl font-bold">
-        {paddockArea ? `${paddockArea} ha` : "Not set"}
-      </p>
-    </div>
-  </div>
-
-  {/* Crop Type Card */}
-  <div className="bg-[#0c1220] border border-[#00be64]/20 rounded-xl p-4 flex items-center gap-4">
-    <div className="bg-[#00be64]/10 p-3 rounded-lg">
-      <svg className="w-6 h-6 text-[#00be64]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
-      </svg>
-    </div>
-    <div>
-      <p className="text-gray-400 text-sm">Crop Type</p>
-      <p className="text-white text-lg font-semibold">
-        {cropType && cropType !== "default" ? cropType : "Not set"}
-      </p>
-    </div>
-  </div>
-
-  {/* Plant Date Card */}
-  <div className="bg-[#0c1220] border border-[#00be64]/20 rounded-xl p-4 flex items-center gap-4">
-    <div className="bg-[#00be64]/10 p-3 rounded-lg">
-      <svg className="w-6 h-6 text-[#00be64]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-      </svg>
-    </div>
-    <div>
-      <p className="text-gray-400 text-sm">Planted</p>
-      <p className="text-white text-lg font-semibold">
-        {formatPlantDate(plantDate)}
-      </p>
-      {daysSincePlanting !== null && (
-        <p className={`text-sm ${daysSincePlanting >= 0 ? 'text-[#00be64]' : 'text-blue-400'}`}>
-          {formatDaysMessage(daysSincePlanting)}
-        </p>
-      )}
-    </div>
-  </div>
-</div>
             </section>
 
-            <section className="bg-[#121829] border border-[#00be64]/30 rounded-2xl shadow-xl p-8 relative overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-br from-[#00be64]/10 to-transparent pointer-events-none" />
-              <h2 className="text-2xl font-semibold mb-6 relative z-10">
-                Soil Health Overview
-              </h2>
-              <div className="flex justify-center">
-                <SoilHealthScore score={soilHealthScore} />
+            {/* Soil Health Section */}
+            {/* <section className="bg-gradient-to-br from-[#121829] to-[#0f1318] border border-[#00be64]/20 rounded-2xl p-8 relative overflow-hidden hover:border-[#00be64]/40 transition-all duration-300">
+              <div className="absolute bottom-0 left-0 w-64 h-64 bg-[#00be64]/5 rounded-full blur-3xl translate-y-32 -translate-x-32" />
+              
+              <div className="relative z-10">
+                <div className="mb-8">
+                  <h2 className="text-2xl font-bold mb-2">Soil Health Overview</h2>
+                  <p className="text-gray-400 text-sm">
+                    Real-time soil health assessment from your active sensors
+                  </p>
+                </div>
+                
+                <div className="flex justify-center mb-6">
+                  <SoilHealthScore score={soilHealthScore} />
+                </div>
+                
+                <p className="text-gray-400 text-center text-sm max-w-2xl mx-auto">
+                  Calculated using microbial activity, organic matter, moisture balance, and nutrient availability
+                </p>
               </div>
-              <p className="text-gray-400 text-center mt-6 max-w-xl mx-auto relative z-10">
-                Soil health is calculated using microbial activity, organic
-                matter, moisture balance, and nutrient availability from your
-                active sensors.
-              </p>
-            </section>
+            </section> */}
 
+            {/* Recent Averages */}
             <RecentAverages paddockId={paddockId} />
 
-            {loading && <p className="text-gray-400">Loading devices...</p>}
-            {error && <p className="text-red-500">{error}</p>}
-
-            {!loading && !error && (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full">
-                {/* DEVICE TABLE */}
-                <div className="w-full">
-                  <DeviceTable
-                    devices={devices}
-                    onAddDevice={handleAddDevice}
-                    onDeviceClick={handleDeviceClick}
-                  />
+            {/* Loading/Error States */}
+            {loading && (
+              <div className="bg-gradient-to-br from-[#121829] to-[#0f1318] border border-[#00be64]/20 rounded-2xl p-8">
+                <div className="flex items-center justify-center gap-3">
+                  <div className="w-2 h-2 bg-[#00be64] rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <div className="w-2 h-2 bg-[#00be64] rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <div className="w-2 h-2 bg-[#00be64] rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                  <p className="text-white ml-2">Loading devices...</p>
                 </div>
+              </div>
+            )}
+            
+            {error && (
+              <div className="bg-gradient-to-br from-[#121829] to-[#0f1318] border border-red-500/20 rounded-2xl p-8">
+                <p className="text-red-400 text-center">{error}</p>
+              </div>
+            )}
 
-                {/* DEVICE MAP */}
+            {/* Devices and Map */}
+            {!loading && !error && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Device Table */}
+                <DeviceTable
+                  devices={devices}
+                  onAddDevice={handleAddDevice}
+                  onDeviceClick={handleDeviceClick}
+                />
+
+                {/* Device Map */}
                 {nodeLocations.length > 0 && (
-                  <section className="bg-[#121829] border border-[#00be64]/30 rounded-2xl shadow-xl p-6 w-full relative z-0">
-                    <h2 className="text-2xl font-semibold mb-6">
-                      Device Locations
-                    </h2>
-                    <div className="rounded-xl overflow-hidden h-[500px] w-full relative z-0">
-                      <DeviceMap nodes={nodeLocations} />
+                  <section className="bg-gradient-to-br from-[#121829] to-[#0f1318] border border-[#00be64]/20 rounded-2xl p-8 relative overflow-hidden hover:border-[#00be64]/40 transition-all duration-300">
+                    <div className="absolute top-0 left-0 w-64 h-64 bg-[#00be64]/5 rounded-full blur-3xl -translate-y-32 -translate-x-32" />
+                    
+                    <div className="relative z-10">
+                      <div className="flex items-center gap-3 mb-6">
+                        <div className="w-10 h-10 bg-[#00be64]/10 rounded-xl flex items-center justify-center">
+                          <svg className="w-5 h-5 text-[#00be64]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                          </svg>
+                        </div>
+                        <div>
+                          <h2 className="text-xl font-bold text-white">Device Locations</h2>
+                          <p className="text-gray-400 text-sm">View all devices on the map</p>
+                        </div>
+                      </div>
+                      
+                      <div className="rounded-xl overflow-hidden h-[500px] w-full border border-white/5">
+                        <DeviceMap nodes={nodeLocations} />
+                      </div>
                     </div>
                   </section>
                 )}
@@ -476,7 +507,9 @@ const formatDaysMessage = (days: number | null) => {
             )}
           </div>
         ) : (
-          <p className="text-gray-400">No paddock selected.</p>
+          <div className="bg-gradient-to-br from-[#121829] to-[#0f1318] border border-[#00be64]/20 rounded-2xl p-16 text-center">
+            <p className="text-gray-400 text-lg">No zone selected.</p>
+          </div>
         )}
       </div>
 
