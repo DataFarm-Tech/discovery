@@ -15,6 +15,7 @@ export default function InfoPopup({
 }: InfoPopupProps) {
   const [showInfo, setShowInfo] = useState(false);
   const popupRef = useRef<HTMLDivElement>(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -32,20 +33,47 @@ export default function InfoPopup({
 
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
     };
   }, [showInfo]);
+
+  const handleMouseEnter = () => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+    setShowInfo(true);
+  };
+
+  const handleMouseLeave = () => {
+    // Add a small delay before hiding to allow moving to the popup
+    timeoutRef.current = setTimeout(() => {
+      setShowInfo(false);
+    }, 200);
+  };
+
+  const handleClick = () => {
+    setShowInfo(!showInfo);
+  };
 
   return (
     <div className="relative" ref={popupRef}>
       <button
-        onClick={() => setShowInfo(!showInfo)}
+        onClick={handleClick}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
         className="w-4 h-4 rounded-full border-2 border-gray-400 text-gray-400 hover:border-[#00be64] hover:text-[#00be64] transition-all flex items-center justify-center text-sm font-bold"
         aria-label={ariaLabel}
       >
         ?
       </button>
       {showInfo && (
-        <div className="absolute top-8 left-0 z-50 w-80 bg-[#0f1419] border border-[#00be64] rounded-lg shadow-xl p-4">
+        <div 
+          className="absolute top-8 left-0 z-50 w-80 bg-[#0f1419] border border-[#00be64] rounded-lg shadow-xl p-4"
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
+        >
           <div className="flex justify-between items-start mb-2">
             <h3 className="text-sm font-bold text-[#00be64]">{title}</h3>
             <button

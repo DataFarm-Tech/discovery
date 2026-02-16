@@ -34,7 +34,7 @@ export default function DeletePaddockModal({
           <div className="w-12 h-12 bg-red-500/20 rounded-full flex items-center justify-center">
             <MdDelete size={24} color="#ef4444" />
           </div>
-          <h2 className="text-2xl font-bold text-red-500">Delete Paddock</h2>
+          <h2 className="text-2xl font-bold text-red-500">Delete Zone</h2>
         </div>
         <p className="text-white text-lg mb-3">
           Are you sure you want to delete{" "}
@@ -44,7 +44,7 @@ export default function DeletePaddockModal({
           ?
         </p>
         <p className="text-gray-400 mb-8 leading-relaxed">
-          This will unlink all devices from this paddock. This action cannot be
+          This will unlink all devices from this zone. This action cannot be
           undone.
         </p>
         <div className="flex gap-4 justify-end">
@@ -64,7 +64,7 @@ export default function DeletePaddockModal({
                 : "bg-red-500 hover:bg-red-600"
             }`}
           >
-            {loading ? "Deleting..." : "Delete Paddock"}
+            {loading ? "Deleting..." : "Delete Zone"}
           </button>
         </div>
       </div>
