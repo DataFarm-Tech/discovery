@@ -121,97 +121,10 @@ export default function DashboardPage() {
       />
 
       {/* Sidebar */}
-      <Sidebar menuOpen={menuOpen} setMenuOpen={setMenuOpen} />
+      {/* <Sidebar menuOpen={menuOpen} setMenuOpen={setMenuOpen} /> */}
 
       {/* Scrollable Main Content */}
-      <div className="flex-1 overflow-y-auto space-y-8 scrollbar-hide">
-        {/* Welcome + What's New Section */}
-        <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Welcome Card */}
-          <div className="lg:col-span-2 bg-gradient-to-br from-[#121829] to-[#0f1318] border border-[#00be64]/20 rounded-2xl p-8 relative overflow-hidden group hover:border-[#00be64]/40 transition-all duration-300">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-[#00be64]/5 rounded-full blur-3xl -translate-y-32 translate-x-32 group-hover:bg-[#00be64]/10 transition-all duration-500" />
-            
-            <div className="relative z-10">
-              <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#00be64]/10 border border-[#00be64]/30 rounded-full mb-4">
-                <span className="w-2 h-2 bg-[#00be64] rounded-full animate-pulse" />
-                <span className="text-xs font-medium text-[#00be64]">LIVE PLATFORM</span>
-              </div>
-
-              <h1 className="text-3xl font-bold mb-3">
-                Welcome to Discovery
-              </h1>
-
-              <p className="text-gray-300 text-base leading-relaxed mb-4">
-                Your all-in-one soil intelligence platform. Monitor soil health, track zone performance, and make data-driven decisions with real-time insights from your on-ground sensors.
-              </p>
-
-              <p className="text-gray-400 text-sm leading-relaxed">
-                Analyze moisture, temperature, and nutrient trends to farm smarter—not harder.
-              </p>
-
-              {/* App Store Badges - Mobile Only */}
-              <div className="flex gap-3 mt-6 lg:hidden">
-                <img
-                  src="/appstore.png"
-                  alt="App Store"
-                  className="h-10 opacity-70 hover:opacity-100 transition cursor-pointer"
-                />
-                <img
-                  src="/googleplay.png"
-                  alt="Google Play"
-                  className="h-10 opacity-70 hover:opacity-100 transition cursor-pointer"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* What's New Card */}
-          <div className="bg-gradient-to-br from-[#121829] to-[#0f1318] border border-[#00be64]/20 rounded-2xl p-8 relative overflow-hidden hover:border-[#00be64]/40 transition-all duration-300">
-            <div className="absolute bottom-0 left-0 w-48 h-48 bg-[#00be64]/5 rounded-full blur-3xl translate-y-24 -translate-x-24" />
-            
-            <div className="relative z-10">
-              <div className="flex items-center gap-2 mb-6">
-                <div className="w-8 h-8 bg-[#00be64]/10 rounded-lg flex items-center justify-center">
-                  <span className="text-lg">✨</span>
-                </div>
-                <h2 className="text-xl font-bold">What's New</h2>
-              </div>
-
-              <div className="space-y-4">
-                <div className="flex gap-3">
-                  <div className="w-1.5 h-1.5 bg-[#00be64] rounded-full mt-2 flex-shrink-0" />
-                  <div>
-                    <h3 className="text-white font-medium text-sm mb-1">Enhanced Zone Management</h3>
-                    <p className="text-gray-400 text-xs leading-relaxed">Create and organize zones with an intuitive interface</p>
-                  </div>
-                </div>
-
-                <div className="flex gap-3">
-                  <div className="w-1.5 h-1.5 bg-[#00be64] rounded-full mt-2 flex-shrink-0" />
-                  <div>
-                    <h3 className="text-white font-medium text-sm mb-1">Real-Time Search</h3>
-                    <p className="text-gray-400 text-xs leading-relaxed">Quickly find zones and devices with smart search</p>
-                  </div>
-                </div>
-
-                <div className="flex gap-3">
-                  <div className="w-1.5 h-1.5 bg-[#00be64] rounded-full mt-2 flex-shrink-0" />
-                  <div>
-                    <h3 className="text-white font-medium text-sm mb-1">Enhanced Zone Information</h3>
-                    <p className="text-gray-400 text-xs leading-relaxed">Understand more about your soil with added context</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-6 pt-4 border-t border-white/5">
-                <p className="text-xs text-gray-500">Version 0.0.2 • More updates coming soon</p>
-              </div>
-            </div>
-          </div>
-        </section>
-        
-        
-        
+      <div className="flex-1 overflow-y-auto space-y-8 scrollbar-hide">        
         {/* Search Bar Section */}
         <section className="bg-gradient-to-br from-[#121829] to-[#0f1318] border border-[#00be64]/20 rounded-2xl p-8 relative hover:border-[#00be64]/40 transition-all duration-300">
           <div className="absolute top-0 left-0 w-64 h-64 bg-[#00be64]/5 rounded-full blur-3xl -translate-y-32 -translate-x-32 pointer-events-none" />
