@@ -130,14 +130,14 @@ export default function RecentAverages({ paddockId }: RecentAveragesProps) {
           </div>
         ) : (
           <p className="text-gray-400">
-            No sensor data available for this paddock.
+            No sensor data available for this zone.
           </p>
         )}
 
         {hasData && (
           <p className="text-gray-400 text-sm mt-6">
             Values represent the most recent average readings from all active
-            sensors in this paddock.
+            sensors in this zone.
           </p>
         )}
       </div>
