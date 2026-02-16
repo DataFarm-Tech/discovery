@@ -757,7 +757,7 @@ function DeviceViewContent() {
               size={24}
               className="group-hover:-translate-x-1 transition-transform"
             />
-            <span>Back to Paddock </span>
+            <span>Back to Zone </span>
           </button>
 
           <section className="bg-[#121829] border border-[#00be64]/30 rounded-2xl shadow-xl p-6">
@@ -1113,7 +1113,7 @@ function DeviceViewContent() {
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500 mb-1">Paddock ID</p>
+                    <p className="text-xs text-gray-500 mb-1">Zone ID</p>
                     <p className="font-mono text-sm text-[#00be64]">
                       {moistureData?.paddock_id || phData?.paddock_id}
                     </p>

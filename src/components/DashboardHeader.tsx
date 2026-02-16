@@ -1,33 +1,17 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import SearchBar from "@/components/SearchBar";
 
 interface DashboardHeaderProps {
   userName: string | null;
   menuOpen: boolean;
   setMenuOpen: (open: boolean) => void;
-  searchQuery: string;
-  setSearchQuery: (query: string) => void;
-  paddocks?: Array<{
-    paddock_id?: number;
-    id?: number;
-    paddock_name?: string;
-    name?: string;
-  }>;
-  devices?: Array<{ node_id: string; node_name: string }>;
-  onSearchItemSelect?: (item: any) => void;
 }
 
 export default function DashboardHeader({
   userName,
   menuOpen,
   setMenuOpen,
-  searchQuery,
-  setSearchQuery,
-  paddocks = [],
-  devices = [],
-  onSearchItemSelect,
 }: DashboardHeaderProps) {
   const router = useRouter();
 
@@ -56,15 +40,6 @@ export default function DashboardHeader({
         </button>
         <h1 className="text-2xl font-semibold text-white">Discovery</h1>
       </div>
-
-      {/* Use the SearchBar Component with data */}
-      <SearchBar
-        value={searchQuery}
-        onChange={setSearchQuery}
-        paddocks={paddocks}
-        devices={devices}
-        onItemSelect={onSearchItemSelect}
-      />
 
       <div className="flex items-center gap-4">
         <button

@@ -386,7 +386,7 @@ const formatDaysMessage = (days: number | null) => {
       </svg>
     </div>
     <div>
-      <p className="text-gray-400 text-sm">Paddock Area</p>
+      <p className="text-gray-400 text-sm">Paddock Zone</p>
       <p className="text-white text-2xl font-bold">
         {paddockArea ? `${paddockArea} ha` : "Not set"}
       </p>

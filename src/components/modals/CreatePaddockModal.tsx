@@ -123,10 +123,10 @@ export default function CreatePaddockModal({
           <div className="flex justify-between items-center">
             <div>
               <h2 className="text-3xl font-bold text-white mb-1">
-                Create New Paddock
+                Create New Zone
               </h2>
               <p className="text-gray-400 text-sm">
-                Add a new paddock to your farm
+                Add a new zone to your farm
               </p>
             </div>
             <button
@@ -157,7 +157,7 @@ export default function CreatePaddockModal({
           {/* Paddock Name */}
           <div className="space-y-2">
             <label className="block text-sm font-semibold text-white">
-              Paddock Name{" "}
+              Zone Name{" "}
               <span className="text-gray-500 font-normal">(optional)</span>
             </label>
             <input
@@ -300,7 +300,7 @@ export default function CreatePaddockModal({
               disabled={loading}
               className="px-5 py-2 text-sm text-white/80 hover:text-[#00be64] border border-white/20 hover:border-[#00be64]/50 hover:bg-white/5 rounded-full transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? "Creating..." : "Create Paddock"}
+              {loading ? "Creating..." : "Create Zone"}
             </button>
           </div>
         </div>

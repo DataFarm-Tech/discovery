@@ -36,7 +36,7 @@ export default function PaddockTable({
     <div className="bg-[#1a1f2e] border border-[#00be64] rounded-lg shadow-lg p-6 flex-1 w-full">
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center gap-2">
-          <h2 className="text-2xl font-bold text-white">My Paddocks</h2>
+          <h2 className="text-2xl font-bold text-white">My Zones</h2>
           <InfoPopup
             title="What is a Paddock?"
             description="A paddock is a field or area on your farm. Multiple devices can belong to a paddock, and you're free to move devices between paddocks as needed."
@@ -47,7 +47,7 @@ export default function PaddockTable({
           onClick={onAddPaddock}
           className="px-4 py-1.5 text-sm text-white/80 hover:text-[#00be64] border border-white/20 hover:border-[#00be64]/50 hover:bg-white/5 rounded-full transition-all duration-200 active:scale-95"
         >
-          + Add Paddock
+          + Add Zone
         </button>
       </div>
 
@@ -68,7 +68,7 @@ export default function PaddockTable({
         <>
           <div className="mb-4">
             <p className="text-sm text-gray-400">
-              Total Paddocks:{" "}
+              Total Zones:{" "}
               <span className="text-[#00be64] font-semibold">
                 {paddocks.length}
               </span>

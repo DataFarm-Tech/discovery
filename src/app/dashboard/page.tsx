@@ -6,6 +6,7 @@ import dynamic from "next/dynamic";
 import toast from "react-hot-toast";
 import DashboardHeader from "@/components/DashboardHeader";
 import Sidebar from "@/components/Sidebar";
+import SearchBar from "@/components/SearchBar";
 import StatsTile from "@/components/StatsTile";
 import PaddockTable from "@/components/PaddockTable";
 import { Device } from "@/components/DeviceTable";
@@ -13,6 +14,7 @@ import { Paddock } from "@/components/PaddockTable";
 import { getPaddocks } from "@/lib/paddock";
 import SoilHealthScore from "@/components/SoilHealthScore";
 import CreatePaddockModal from "@/components/modals/CreatePaddockModal";
+import WeatherWidget from "@/components/WeatherWidget";
 
 // Load DeviceMap dynamically (Leaflet needs browser APIs)
 const DeviceMap = dynamic(() => import("@/components/DeviceMap"), {
@@ -116,177 +118,149 @@ export default function DashboardPage() {
         userName={userName}
         menuOpen={menuOpen}
         setMenuOpen={setMenuOpen}
-        searchQuery={searchQuery}
-        setSearchQuery={setSearchQuery}
-        paddocks={paddocks}
-        devices={devices}
-        onSearchItemSelect={handleSearchItemSelect}
       />
 
       {/* Sidebar */}
       <Sidebar menuOpen={menuOpen} setMenuOpen={setMenuOpen} />
 
       {/* Scrollable Main Content */}
-      <div className="flex-1 overflow-y-auto space-y-10 scrollbar-hide">
-        {/* 🌱 Welcome + What's New Section */}
-        <section className="grid grid-cols-1 lg:grid-cols-7 gap-6">
-          {/* LEFT — Welcome */}
-          <div className="bg-[#121829] border border-[#00be64]/30 rounded-2xl shadow-xl p-8 relative overflow-hidden col-span-1 lg:col-span-4">
-            {/* Glow */}
-            <div className="absolute inset-0 bg-gradient-to-br from-[#00be64]/10 to-transparent pointer-events-none" />
-
-            <h1 className="text-3xl font-bold mb-3 relative z-10">
-              Welcome to <span className="text-[#00be64]">Discovery</span>
-            </h1>
-
-            <p className="text-gray-300 max-w-3xl text-lg leading-relaxed relative z-10">
-              Discovery is your all-in-one{" "}
-              <span className="text-white font-semibold">
-                Soil Intelligence Platform
-              </span>
-              , helping you monitor soil health, track paddock performance, and
-              make data-driven decisions with real-time insights from your
-              on-ground sensors.
-            </p>
-
-            <p className="mt-3 text-gray-400 max-w-2xl relative z-10">
-              Whether you're analysing moisture, temperature, or nutrient
-              trends, Discovery gives you the tools to farm smarter — not
-              harder.
-            </p>
-
-            {/* Mobile hint to get the app */}
-            <div className="flex gap-4 mt-6 relative z-10 lg:hidden">
-              <img
-                src="/appstore.png"
-                alt="App Store"
-                className="h-10 opacity-80 hover:opacity-100 transition"
-              />
-              <img
-                src="/googleplay.png"
-                alt="Google Play"
-                className="h-10 opacity-80 hover:opacity-100 transition"
-              />
-            </div>
-          </div>
-
-          {/* RIGHT — What's New */}
-          <div className="bg-[#121829] border border-[#00be64]/30 rounded-2xl shadow-xl p-8 relative overflow-hidden col-span-1 lg:col-span-3">
-            {/* Glow */}
-            <div className="absolute inset-0 bg-gradient-to-bl from-[#00be64]/10 to-transparent pointer-events-none" />
-
+      <div className="flex-1 overflow-y-auto space-y-8 scrollbar-hide">
+        {/* Welcome + What's New Section */}
+        <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Welcome Card */}
+          <div className="lg:col-span-2 bg-gradient-to-br from-[#121829] to-[#0f1318] border border-[#00be64]/20 rounded-2xl p-8 relative overflow-hidden group hover:border-[#00be64]/40 transition-all duration-300">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-[#00be64]/5 rounded-full blur-3xl -translate-y-32 translate-x-32 group-hover:bg-[#00be64]/10 transition-all duration-500" />
+            
             <div className="relative z-10">
-              <div className="flex items-center gap-2 mb-4">
-                <span className="text-2xl">✨</span>
-                <h2 className="text-2xl font-bold">What's New in 0.0.1</h2>
+              <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#00be64]/10 border border-[#00be64]/30 rounded-full mb-4">
+                <span className="w-2 h-2 bg-[#00be64] rounded-full animate-pulse" />
+                <span className="text-xs font-medium text-[#00be64]">LIVE PLATFORM</span>
               </div>
 
-              <ul className="space-y-4 text-gray-300">
-                <li className="flex items-start gap-3">
-                  <span className="text-[#00be64] mt-1">•</span>
-                  <span>
-                    <strong className="text-white">
-                      Enhanced Paddock Management
-                    </strong>{" "}
-                    — Create, edit, and organize your paddocks with an intuitive
-                    interface
-                  </span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="text-[#00be64] mt-1">•</span>
-                  <span>
-                    <strong className="text-white">Real-Time Search</strong> —
-                    Quickly find paddocks and devices with our new smart search
-                    functionality
-                  </span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="text-[#00be64] mt-1">•</span>
-                  <span>
-                    <strong className="text-white">
-                      Educational Resources
-                    </strong>{" "}
-                    — Access guides and tutorials to maximize your soil
-                    intelligence insights
-                  </span>
-                </li>
-              </ul>
+              <h1 className="text-3xl font-bold mb-3">
+                Welcome to Discovery
+              </h1>
 
-              <p className="mt-6 text-sm text-gray-400">
-                Stay tuned for more updates as we continue to improve your
-                Discovery experience.
+              <p className="text-gray-300 text-base leading-relaxed mb-4">
+                Your all-in-one soil intelligence platform. Monitor soil health, track zone performance, and make data-driven decisions with real-time insights from your on-ground sensors.
               </p>
+
+              <p className="text-gray-400 text-sm leading-relaxed">
+                Analyze moisture, temperature, and nutrient trends to farm smarter—not harder.
+              </p>
+
+              {/* App Store Badges - Mobile Only */}
+              <div className="flex gap-3 mt-6 lg:hidden">
+                <img
+                  src="/appstore.png"
+                  alt="App Store"
+                  className="h-10 opacity-70 hover:opacity-100 transition cursor-pointer"
+                />
+                <img
+                  src="/googleplay.png"
+                  alt="Google Play"
+                  className="h-10 opacity-70 hover:opacity-100 transition cursor-pointer"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* What's New Card */}
+          <div className="bg-gradient-to-br from-[#121829] to-[#0f1318] border border-[#00be64]/20 rounded-2xl p-8 relative overflow-hidden hover:border-[#00be64]/40 transition-all duration-300">
+            <div className="absolute bottom-0 left-0 w-48 h-48 bg-[#00be64]/5 rounded-full blur-3xl translate-y-24 -translate-x-24" />
+            
+            <div className="relative z-10">
+              <div className="flex items-center gap-2 mb-6">
+                <div className="w-8 h-8 bg-[#00be64]/10 rounded-lg flex items-center justify-center">
+                  <span className="text-lg">✨</span>
+                </div>
+                <h2 className="text-xl font-bold">What's New</h2>
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex gap-3">
+                  <div className="w-1.5 h-1.5 bg-[#00be64] rounded-full mt-2 flex-shrink-0" />
+                  <div>
+                    <h3 className="text-white font-medium text-sm mb-1">Enhanced Zone Management</h3>
+                    <p className="text-gray-400 text-xs leading-relaxed">Create and organize zones with an intuitive interface</p>
+                  </div>
+                </div>
+
+                <div className="flex gap-3">
+                  <div className="w-1.5 h-1.5 bg-[#00be64] rounded-full mt-2 flex-shrink-0" />
+                  <div>
+                    <h3 className="text-white font-medium text-sm mb-1">Real-Time Search</h3>
+                    <p className="text-gray-400 text-xs leading-relaxed">Quickly find zones and devices with smart search</p>
+                  </div>
+                </div>
+
+                <div className="flex gap-3">
+                  <div className="w-1.5 h-1.5 bg-[#00be64] rounded-full mt-2 flex-shrink-0" />
+                  <div>
+                    <h3 className="text-white font-medium text-sm mb-1">Enhanced Zone Information</h3>
+                    <p className="text-gray-400 text-xs leading-relaxed">Understand more about your soil with added context</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-6 pt-4 border-t border-white/5">
+                <p className="text-xs text-gray-500">Version 0.0.2 • More updates coming soon</p>
+              </div>
             </div>
           </div>
         </section>
-
-        {/* 🌾 Product Education Section */}
-        <section className="bg-[#121829] border border-[#00be64]/30 rounded-2xl shadow-xl p-8 relative overflow-hidden">
-          {/* Background glow */}
-          <div className="absolute inset-0 bg-gradient-to-r from-[#00be64]/5 to-transparent pointer-events-none" />
-
-          <h2 className="text-2xl font-bold mb-4 relative z-10">
-            Learn How to Get the Most From{" "}
-            <span className="text-[#00be64]">Discovery</span>
-          </h2>
-
-          <p className="text-gray-300 mb-8 max-w-3xl relative z-10">
-            Whether you're new to soil monitoring or looking to sharpen your
-            agronomy skills, these guides will help you get more value from your
-            sensors, paddocks, and soil intelligence data.
-          </p>
-
-          {/* Education Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative z-10">
-            {/* Card 1 */}
-            <div className="bg-[#0f1525] border border-[#00be64]/20 rounded-xl p-6 hover:border-[#00be64]/40 transition shadow-lg">
-              <h3 className="text-xl font-semibold mb-2">
-                📡 Understanding Your Sensors
-              </h3>
-              <p className="text-gray-400 text-sm mb-4">
-                Learn how your Discovery probes capture soil moisture, pH, and
-                temperature data.
-              </p>
-              <button className="text-[#00be64] hover:text-[#00d978] font-medium text-sm">
-                Read more →
-              </button>
+        
+        
+        
+        {/* Search Bar Section */}
+        <section className="bg-gradient-to-br from-[#121829] to-[#0f1318] border border-[#00be64]/20 rounded-2xl p-8 relative hover:border-[#00be64]/40 transition-all duration-300">
+          <div className="absolute top-0 left-0 w-64 h-64 bg-[#00be64]/5 rounded-full blur-3xl -translate-y-32 -translate-x-32 pointer-events-none" />
+          
+          <div className="relative z-10">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 bg-[#00be64]/10 rounded-xl flex items-center justify-center">
+                <svg
+                  className="w-5 h-5 text-[#00be64]"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  />
+                </svg>
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-white">Quick Search</h2>
+                <p className="text-gray-400 text-sm">Find zones and devices instantly</p>
+              </div>
             </div>
 
-            {/* Card 2 */}
-            <div className="bg-[#0f1525] border border-[#00be64]/20 rounded-xl p-6 hover:border-[#00be64]/40 transition shadow-lg">
-              <h3 className="text-xl font-semibold mb-2">
-                🌱 Improving Soil Health
-              </h3>
-              <p className="text-gray-400 text-sm mb-4">
-                Practical steps to increase microbial activity, fertility, and
-                long-term soil resilience.
-              </p>
-              <button className="text-[#00be64] hover:text-[#00d978] font-medium text-sm">
-                Learn how →
-              </button>
-            </div>
-
-            {/* Card 3 */}
-            <div className="bg-[#0f1525] border border-[#00be64]/20 rounded-xl p-6 hover:border-[#00be64]/40 transition shadow-lg">
-              <h3 className="text-xl font-semibold mb-2">
-                📊 Using Data for Better Decisions
-              </h3>
-              <p className="text-gray-400 text-sm mb-4">
-                Turn your real-time measurements into meaningful farm insights
-                and crop strategies.
-              </p>
-              <button className="text-[#00be64] hover:text-[#00d978] font-medium text-sm">
-                Start learning →
-              </button>
-            </div>
+            <SearchBar
+              value={searchQuery}
+              onChange={setSearchQuery}
+              paddocks={paddocks}
+              devices={devices}
+              onItemSelect={handleSearchItemSelect}
+            />
           </div>
         </section>
 
+        <WeatherWidget />
+        
         {/* Paddock Table */}
-        <section className="flex flex-col lg:flex-row gap-4 mb-4">
+        <section className="pb-6">
           {loading ? (
-            <div className="bg-[#1a1f2e] border border-[#00be64] rounded-lg shadow p-4 flex-1 w-full">
-              <p className="text-white text-center">Loading paddocks...</p>
+            <div className="bg-[#1a1f2e] border border-[#00be64] rounded-lg shadow p-8">
+              <div className="flex items-center justify-center gap-3">
+                <div className="w-2 h-2 bg-[#00be64] rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                <div className="w-2 h-2 bg-[#00be64] rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                <div className="w-2 h-2 bg-[#00be64] rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                <p className="text-white ml-2">Loading zones...</p>
+              </div>
             </div>
           ) : (
             <PaddockTable
