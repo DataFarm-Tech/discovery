@@ -747,8 +747,9 @@ function DeviceViewContent() {
 
       <Sidebar menuOpen={menuOpen} setMenuOpen={setMenuOpen} />
 
-      <div className="flex-1 overflow-y-auto flex flex-col items-center pt-6">
-        <div className="w-full max-w-7xl space-y-8">
+      <div className="flex-1 overflow-y-auto scrollbar-hide">
+  <div className="mx-auto w-full max-w-6xl space-y-8 pt-6 pb-6">
+
           <button
             onClick={() => router.back()}
             className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors group text-lg"

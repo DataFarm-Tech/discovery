@@ -40,14 +40,11 @@ export default function InfoPopup({
   }, [showInfo]);
 
   const handleMouseEnter = () => {
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-    }
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
     setShowInfo(true);
   };
 
   const handleMouseLeave = () => {
-    // Add a small delay before hiding to allow moving to the popup
     timeoutRef.current = setTimeout(() => {
       setShowInfo(false);
     }, 200);
@@ -59,17 +56,19 @@ export default function InfoPopup({
 
   return (
     <div className="relative" ref={popupRef}>
+      {/* Grey circle with italic "i" */}
       <button
         onClick={handleClick}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
-        className="w-4 h-4 rounded-full border-2 border-gray-400 text-gray-400 hover:border-[#00be64] hover:text-[#00be64] transition-all flex items-center justify-center text-sm font-bold"
+        className="w-5 h-5 rounded-full bg-gray-500 text-white flex items-center justify-center text-sm italic font-bold hover:bg-gray-400 transition-all"
         aria-label={ariaLabel}
       >
-        ?
+        i
       </button>
+
       {showInfo && (
-        <div 
+        <div
           className="absolute top-8 left-0 z-50 w-80 bg-[#0f1419] border border-[#00be64] rounded-lg shadow-xl p-4"
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
