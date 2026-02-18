@@ -38,41 +38,29 @@ export default function PaddockTable({
       
       <div className="relative z-10">
         <div className="flex justify-between items-center mb-6">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-[#00be64]/10 rounded-xl flex items-center justify-center">
-              <svg
-                className="w-6 h-6 text-[#00be64]"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
-                />
-              </svg>
-            </div>
-            <div className="flex items-center gap-2">
-              <div>
-                <h2 className="text-xl font-bold text-white">My Zones</h2>
-                <p className="text-gray-400 text-sm">Manage your farm areas</p>
-              </div>
-              <InfoPopup
-                title="What is a Zone?"
-                description="A zone is a designated area on your farm where you monitor soil health. Multiple devices can be placed within a zone to track moisture, temperature, pH, and nutrient levels. You can freely move devices between zones as your monitoring needs change."
-                ariaLabel="What is a zone?"
-              />
-            </div>
-          </div>
-          <button
-            onClick={onAddPaddock}
-            className="px-4 py-1.5 text-sm text-white/80 hover:text-[#00be64] border border-white/20 hover:border-[#00be64]/50 hover:bg-white/5 rounded-full transition-all duration-200 active:scale-95"
-          >
-            + Add Zone
-          </button>
-        </div>
+  {/* Left: Title and subtitle */}
+  <div>
+    <h2 className="text-xl font-bold text-white flex items-center gap-2">
+      My Zones
+      {/* Info icon right next to title */}
+      <InfoPopup
+        title="What is a Zone?"
+        description="A zone is a designated area on your farm where you monitor soil health. Multiple devices can be placed within a zone to track moisture, temperature, pH, and nutrient levels. You can freely move devices between zones as your monitoring needs change."
+        ariaLabel="What is a zone?"
+      />
+    </h2>
+    <p className="text-gray-400 text-sm">Manage your farm areas</p>
+  </div>
+
+  {/* Right: Add Zone button */}
+  <button
+    onClick={onAddPaddock}
+    className="px-4 py-1.5 text-sm text-white/80 hover:text-[#00be64] border border-white/20 hover:border-[#00be64]/50 hover:bg-white/5 rounded-full transition-all duration-200 active:scale-95"
+  >
+    + Add Zone
+  </button>
+</div>
+
 
         {/* Empty State */}
         {paddocks.length === 0 ? (

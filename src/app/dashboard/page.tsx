@@ -124,7 +124,10 @@ export default function DashboardPage() {
       {/* <Sidebar menuOpen={menuOpen} setMenuOpen={setMenuOpen} /> */}
 
       {/* Scrollable Main Content */}
-      <div className="flex-1 overflow-y-auto space-y-8 scrollbar-hide">        
+      <div className="flex-1 overflow-y-auto overflow-x-visible scrollbar-hide">
+
+  <div className="mx-auto w-full max-w-6xl space-y-8">
+
         {/* Search Bar Section */}
         <section className="bg-gradient-to-br from-[#121829] to-[#0f1318] border border-[#00be64]/20 rounded-2xl p-8 relative hover:border-[#00be64]/40 transition-all duration-300">
           <div className="absolute top-0 left-0 w-64 h-64 bg-[#00be64]/5 rounded-full blur-3xl -translate-y-32 -translate-x-32 pointer-events-none" />
@@ -162,7 +165,7 @@ export default function DashboardPage() {
           </div>
         </section>
 
-        <WeatherWidget />
+        {/* <WeatherWidget /> */}
         
         {/* Paddock Table */}
         <section className="pb-6">
@@ -194,6 +197,7 @@ export default function DashboardPage() {
           }
         }}
       />
+      </div>
     </main>
   );
 }

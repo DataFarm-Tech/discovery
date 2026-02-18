@@ -316,6 +316,8 @@ export default function Page() {
       <Sidebar menuOpen={menuOpen} setMenuOpen={setMenuOpen} />
 
       <div className="flex-1 overflow-y-auto scrollbar-hide">
+  <div className="mx-auto w-full max-w-6xl space-y-8 pb-6">
+
         {paddockId ? (
           <div className="space-y-8 pb-6">
             {/* Back Button */}
@@ -470,41 +472,93 @@ export default function Page() {
 
             {/* Devices and Map */}
             {!loading && !error && (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Device Table */}
-                <DeviceTable
-                  devices={devices}
-                  onAddDevice={handleAddDevice}
-                  onDeviceClick={handleDeviceClick}
-                />
+  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    {/* Device Table */}
+    <DeviceTable
+      devices={devices}
+      onAddDevice={handleAddDevice}
+      onDeviceClick={handleDeviceClick}
+    />
 
-                {/* Device Map */}
-                {nodeLocations.length > 0 && (
-                  <section className="bg-gradient-to-br from-[#121829] to-[#0f1318] border border-[#00be64]/20 rounded-2xl p-8 relative overflow-hidden hover:border-[#00be64]/40 transition-all duration-300">
-                    <div className="absolute top-0 left-0 w-64 h-64 bg-[#00be64]/5 rounded-full blur-3xl -translate-y-32 -translate-x-32" />
-                    
-                    <div className="relative z-10">
-                      <div className="flex items-center gap-3 mb-6">
-                        <div className="w-10 h-10 bg-[#00be64]/10 rounded-xl flex items-center justify-center">
-                          <svg className="w-5 h-5 text-[#00be64]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                          </svg>
-                        </div>
-                        <div>
-                          <h2 className="text-xl font-bold text-white">Device Locations</h2>
-                          <p className="text-gray-400 text-sm">View all devices on the map</p>
-                        </div>
-                      </div>
-                      
-                      <div className="rounded-xl overflow-hidden h-[500px] w-full border border-white/5">
-                        <DeviceMap nodes={nodeLocations} />
-                      </div>
-                    </div>
-                  </section>
-                )}
-              </div>
-            )}
+    {/* Map or Placeholder */}
+    <section className="bg-gradient-to-br from-[#121829] to-[#0f1318] border border-[#00be64]/20 rounded-2xl p-8 relative overflow-hidden hover:border-[#00be64]/40 transition-all duration-300">
+      <div className="absolute top-0 left-0 w-64 h-64 bg-[#00be64]/5 rounded-full blur-3xl -translate-y-32 -translate-x-32" />
+
+      <div className="relative z-10 h-[500px] flex flex-col">
+  {/* Header aligned top-left */}
+  <div className="flex items-center gap-3 mb-4">
+    <div className="w-10 h-10 bg-[#00be64]/10 rounded-xl flex items-center justify-center">
+      <svg
+        className="w-5 h-5 text-[#00be64]"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+        />
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+        />
+      </svg>
+    </div>
+    <div>
+      <h2 className="text-xl font-bold text-white">Device Locations</h2>
+      <p className="text-gray-400 text-sm">View all devices on the map</p>
+    </div>
+  </div>
+
+  {/* Map */}
+  {/* Map */}
+<div className="flex-1 rounded-xl overflow-hidden border border-white/5 relative">
+  {nodeLocations.length > 0 ? (
+    <DeviceMap nodes={nodeLocations} />
+  ) : (
+    <div className="flex flex-col items-center justify-center h-full w-full border border-white/10 rounded-xl bg-[#0f1318] text-gray-400 text-center p-4 relative">
+      <svg
+        className="w-12 h-12 mb-4 text-[#00be64]/50"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+        />
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+        />
+      </svg>
+      <p className="text-gray-400 mb-4">No map data available</p>
+
+      {/* Add Device Button (copied from DeviceTable) */}
+      <button
+        onClick={handleAddDevice}
+        className="flex items-center gap-2 px-4 py-1.5 text-sm text-white/80 hover:text-[#00be64] border border-white/20 hover:border-[#00be64]/50 hover:bg-white/5 rounded-full transition-all duration-200 active:scale-95"
+      >
+        + Add Device
+      </button>
+    </div>
+  )}
+</div>
+
+</div>
+
+    </section>
+  </div>
+)}
+
           </div>
         ) : (
           <div className="bg-gradient-to-br from-[#121829] to-[#0f1318] border border-[#00be64]/20 rounded-2xl p-16 text-center">
@@ -540,6 +594,8 @@ export default function Page() {
         onDelete={handleDeletePaddock}
         loading={deleteLoading}
       />
+
+      </div>
     </main>
   );
 }
