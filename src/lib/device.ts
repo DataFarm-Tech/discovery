@@ -294,3 +294,43 @@ export async function unlinkDevice(
     };
   }
 }
+
+/**
+ * Fetches all devices for the authenticated user.
+ *
+ * @param token - JWT authentication token.
+ * @returns A promise resolving to the list of devices.
+ */
+export async function getDevices(token: string) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/device/list`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return {
+        success: false,
+        message: data.message || "Failed to fetch devices",
+        devices: [],
+      };
+    }
+
+    return {
+      success: true,
+      devices: data.devices || [],
+    };
+  } catch (error) {
+    console.error("Error fetching devices:", error);
+    return {
+      success: false,
+      message: "An error occurred while fetching devices.",
+      devices: [],
+    };
+  }
+}
