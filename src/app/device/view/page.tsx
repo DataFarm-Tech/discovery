@@ -738,11 +738,6 @@ function DeviceViewContent() {
         userName="Lucas"
         menuOpen={menuOpen}
         setMenuOpen={setMenuOpen}
-        searchQuery={searchQuery}
-        setSearchQuery={setSearchQuery}
-        paddocks={[]}
-        devices={devices}
-        onSearchItemSelect={handleSearchItemSelect}
       />
 
       <Sidebar menuOpen={menuOpen} setMenuOpen={setMenuOpen} />
@@ -758,7 +753,7 @@ function DeviceViewContent() {
               size={24}
               className="group-hover:-translate-x-1 transition-transform"
             />
-            <span>Back to Zone </span>
+            <span>Back</span>
           </button>
 
           <section className="bg-[#121829] border border-[#00be64]/30 rounded-2xl shadow-xl p-6">
