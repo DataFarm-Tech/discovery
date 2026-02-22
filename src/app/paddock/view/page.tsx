@@ -329,7 +329,7 @@ export default function Page() {
                 size={20}
                 className="group-hover:-translate-x-1 transition-transform"
               />
-              <span>Back to Dashboard</span>
+              <span>Back</span>
             </button>
 
             {/* Zone Header */}
