@@ -67,6 +67,7 @@ export default function DashboardPage() {
       const result = await getDevices(token);
       if (result.success) {
         setDevices(result.devices);
+        sessionStorage.setItem("deviceList", JSON.stringify(result.devices));
       } else {
         toast.error(result.message);
       }
