@@ -9,7 +9,11 @@ interface RegisterDeviceModalProps {
   isOpen: boolean;
   onClose: () => void;
   paddockId: number;
-  onSuccess?: () => void;
+  onSuccess?: (device?: {
+    node_id: string;
+    node_name?: string;
+    paddock_id: number;
+  }) => void;
   devices?: Device[];
 }
 
@@ -91,7 +95,15 @@ export default function RegisterDeviceModal({
       onClose();
 
       if (onSuccess) {
-        onSuccess();
+        if (result.node) {
+          onSuccess({
+            node_id: result.node.node_id,
+            node_name: result.node.node_name,
+            paddock_id: result.node.paddock_id,
+          });
+        } else {
+          onSuccess();
+        }
       } else {
         setTimeout(() => {
           router.refresh();

@@ -9,7 +9,6 @@ import DeviceTable, { Device } from "@/components/DeviceTable";
 import SoilHealthScore from "@/components/SoilHealthScore";
 import { MdDelete, MdEdit, MdArrowBack } from "react-icons/md";
 import {
-  getPaddockDevices,
   updatePaddockName,
   deletePaddock,
   cropType,
@@ -46,7 +45,6 @@ export default function Page() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
 
   const router = useRouter();
 
@@ -165,34 +163,97 @@ export default function Page() {
     return 0;
   };
 
-  const fetchDevices = async () => {
+  type StoredDevice = {
+    node_id: string;
+    node_name?: string;
+    paddock_id?: number | string;
+    gps?: string;
+    battery?: number;
+    lat?: number;
+    lon?: number;
+  };
+
+  const parseGps = (gps?: string): { lat: number; lon: number } | null => {
+    if (!gps) return null;
+    const parts = gps.split(",").map((part) => part.trim());
+    if (parts.length !== 2) return null;
+    const lat = Number(parts[0]);
+    const lon = Number(parts[1]);
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+    return { lat, lon };
+  };
+
+  const loadDevicesFromStorage = () => {
     if (!paddockId) return;
 
-    try {
-      const token = localStorage.getItem("token") || "";
-      const result = await getPaddockDevices(paddockId, token);
-      if (result.success) {
-        const mapped: Device[] = result.devices.map((d: any) => ({
-          node_id: d.node_id,
-          node_name: d.node_name || "",
-          battery: d.battery,
-          lat: d.lat,
-          lon: d.lon,
-        }));
-        setDevices(mapped);
+    const stored = sessionStorage.getItem("deviceList");
+    if (!stored) {
+      setDevices([]);
+      setNodeLocations([]);
+      return;
+    }
 
-        // Update node locations with mock GPS data
-        const locations = mapped.map((device, index) => ({
+    try {
+      const parsed = JSON.parse(stored) as StoredDevice[];
+      const filtered = parsed.filter(
+        (device) => String(device.paddock_id) === String(paddockId),
+      );
+
+      const mapped: Device[] = filtered.map((device) => {
+        const gps = parseGps(device.gps);
+        return {
+          node_id: device.node_id,
+          node_name: device.node_name || "",
+          battery: device.battery,
+          lat: device.lat ?? gps?.lat,
+          lon: device.lon ?? gps?.lon,
+        };
+      });
+
+      setDevices(mapped);
+
+      const locations = mapped.map((device, index) => ({
+        node_id: device.node_id,
+        node_name: device.node_name,
+        lat: device.lat ?? 37.7749 + index * 0.001,
+        lon: device.lon ?? -122.4194 + index * 0.001,
+      }));
+      setNodeLocations(locations);
+    } catch (err) {
+      console.error("Failed to parse stored devices:", err);
+      setDevices([]);
+      setNodeLocations([]);
+    }
+  };
+
+  const handleDeviceAdded = (device?: {
+    node_id: string;
+    node_name?: string;
+    paddock_id: number;
+  }) => {
+    if (!device) {
+      loadDevicesFromStorage();
+      return;
+    }
+
+    try {
+      const stored = sessionStorage.getItem("deviceList");
+      const list = stored ? (JSON.parse(stored) as StoredDevice[]) : [];
+      const exists = list.some((item) => item.node_id === device.node_id);
+
+      if (!exists) {
+        list.push({
           node_id: device.node_id,
           node_name: device.node_name,
-          lat: device.lat || 37.7749 + index * 0.001,
-          lon: device.lon || -122.4194 + index * 0.001,
-        }));
-        setNodeLocations(locations);
+          paddock_id: device.paddock_id,
+        });
+        sessionStorage.setItem("deviceList", JSON.stringify(list));
       }
     } catch (err) {
-      console.error("Failed to fetch devices:", err);
+      console.error("Failed to update stored devices:", err);
     }
+
+    loadDevicesFromStorage();
   };
 
   useEffect(() => {
@@ -204,19 +265,9 @@ export default function Page() {
 
       try {
         const token = localStorage.getItem("token") || "";
+        // Fetch devices for this paddock from session storage
+        loadDevicesFromStorage();
 
-        // Fetch devices
-        await fetchDevices();
-
-        // Fetch sensor averages
-        const averagesResult = await getPaddockSensorAverages(paddockId, token);
-        if (averagesResult.success && averagesResult.sensor_averages) {
-          setSensorAverages(averagesResult.sensor_averages);
-          const computedScore = computeSoilHealthScore(
-            averagesResult.sensor_averages,
-          );
-          setSoilHealthScore(computedScore);
-        }
       } catch (err: any) {
         setError(err.message);
       } finally {
@@ -573,7 +624,7 @@ export default function Page() {
           onClose={() => setIsModalOpen(false)}
           paddockId={Number(paddockId)}
           devices={devices}
-          onSuccess={fetchDevices}
+          onSuccess={handleDeviceAdded}
         />
       )}
 
