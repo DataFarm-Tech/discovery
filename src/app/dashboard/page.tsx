@@ -119,12 +119,6 @@ export default function DashboardPage() {
     toast.error("Unable to navigate to selected item");
   };
 
-  // Filter paddocks by search query
-  const filteredPaddocks = paddocks.filter((p) =>
-    (p.paddock_name || p.paddock_name || "")
-      ?.toLowerCase()
-      .includes(searchQuery.toLowerCase()),
-  );
 
   return (
     <main className="h-screen overflow-hidden bg-[#0c1220] px-6 py-6 text-white relative flex flex-col">
@@ -203,10 +197,7 @@ export default function DashboardPage() {
                 </div>
               </div>
             ) : (
-              <PaddockTable
-                paddocks={filteredPaddocks}
-                onAddPaddock={handleAddPaddock}
-              />
+              <PaddockTable paddocks={paddocks} onAddPaddock={handleAddPaddock} />
             )}
           </section>
         </div>
