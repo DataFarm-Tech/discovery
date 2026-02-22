@@ -43,6 +43,8 @@ jobs:
             docker run -d \
               -p 443:443 \
               --name discovery \
+              -e NEXT_PUBLIC_API_URL='${{ secrets.PROD_API_URL }}' \
+              -e BACKEND_URL='${{ secrets.PROD_API_URL }}' \
               ${{ secrets.DOCKER_LOGIN_USERNAME }}/discovery:prod
 
             echo "Deployment completed successfully!"
