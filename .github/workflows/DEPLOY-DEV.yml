@@ -17,7 +17,7 @@ jobs:
         run: echo "${{ secrets.DOCKER_LOGIN_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_LOGIN_USERNAME }}" --password-stdin
 
       - name: Build Docker image
-        run: docker build --build-arg BACKEND_URL='${{ secrets.DEV_API_URL }}' -t ${{ secrets.DOCKER_LOGIN_USERNAME }}/discovery:development .
+        run: docker build -t ${{ secrets.DOCKER_LOGIN_USERNAME }}/discovery:development .
 
       - name: Push Docker image
         run: docker push ${{ secrets.DOCKER_LOGIN_USERNAME }}/discovery:development
@@ -42,8 +42,7 @@ jobs:
             docker run -d \
               -p 443:443 \
               --name discovery \
-              -e NEXT_PUBLIC_API_URL='${{ secrets.DEV_API_URL }}' \
-              -e BACKEND_URL='${{ secrets.DEV_API_URL }}' \
+              -e API_UPSTREAM='${{ secrets.DEV_API_URL }}' \
               ${{ secrets.DOCKER_LOGIN_USERNAME }}/discovery:development
 
             echo "Deployment completed successfully!"
