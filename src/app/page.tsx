@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { FormEvent, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { loginUser, LoginResponse } from '@/lib/auth/login';
 import toast from 'react-hot-toast';
@@ -50,10 +50,9 @@ export default function LoginPage() {
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleLogin();
-    }
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    await handleLogin();
   };
 
   return (
@@ -76,7 +75,7 @@ export default function LoginPage() {
 
         {/* Login Form */}
         <div className="bg-gradient-to-br from-[#121829] to-[#0f1318] border border-[#00be64]/20 rounded-2xl p-8 shadow-xl">
-          <div className="space-y-6">
+          <form className="space-y-6" onSubmit={handleSubmit}>
             {/* Email Field */}
             <div>
               <label htmlFor="email" className="block text-sm font-semibold mb-2 text-white">
@@ -87,7 +86,6 @@ export default function LoginPage() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                onKeyPress={handleKeyPress}
                 disabled={loading}
                 placeholder="you@example.com"
                 className="w-full px-4 py-3 bg-[#0c1220] border border-gray-700 rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:border-[#00be64] focus:ring-2 focus:ring-[#00be64]/20 transition-all duration-200 disabled:opacity-50"
@@ -105,7 +103,6 @@ export default function LoginPage() {
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  onKeyPress={handleKeyPress}
                   disabled={loading}
                   placeholder="••••••••"
                   className="w-full px-4 py-3 pr-12 bg-[#0c1220] border border-gray-700 rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:border-[#00be64] focus:ring-2 focus:ring-[#00be64]/20 transition-all duration-200 disabled:opacity-50"
@@ -128,7 +125,7 @@ export default function LoginPage() {
 
             {/* Login Button */}
             <button
-              onClick={handleLogin}
+              type="submit"
               disabled={loading}
               className="w-full py-3 bg-[#00be64] hover:bg-[#00d470] text-white font-semibold rounded-xl transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-[#00be64]/20 hover:shadow-xl hover:shadow-[#00be64]/30"
             >
@@ -141,7 +138,7 @@ export default function LoginPage() {
                 'Sign In'
               )}
             </button>
-          </div>
+          </form>
         </div>
 
         {/* Sign Up Link */}

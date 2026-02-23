@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { FormEvent, useState } from 'react';
 import toast from 'react-hot-toast';
 import { signupUser } from '@/lib/auth/signup';
 import Link from 'next/link';
@@ -89,10 +89,9 @@ export default function SignupPage() {
     }, 1500);
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleSignup();
-    }
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    await handleSignup();
   };
 
   const handlePasswordChange = (value: string) => {
@@ -140,7 +139,7 @@ export default function SignupPage() {
 
           {/* Signup Form */}
           <div className="bg-gradient-to-br from-[#121829] to-[#0f1318] border border-[#00be64]/20 rounded-2xl p-8 shadow-xl">
-            <div className="space-y-5">
+            <form className="space-y-5" onSubmit={handleSubmit}>
               {/* Name Fields */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -152,7 +151,6 @@ export default function SignupPage() {
                     type="text"
                     value={firstName}
                     onChange={(e) => setFirstName(e.target.value)}
-                    onKeyPress={handleKeyPress}
                     disabled={loading}
                     placeholder="John"
                     className="w-full px-4 py-3 bg-[#0c1220] border border-gray-700 rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:border-[#00be64] focus:ring-2 focus:ring-[#00be64]/20 transition-all duration-200 disabled:opacity-50"
@@ -167,7 +165,6 @@ export default function SignupPage() {
                     type="text"
                     value={lastName}
                     onChange={(e) => setLastName(e.target.value)}
-                    onKeyPress={handleKeyPress}
                     disabled={loading}
                     placeholder="Doe"
                     className="w-full px-4 py-3 bg-[#0c1220] border border-gray-700 rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:border-[#00be64] focus:ring-2 focus:ring-[#00be64]/20 transition-all duration-200 disabled:opacity-50"
@@ -186,7 +183,6 @@ export default function SignupPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   onBlur={handleEmailBlur}
-                  onKeyPress={handleKeyPress}
                   disabled={loading}
                   placeholder="you@example.com"
                   className={`w-full px-4 py-3 bg-[#0c1220] border ${emailError ? 'border-red-500' : 'border-gray-700'} rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:border-[#00be64] focus:ring-2 focus:ring-[#00be64]/20 transition-all duration-200 disabled:opacity-50`}
@@ -207,7 +203,6 @@ export default function SignupPage() {
                     type={showPassword ? 'text' : 'password'}
                     value={password}
                     onChange={(e) => handlePasswordChange(e.target.value)}
-                    onKeyPress={handleKeyPress}
                     disabled={loading}
                     placeholder="••••••••"
                     className={`w-full px-4 py-3 pr-12 bg-[#0c1220] border ${passwordError ? 'border-red-500' : 'border-gray-700'} rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:border-[#00be64] focus:ring-2 focus:ring-[#00be64]/20 transition-all duration-200 disabled:opacity-50`}
@@ -265,7 +260,6 @@ export default function SignupPage() {
                     type={showConfirmPassword ? 'text' : 'password'}
                     value={confirmPassword}
                     onChange={(e) => handleConfirmPasswordChange(e.target.value)}
-                    onKeyPress={handleKeyPress}
                     disabled={loading}
                     placeholder="••••••••"
                     className={`w-full px-4 py-3 pr-12 bg-[#0c1220] border ${confirmPasswordError ? 'border-red-500' : 'border-gray-700'} rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:border-[#00be64] focus:ring-2 focus:ring-[#00be64]/20 transition-all duration-200 disabled:opacity-50`}
@@ -348,7 +342,7 @@ export default function SignupPage() {
 
               {/* Signup Button */}
               <button
-                onClick={handleSignup}
+                type="submit"
                 disabled={loading}
                 className="w-full py-3 bg-[#00be64] hover:bg-[#00d470] text-white font-semibold rounded-xl transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-[#00be64]/20 hover:shadow-xl hover:shadow-[#00be64]/30"
               >
@@ -361,7 +355,7 @@ export default function SignupPage() {
                   'Create Account'
                 )}
               </button>
-            </div>
+            </form>
           </div>
 
           {/* Login Link */}
