@@ -42,6 +42,7 @@ jobs:
             docker run -d \
               -p 443:443 \
               --name discovery \
+              -e API_UPSTREAM='${{ secrets.DEV_API_URL }}' \
               ${{ secrets.DOCKER_LOGIN_USERNAME }}/discovery:development
 
             echo "Deployment completed successfully!"

@@ -26,8 +26,13 @@ COPY --from=builder /app/out .
 COPY fullchain.pem /etc/ssl/certs/fullchain.pem
 COPY privkey.pem /etc/ssl/private/privkey.pem
 
-# Copy custom Nginx configuration
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Copy Nginx template and render script
+COPY nginx.conf.template /etc/nginx/nginx.conf.template
+COPY docker/99-render-nginx.sh /docker-entrypoint.d/99-render-nginx.sh
+RUN chmod +x /docker-entrypoint.d/99-render-nginx.sh
+
+# Default backend upstream (override per environment)
+ENV API_UPSTREAM=https://discovery-datafarm.com.au:8081
 
 # Expose HTTPS
 EXPOSE 443
