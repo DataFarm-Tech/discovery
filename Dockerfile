@@ -10,7 +10,7 @@ RUN npm ci
 
 # Copy app source and build
 COPY . .
-ARG BACKEND_URL=http://localhost:8000
+# ARG BACKEND_URL=http://localhost:8000
 ENV NEXT_PUBLIC_API_URL=$BACKEND_URL
 RUN npm run build
 # RUN npm run export   # for Next.js static export (creates /out)
