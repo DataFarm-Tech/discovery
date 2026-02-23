@@ -1,4 +1,4 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || '/api').replace(/\/+$/, '');
 
 export type cropType = 'default' | 'Grains' | 'Legumes' | 'Fruit' |'Oil Seeds' |'Root Crops' | 'Tropical'| 'Other';
 

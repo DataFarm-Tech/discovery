@@ -20,7 +20,6 @@ jobs:
       - name: Build Docker image
         run: |
           docker build \
-            --build-arg BACKEND_URL='${{ secrets.PROD_API_URL }}' \
             -t ${{ secrets.DOCKER_LOGIN_USERNAME }}/discovery:prod .
 
       - name: Push Docker image
