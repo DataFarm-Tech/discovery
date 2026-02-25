@@ -9,25 +9,37 @@ export default function ExportCsvButton({
   filename = "device-data.csv",
   data,
 }: ExportCsvButtonProps) {
+  const escapeCsv = (value: unknown) =>
+    `"${String(value ?? "").replace(/"/g, '""')}"`;
+
+  const normalizeValue = (value: unknown) => {
+    if (value === null || value === undefined) return "";
+    if (value instanceof Date) return value.toISOString();
+    if (typeof value === "object") return JSON.stringify(value);
+    return value;
+  };
+
   const handleExport = () => {
     if (!data || data.length === 0) {
       alert("No data available to export.");
       return;
     }
 
-    // Extract CSV header
-    const headers = Object.keys(data[0]).join(",");
+    // Build stable headers from all rows (not only first row)
+    const headers = Array.from(
+      new Set(data.flatMap((item) => Object.keys(item))),
+    );
 
-    // Convert objects → CSV rows
+    // Convert objects → CSV rows with robust escaping
     const rows = data
       .map((item) =>
-        Object.values(item)
-          .map((value) => `"${value ?? ""}"`)
+        headers
+          .map((header) => escapeCsv(normalizeValue(item[header])))
           .join(",")
       )
       .join("\n");
 
-    const csvContent = `${headers}\n${rows}`;
+    const csvContent = `\uFEFF${headers.join(",")}\n${rows}`;
 
     // Create a downloadable file
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
@@ -44,9 +56,10 @@ export default function ExportCsvButton({
   return (
     <button
       onClick={handleExport}
-      className="px-4 py-2 bg-blue-600 text-white rounded-md shadow hover:bg-blue-700 transition"
+      disabled={!data || data.length === 0}
+      className="px-4 py-2 bg-blue-600 text-white rounded-md shadow hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
     >
-      Export CSV
+      {data?.length ? `Export CSV (${data.length})` : "Export CSV"}
     </button>
   );
 }

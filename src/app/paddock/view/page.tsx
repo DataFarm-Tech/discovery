@@ -14,6 +14,7 @@ import {
   cropType,
   getPaddockSensorAverages,
 } from "@/lib/paddock";
+import { getDeviceData } from "@/lib/device";
 import toast from "react-hot-toast";
 import RegisterDeviceModal from "@/components/modals/RegisterDeviceModal";
 import EditPaddockModal from "@/components/modals/EditPaddockModal";
@@ -45,6 +46,7 @@ export default function Page() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [exportLoading, setExportLoading] = useState(false);
 
   const router = useRouter();
 
@@ -354,6 +356,126 @@ export default function Page() {
     }
   };
 
+  const handleExportPaddockCsv = async () => {
+    if (!paddockId) {
+      toast.error("No zone selected");
+      return;
+    }
+
+    if (!devices.length) {
+      toast.error("No devices available in this zone");
+      return;
+    }
+
+    setExportLoading(true);
+
+    try {
+      const token = localStorage.getItem("token") || "";
+      if (!token) {
+        toast.error("You must be logged in to export data");
+        return;
+      }
+
+      const readingTypes = [
+        "moisture",
+        "ph",
+        "temperature",
+        "nitrogen",
+        "potassium",
+        "phosphorus",
+      ] as const;
+
+      const requests = devices.flatMap((device) =>
+        readingTypes.map(async (readingType) => {
+          const response = await getDeviceData(
+            { nodeId: device.node_id, readingType },
+            token,
+          );
+
+          if (!response.success || !response.node?.readings?.length) {
+            return [] as Array<{
+              paddock_id: number | string;
+              node_id: string;
+              node_name: string;
+              sensor_type: string;
+              time_stamplocal: string;
+              reading_value: string | number;
+            }>;
+          }
+
+          return response.node.readings.map((reading) => {
+            const parsedDate = new Date(reading.timestamp);
+            return {
+              paddock_id: response.node?.paddock_id ?? paddockId,
+              node_id: response.node?.node_id ?? device.node_id,
+              node_name: response.node?.node_name || device.node_name || "",
+              sensor_type: readingType,
+              time_stamplocal: Number.isNaN(parsedDate.getTime())
+                ? reading.timestamp
+                : parsedDate.toLocaleString(),
+              reading_value: reading.reading_val,
+            };
+          });
+        }),
+      );
+
+      const responses = await Promise.all(requests);
+      const rows = responses.flat();
+
+      if (!rows.length) {
+        toast.error("No sensor readings found to export for this zone");
+        return;
+      }
+
+      rows.sort(
+        (a, b) =>
+          new Date(a.time_stamplocal).getTime() -
+          new Date(b.time_stamplocal).getTime(),
+      );
+
+      const escapeCsv = (value: string | number | null | undefined) =>
+        `"${String(value ?? "").replace(/"/g, '""')}"`;
+
+      const headers = [
+        "paddock_id",
+        "node_id",
+        "node_name",
+        "sensor_type",
+        "time_stamplocal",
+        "reading_value",
+      ];
+
+      const csvBody = rows.map((row) =>
+        [
+          escapeCsv(row.paddock_id),
+          escapeCsv(row.node_id),
+          escapeCsv(row.node_name),
+          escapeCsv(row.sensor_type),
+          escapeCsv(row.time_stamplocal),
+          escapeCsv(row.reading_value),
+        ].join(","),
+      );
+
+      const csv = `\uFEFF${headers.join(",")}\n${csvBody.join("\n")}`;
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      const safePaddockId = String(paddockId).replace(/[^a-zA-Z0-9-_]/g, "_");
+      const dateStamp = new Date().toISOString().slice(0, 10);
+      link.download = `${safePaddockId}_all_sensors_${dateStamp}.csv`;
+      link.click();
+      window.URL.revokeObjectURL(url);
+
+      toast.success("Zone data exported successfully");
+    } catch (err) {
+      console.error("Failed to export paddock data:", err);
+      toast.error("Failed to export zone data");
+    } finally {
+      setExportLoading(false);
+    }
+  };
+
   const daysSincePlanting = getDaysSincePlanting(plantDate);
 
   return (
@@ -405,6 +527,24 @@ export default function Page() {
                   </div>
 
                   <div className="flex items-center gap-2">
+                    <button
+                      onClick={handleExportPaddockCsv}
+                      disabled={exportLoading || devices.length === 0}
+                      className="p-2.5 text-white/80 hover:text-[#00be64] border border-white/20 hover:border-[#00be64]/50 hover:bg-white/5 rounded-lg transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:text-white/80 disabled:hover:border-white/20 disabled:hover:bg-transparent"
+                      title="Export zone CSV"
+                    >
+                      {exportLoading ? (
+                        <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                        </svg>
+                      ) : (
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 16V4m0 12l-4-4m4 4l4-4M4 20h16" />
+                        </svg>
+                      )}
+                    </button>
+
                     <button
                       onClick={() => setIsEditModalOpen(true)}
                       className="p-2.5 text-white/80 hover:text-[#00be64] border border-white/20 hover:border-[#00be64]/50 hover:bg-white/5 rounded-lg transition-all duration-200 active:scale-95 group"

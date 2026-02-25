@@ -538,26 +538,62 @@ function DeviceViewContent() {
     router.back();
   };
 
+  const currentNode =
+    moistureData ||
+    phData ||
+    temperatureData ||
+    nitrogenData ||
+    potassiumData ||
+    phosphorusData ||
+    null;
+
   // CSV EXPORTER
   const exportToCSV = () => {
-    const data =
-      selectedGraph === "moisture"
-        ? moistureData?.readings || []
-        : phData?.readings || [];
+    const data = filterDataByTimePeriod(selectedReadings);
 
-    if (!data.length) return;
+    if (!data.length) {
+      alert(`No ${selectedGraph} data available for the selected time period.`);
+      return;
+    }
+
+    const escapeCsv = (value: string | number | null | undefined) =>
+      `"${String(value ?? "").replace(/"/g, '""')}"`;
+
+    const sortedData = [...data].sort(
+      (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
+    );
 
     const csvRows = [
-      "timestamp,value",
-      ...data.map((r) => `${r.timestamp},${r.reading_val}`),
+      [
+        "paddock_id",
+        "sensor_type",
+        "time_stamplocal",
+        "reading_value",
+      ].join(","),
+      ...sortedData.map((reading) => {
+        const timestamp = new Date(reading.timestamp);
+        return [
+          escapeCsv(currentNode?.paddock_id ?? ""),
+          escapeCsv(selectedGraph),
+          escapeCsv(
+            Number.isNaN(timestamp.getTime())
+              ? reading.timestamp
+              : timestamp.toLocaleString(),
+          ),
+          escapeCsv(reading.reading_val),
+        ].join(",");
+      }),
     ];
 
-    const blob = new Blob([csvRows.join("\n")], { type: "text/csv" });
+    const csvContent = `\uFEFF${csvRows.join("\n")}`;
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = window.URL.createObjectURL(blob);
 
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${nodeId}_${selectedGraph}_data.csv`;
+    const safeNodeId = (nodeId || "device").replace(/[^a-zA-Z0-9-_]/g, "_");
+    const dateStamp = new Date().toISOString().slice(0, 10);
+    a.download = `${safeNodeId}_${selectedGraph}_${timePeriod}_${dateStamp}.csv`;
     a.click();
     window.URL.revokeObjectURL(url);
   };
@@ -688,36 +724,26 @@ function DeviceViewContent() {
     return readings.filter((r) => new Date(r.timestamp) >= cutoffDate);
   };
 
-  const graphData =
+  const selectedReadings =
     selectedGraph === "moisture"
-      ? filterDataByTimePeriod(moistureData?.readings)?.map((r) => ({
-        x: r.timestamp,
-        y: Number(r.reading_val),
-      })) || []
+      ? moistureData?.readings || []
       : selectedGraph === "ph"
-        ? filterDataByTimePeriod(phData?.readings)?.map((r) => ({
-          x: r.timestamp,
-          y: Number(r.reading_val),
-        })) || []
+        ? phData?.readings || []
         : selectedGraph === "temperature"
-          ? filterDataByTimePeriod(temperatureData?.readings)?.map((r) => ({
-            x: r.timestamp,
-            y: Number(r.reading_val),
-          })) || []
+          ? temperatureData?.readings || []
           : selectedGraph === "nitrogen"
-            ? filterDataByTimePeriod(nitrogenData?.readings)?.map((r) => ({
-              x: r.timestamp,
-              y: Number(r.reading_val),
-            })) || []
+            ? nitrogenData?.readings || []
             : selectedGraph === "potassium"
-              ? filterDataByTimePeriod(potassiumData?.readings)?.map((r) => ({
-                x: r.timestamp,
-                y: Number(r.reading_val),
-              })) || []
-              : filterDataByTimePeriod(phosphorusData?.readings)?.map((r) => ({
-                x: r.timestamp,
-                y: Number(r.reading_val),
-              })) || [];
+              ? potassiumData?.readings || []
+              : phosphorusData?.readings || [];
+
+  const exportableData = filterDataByTimePeriod(selectedReadings);
+
+  const graphData =
+    filterDataByTimePeriod(selectedReadings).map((r) => ({
+      x: r.timestamp,
+      y: Number(r.reading_val),
+    }));
 
   const graphTitle =
     selectedGraph === "moisture"
@@ -1076,9 +1102,12 @@ function DeviceViewContent() {
                       </select>
                       <button
                         onClick={exportToCSV}
-                        className="px-4 py-1.5 text-sm text-white/80 hover:text-[#00be64] border border-white/20 hover:border-[#00be64]/50 hover:bg-white/5 rounded-full transition-all duration-200 active:scale-95"
+                        disabled={exportableData.length === 0}
+                        className="px-4 py-1.5 text-sm text-white/80 hover:text-[#00be64] border border-white/20 hover:border-[#00be64]/50 hover:bg-white/5 rounded-full transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:text-white/80 disabled:hover:border-white/20 disabled:hover:bg-transparent"
                       >
-                        Export CSV
+                        {exportableData.length > 0
+                          ? `Export CSV (${exportableData.length})`
+                          : "Export CSV"}
                       </button>
                     </div>
                   </div>
