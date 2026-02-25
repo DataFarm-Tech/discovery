@@ -428,8 +428,7 @@ export default function Page() {
         readingTypes.map(async (readingType) => {
           const cacheKey = `paddockExport:${paddockId}:${device.node_id}:${readingType}`;
 
-          let response: Awaited<ReturnType<typeof getDeviceData>>;
-          let usedCache = false;
+          let response: Awaited<ReturnType<typeof getDeviceData>> | null = null;
 
           try {
             const cachedRaw = sessionStorage.getItem(cacheKey);
@@ -444,14 +443,13 @@ export default function Page() {
                 cached?.response
               ) {
                 response = cached.response;
-                usedCache = true;
               }
             }
           } catch {
             // Ignore cache parsing issues and continue with live fetch.
           }
 
-          if (!usedCache) {
+          if (!response) {
             response = await getDeviceData(
               { nodeId: device.node_id, readingType },
               token,
@@ -469,7 +467,7 @@ export default function Page() {
             }
           }
 
-          if (!response.success || !response.node?.readings?.length) {
+          if (!response?.success || !response.node?.readings?.length) {
             return [] as Array<{
               zone_name: string;
               device_name: string;
