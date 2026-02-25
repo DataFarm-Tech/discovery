@@ -45,6 +45,7 @@ jobs:
             docker run -d \
               -p 443:443 \
               --name discovery \
+              --restart always \
               -e API_UPSTREAM='${{ secrets.PROD_API_URL }}' \
               ${{ secrets.DOCKER_LOGIN_USERNAME }}/discovery:prod
 
