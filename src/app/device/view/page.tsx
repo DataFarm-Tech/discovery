@@ -547,6 +547,72 @@ function DeviceViewContent() {
     phosphorusData ||
     null;
 
+  const exportPaddockId = currentNode?.paddock_id
+    ? String(currentNode.paddock_id)
+    : "";
+  const exportZoneName = exportPaddockId ? `Zone ${exportPaddockId}` : "Zone";
+
+  const filterDataByTimePeriod = (readings: any[] | undefined) => {
+    if (!readings || readings.length === 0) return [];
+
+    if (timePeriod === "all") return readings;
+
+    const now = new Date();
+    let cutoffDate: Date;
+
+    switch (timePeriod) {
+      case "week":
+        cutoffDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        break;
+      case "month":
+        cutoffDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        break;
+      case "6months":
+        cutoffDate = new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000);
+        break;
+      case "year":
+        cutoffDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+        break;
+      default:
+        return readings;
+    }
+
+    return readings.filter((r) => new Date(r.timestamp) >= cutoffDate);
+  };
+
+  const selectedReadings =
+    selectedGraph === "moisture"
+      ? moistureData?.readings || []
+      : selectedGraph === "ph"
+        ? phData?.readings || []
+        : selectedGraph === "temperature"
+          ? temperatureData?.readings || []
+          : selectedGraph === "nitrogen"
+            ? nitrogenData?.readings || []
+            : selectedGraph === "potassium"
+              ? potassiumData?.readings || []
+              : phosphorusData?.readings || [];
+
+  const exportableData = filterDataByTimePeriod(selectedReadings);
+
+  const graphData = filterDataByTimePeriod(selectedReadings).map((r) => ({
+    x: r.timestamp,
+    y: Number(r.reading_val),
+  }));
+
+  const graphTitle =
+    selectedGraph === "moisture"
+      ? "Moisture Levels"
+      : selectedGraph === "ph"
+        ? "pH Levels"
+        : selectedGraph === "temperature"
+          ? "Temperature"
+          : selectedGraph === "nitrogen"
+            ? "Nitrogen"
+            : selectedGraph === "potassium"
+              ? "Potassium"
+              : "Phosphorus";
+
   // CSV EXPORTER
   const exportToCSV = () => {
     const data = filterDataByTimePeriod(selectedReadings);
@@ -563,24 +629,63 @@ function DeviceViewContent() {
       (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
     );
 
+    const getSensorUnit = (sensorType: typeof selectedGraph): string => {
+      const units: Record<typeof selectedGraph, string> = {
+        moisture: "%",
+        ph: "pH",
+        temperature: "°C",
+        nitrogen: "ppm",
+        potassium: "ppm",
+        phosphorus: "ppm",
+      };
+      return units[sensorType] || "";
+    };
+
+    const getSensorStatus = (
+      sensorType: typeof selectedGraph,
+      value: number,
+    ): "ok" | "low" | "high" | "critical" => {
+      const range = getOptimalRange(sensorType);
+      const span = range.max - range.min;
+      const criticalMargin = span * 0.2;
+
+      if (value < range.min - criticalMargin || value > range.max + criticalMargin) {
+        return "critical";
+      }
+      if (value < range.min) return "low";
+      if (value > range.max) return "high";
+      return "ok";
+    };
+
     const csvRows = [
       [
-        "paddock_id",
+        "zone_name",
+        "device_name",
         "sensor_type",
-        "time_stamplocal",
         "reading_value",
+        "unit",
+        "timestamp_local",
+        "status",
       ].join(","),
       ...sortedData.map((reading) => {
+        const numericValue = Number(reading.reading_val);
         const timestamp = new Date(reading.timestamp);
         return [
-          escapeCsv(currentNode?.paddock_id ?? ""),
+          escapeCsv(exportZoneName),
+          escapeCsv(currentNode?.node_name || `Device ${nodeId || ""}`),
           escapeCsv(selectedGraph),
+          escapeCsv(reading.reading_val),
+          escapeCsv(getSensorUnit(selectedGraph)),
           escapeCsv(
             Number.isNaN(timestamp.getTime())
               ? reading.timestamp
               : timestamp.toLocaleString(),
           ),
-          escapeCsv(reading.reading_val),
+          escapeCsv(
+            Number.isFinite(numericValue)
+              ? getSensorStatus(selectedGraph, numericValue)
+              : "ok",
+          ),
         ].join(",");
       }),
     ];
@@ -592,8 +697,9 @@ function DeviceViewContent() {
     const a = document.createElement("a");
     a.href = url;
     const safeNodeId = (nodeId || "device").replace(/[^a-zA-Z0-9-_]/g, "_");
+    const safeZoneName = exportZoneName.replace(/[^a-zA-Z0-9-_]/g, "_");
     const dateStamp = new Date().toISOString().slice(0, 10);
-    a.download = `${safeNodeId}_${selectedGraph}_${timePeriod}_${dateStamp}.csv`;
+    a.download = `${safeZoneName}_${safeNodeId}_${selectedGraph}_${timePeriod}_v2_${dateStamp}.csv`;
     a.click();
     window.URL.revokeObjectURL(url);
   };
@@ -678,85 +784,6 @@ function DeviceViewContent() {
       ).reading_val,
     ).toFixed(1)
     : null;
-
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-screen bg-[#0c1220] text-white">
-        <p className="text-xl animate-pulse">Loading device data...</p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex flex-col justify-center items-center h-screen bg-[#0c1220] text-white">
-        <p className="text-red-500 text-lg font-semibold mb-4">{error}</p>
-      </div>
-    );
-  }
-
-  // Filter data based on time period
-  const filterDataByTimePeriod = (readings: any[] | undefined) => {
-    if (!readings || readings.length === 0) return [];
-
-    if (timePeriod === "all") return readings;
-
-    const now = new Date();
-    let cutoffDate: Date;
-
-    switch (timePeriod) {
-      case "week":
-        cutoffDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-        break;
-      case "month":
-        cutoffDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-        break;
-      case "6months":
-        cutoffDate = new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000);
-        break;
-      case "year":
-        cutoffDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
-        break;
-      default:
-        return readings;
-    }
-
-    return readings.filter((r) => new Date(r.timestamp) >= cutoffDate);
-  };
-
-  const selectedReadings =
-    selectedGraph === "moisture"
-      ? moistureData?.readings || []
-      : selectedGraph === "ph"
-        ? phData?.readings || []
-        : selectedGraph === "temperature"
-          ? temperatureData?.readings || []
-          : selectedGraph === "nitrogen"
-            ? nitrogenData?.readings || []
-            : selectedGraph === "potassium"
-              ? potassiumData?.readings || []
-              : phosphorusData?.readings || [];
-
-  const exportableData = filterDataByTimePeriod(selectedReadings);
-
-  const graphData =
-    filterDataByTimePeriod(selectedReadings).map((r) => ({
-      x: r.timestamp,
-      y: Number(r.reading_val),
-    }));
-
-  const graphTitle =
-    selectedGraph === "moisture"
-      ? "Moisture Levels"
-      : selectedGraph === "ph"
-        ? "pH Levels"
-        : selectedGraph === "temperature"
-          ? "Temperature"
-          : selectedGraph === "nitrogen"
-            ? "Nitrogen"
-            : selectedGraph === "potassium"
-              ? "Potassium"
-              : "Phosphorus";
 
   return (
     <main className="h-screen overflow-hidden bg-[#0c1220] px-6 py-6 text-white relative flex flex-col">

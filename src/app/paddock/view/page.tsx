@@ -385,42 +385,130 @@ export default function Page() {
         "phosphorus",
       ] as const;
 
+      const cacheTtlMs = 5 * 60 * 1000;
+
+      const getSensorUnit = (sensorType: string): string => {
+        const units: Record<string, string> = {
+          moisture: "%",
+          ph: "pH",
+          temperature: "°C",
+          nitrogen: "ppm",
+          potassium: "ppm",
+          phosphorus: "ppm",
+        };
+        return units[sensorType] || "";
+      };
+
+      const getSensorStatus = (
+        sensorType: string,
+        value: number,
+      ): "ok" | "low" | "high" | "critical" => {
+        const ranges: Record<string, { min: number; max: number }> = {
+          moisture: { min: 40, max: 60 },
+          ph: { min: 6.0, max: 7.0 },
+          temperature: { min: 15, max: 25 },
+          nitrogen: { min: 80, max: 120 },
+          potassium: { min: 120, max: 180 },
+          phosphorus: { min: 40, max: 60 },
+        };
+
+        const range = ranges[sensorType] || { min: 0, max: 100 };
+        const span = range.max - range.min;
+        const criticalMargin = span * 0.2;
+
+        if (value < range.min - criticalMargin || value > range.max + criticalMargin) {
+          return "critical";
+        }
+        if (value < range.min) return "low";
+        if (value > range.max) return "high";
+        return "ok";
+      };
+
       const requests = devices.flatMap((device) =>
         readingTypes.map(async (readingType) => {
-          const response = await getDeviceData(
-            { nodeId: device.node_id, readingType },
-            token,
-          );
+          const cacheKey = `paddockExport:${paddockId}:${device.node_id}:${readingType}`;
+
+          let response: Awaited<ReturnType<typeof getDeviceData>>;
+          let usedCache = false;
+
+          try {
+            const cachedRaw = sessionStorage.getItem(cacheKey);
+            if (cachedRaw) {
+              const cached = JSON.parse(cachedRaw) as {
+                fetchedAt: number;
+                response: Awaited<ReturnType<typeof getDeviceData>>;
+              };
+              if (
+                cached?.fetchedAt &&
+                Date.now() - cached.fetchedAt <= cacheTtlMs &&
+                cached?.response
+              ) {
+                response = cached.response;
+                usedCache = true;
+              }
+            }
+          } catch {
+            // Ignore cache parsing issues and continue with live fetch.
+          }
+
+          if (!usedCache) {
+            response = await getDeviceData(
+              { nodeId: device.node_id, readingType },
+              token,
+            );
+
+            try {
+              if (response.success) {
+                sessionStorage.setItem(
+                  cacheKey,
+                  JSON.stringify({ fetchedAt: Date.now(), response }),
+                );
+              }
+            } catch {
+              // Ignore cache write issues.
+            }
+          }
 
           if (!response.success || !response.node?.readings?.length) {
             return [] as Array<{
-              paddock_id: number | string;
-              node_id: string;
-              node_name: string;
+              zone_name: string;
+              device_name: string;
               sensor_type: string;
-              time_stamplocal: string;
               reading_value: string | number;
+              unit: string;
+              timestamp_local: string;
+              status: "ok" | "low" | "high" | "critical";
+              timestamp_ms: number;
             }>;
           }
 
           return response.node.readings.map((reading) => {
             const parsedDate = new Date(reading.timestamp);
+            const readingValue = Number(reading.reading_val);
+            const timestampMs = parsedDate.getTime();
+
             return {
-              paddock_id: response.node?.paddock_id ?? paddockId,
-              node_id: response.node?.node_id ?? device.node_id,
-              node_name: response.node?.node_name || device.node_name || "",
+              zone_name: paddockName || `Zone ${paddockId}`,
+              device_name: response.node?.node_name || device.node_name || device.node_id,
               sensor_type: readingType,
-              time_stamplocal: Number.isNaN(parsedDate.getTime())
+              reading_value: reading.reading_val,
+              unit: getSensorUnit(readingType),
+              timestamp_local: Number.isNaN(timestampMs)
                 ? reading.timestamp
                 : parsedDate.toLocaleString(),
-              reading_value: reading.reading_val,
+              status: Number.isFinite(readingValue)
+                ? getSensorStatus(readingType, readingValue)
+                : "ok",
+              timestamp_ms: Number.isNaN(timestampMs) ? Number.MAX_SAFE_INTEGER : timestampMs,
             };
           });
         }),
       );
 
-      const responses = await Promise.all(requests);
-      const rows = responses.flat();
+      const responses = await Promise.allSettled(requests);
+      const rows = responses.flatMap((result) =>
+        result.status === "fulfilled" ? result.value : [],
+      );
 
       if (!rows.length) {
         toast.error("No sensor readings found to export for this zone");
@@ -428,31 +516,31 @@ export default function Page() {
       }
 
       rows.sort(
-        (a, b) =>
-          new Date(a.time_stamplocal).getTime() -
-          new Date(b.time_stamplocal).getTime(),
+        (a, b) => a.timestamp_ms - b.timestamp_ms,
       );
 
       const escapeCsv = (value: string | number | null | undefined) =>
         `"${String(value ?? "").replace(/"/g, '""')}"`;
 
       const headers = [
-        "paddock_id",
-        "node_id",
-        "node_name",
+        "zone_name",
+        "device_name",
         "sensor_type",
-        "time_stamplocal",
         "reading_value",
+        "unit",
+        "timestamp_local",
+        "status",
       ];
 
       const csvBody = rows.map((row) =>
         [
-          escapeCsv(row.paddock_id),
-          escapeCsv(row.node_id),
-          escapeCsv(row.node_name),
+          escapeCsv(row.zone_name),
+          escapeCsv(row.device_name),
           escapeCsv(row.sensor_type),
-          escapeCsv(row.time_stamplocal),
           escapeCsv(row.reading_value),
+          escapeCsv(row.unit),
+          escapeCsv(row.timestamp_local),
+          escapeCsv(row.status),
         ].join(","),
       );
 
@@ -462,8 +550,9 @@ export default function Page() {
       const link = document.createElement("a");
       link.href = url;
       const safePaddockId = String(paddockId).replace(/[^a-zA-Z0-9-_]/g, "_");
+      const safeZoneName = (paddockName || `Zone_${paddockId}`).replace(/[^a-zA-Z0-9-_]/g, "_");
       const dateStamp = new Date().toISOString().slice(0, 10);
-      link.download = `${safePaddockId}_all_sensors_${dateStamp}.csv`;
+      link.download = `${safeZoneName}_${safePaddockId}_all_sensors_v2_${dateStamp}.csv`;
       link.click();
       window.URL.revokeObjectURL(url);
 
