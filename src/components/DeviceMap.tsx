@@ -27,38 +27,12 @@ interface DeviceMapProps {
 export default function DeviceMap({ nodes }: DeviceMapProps) {
   const mapRef = useRef<HTMLDivElement | null>(null);
   const leafletMap = useRef<L.Map | null>(null);
+  const markersLayer = useRef<L.LayerGroup | null>(null);
 
   useEffect(() => {
     if (!mapRef.current) return;
     if (leafletMap.current) return;
 
-    if (nodes.length === 0) {
-      // No nodes to display
-      leafletMap.current = L.map(mapRef.current, {
-        zoomControl: true,
-        scrollWheelZoom: true,
-        dragging: true,
-        inertia: true,
-        zoomAnimation: true,
-        fadeAnimation: true,
-      }).setView([51.505, -0.09], 15);
-
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: "&copy; OpenStreetMap contributors",
-        minZoom: 3,
-        maxZoom: 19,
-      }).addTo(leafletMap.current);
-
-      return () => {
-        if (leafletMap.current) {
-          leafletMap.current.remove();
-          leafletMap.current = null;
-        }
-      };
-    }
-
-    // Create map with Google-like behavior
-    const firstNode = nodes[0];
     leafletMap.current = L.map(mapRef.current, {
       zoomControl: true, // Google-style zoom buttons
       scrollWheelZoom: true, // Smooth zooming
@@ -66,7 +40,7 @@ export default function DeviceMap({ nodes }: DeviceMapProps) {
       inertia: true,
       zoomAnimation: true,
       fadeAnimation: true,
-    }).setView([firstNode.lat, firstNode.lon], 13);
+    }).setView([0, 0], 2);
 
     // Google Maps–like street tiles (safe to use)
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -75,10 +49,28 @@ export default function DeviceMap({ nodes }: DeviceMapProps) {
       maxZoom: 19,
     }).addTo(leafletMap.current);
 
+    markersLayer.current = L.layerGroup().addTo(leafletMap.current);
+
+    return () => {
+      if (leafletMap.current) {
+        leafletMap.current.remove();
+        leafletMap.current = null;
+      }
+      markersLayer.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!leafletMap.current || !markersLayer.current) return;
+
+    markersLayer.current.clearLayers();
+
+    if (nodes.length === 0) return;
+
     // Add markers for all nodes
     const markers = nodes.map((node) => {
       return L.marker([node.lat, node.lon])
-        .addTo(leafletMap.current!)
+        .addTo(markersLayer.current!)
         .bindPopup(`<strong>${node.node_name}</strong><br>ID: ${node.node_id}`);
     });
 
@@ -86,14 +78,10 @@ export default function DeviceMap({ nodes }: DeviceMapProps) {
     if (nodes.length > 1) {
       const group = new L.FeatureGroup(markers);
       leafletMap.current.fitBounds(group.getBounds(), { padding: [50, 50] });
+    } else {
+      const node = nodes[0];
+      leafletMap.current.setView([node.lat, node.lon], 13);
     }
-
-    return () => {
-      if (leafletMap.current) {
-        leafletMap.current.remove();
-        leafletMap.current = null;
-      }
-    };
   }, [nodes]);
 
   return (
