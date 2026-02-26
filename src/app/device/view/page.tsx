@@ -785,6 +785,22 @@ function DeviceViewContent() {
     ).toFixed(1)
     : null;
 
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-screen bg-[#0c1220] text-white">
+        <p className="text-xl animate-pulse">Loading device data...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col justify-center items-center h-screen bg-[#0c1220] text-white">
+        <p className="text-red-500 text-lg font-semibold mb-4">{error}</p>
+      </div>
+    );
+  }
+
   return (
     <main className="h-screen overflow-hidden bg-[#0c1220] px-6 py-6 text-white relative flex flex-col">
       <DashboardHeader
