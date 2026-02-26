@@ -14,6 +14,7 @@ import {
   cropType,
   getPaddockSensorAverages,
 } from "@/lib/paddock";
+import { getDevices } from "@/lib/device";
 import toast from "react-hot-toast";
 import RegisterDeviceModal from "@/components/modals/RegisterDeviceModal";
 import EditPaddockModal from "@/components/modals/EditPaddockModal";
@@ -183,6 +184,12 @@ export default function Page() {
     return { lat, lon };
   };
 
+  const parseCoordinate = (value?: number | string): number | undefined => {
+    if (value === undefined || value === null || value === "") return undefined;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  };
+
   const loadDevicesFromStorage = () => {
     if (!paddockId) return;
 
@@ -201,23 +208,31 @@ export default function Page() {
 
       const mapped: Device[] = filtered.map((device) => {
         const gps = parseGps(device.gps);
+        const lat = parseCoordinate(device.lat) ?? gps?.lat;
+        const lon = parseCoordinate(device.lon) ?? gps?.lon;
+
         return {
           node_id: device.node_id,
           node_name: device.node_name || "",
           battery: device.battery,
-          lat: device.lat ?? gps?.lat,
-          lon: device.lon ?? gps?.lon,
+          lat,
+          lon,
         };
       });
 
       setDevices(mapped);
 
-      const locations = mapped.map((device, index) => ({
-        node_id: device.node_id,
-        node_name: device.node_name,
-        lat: device.lat ?? 37.7749 + index * 0.001,
-        lon: device.lon ?? -122.4194 + index * 0.001,
-      }));
+      const locations = mapped
+        .filter(
+          (device): device is Device & { lat: number; lon: number } =>
+            typeof device.lat === "number" && typeof device.lon === "number",
+        )
+        .map((device) => ({
+          node_id: device.node_id,
+          node_name: device.node_name,
+          lat: device.lat,
+          lon: device.lon,
+        }));
       setNodeLocations(locations);
     } catch (err) {
       console.error("Failed to parse stored devices:", err);
@@ -265,7 +280,14 @@ export default function Page() {
 
       try {
         const token = localStorage.getItem("token") || "";
-        // Fetch devices for this paddock from session storage
+        if (token) {
+          const result = await getDevices(token);
+          if (result.success) {
+            sessionStorage.setItem("deviceList", JSON.stringify(result.devices));
+          }
+        }
+
+        // Load devices for this paddock
         loadDevicesFromStorage();
 
       } catch (err: any) {
