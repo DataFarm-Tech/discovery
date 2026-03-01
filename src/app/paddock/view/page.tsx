@@ -15,6 +15,7 @@ import {
   getPaddockSensorAverages,
 } from "@/lib/paddock";
 import { getDevices } from "@/lib/device";
+import { getDeviceData } from "@/lib/device";
 import toast from "react-hot-toast";
 import RegisterDeviceModal from "@/components/modals/RegisterDeviceModal";
 import EditPaddockModal from "@/components/modals/EditPaddockModal";
@@ -46,6 +47,7 @@ export default function Page() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [exportLoading, setExportLoading] = useState(false);
 
   const router = useRouter();
 
@@ -376,6 +378,213 @@ export default function Page() {
     }
   };
 
+  const handleExportPaddockCsv = async () => {
+    if (!paddockId) {
+      toast.error("No zone selected");
+      return;
+    }
+
+    if (!devices.length) {
+      toast.error("No devices available in this zone");
+      return;
+    }
+
+    setExportLoading(true);
+
+    try {
+      const token = localStorage.getItem("token") || "";
+      if (!token) {
+        toast.error("You must be logged in to export data");
+        return;
+      }
+
+      const readingTypes = [
+        "moisture",
+        "ph",
+        "temperature",
+        "nitrogen",
+        "potassium",
+        "phosphorus",
+      ] as const;
+
+      const cacheTtlMs = 5 * 60 * 1000;
+
+      const getSensorUnit = (sensorType: string): string => {
+        const units: Record<string, string> = {
+          moisture: "%",
+          ph: "pH",
+          temperature: "°C",
+          nitrogen: "ppm",
+          potassium: "ppm",
+          phosphorus: "ppm",
+        };
+        return units[sensorType] || "";
+      };
+
+      const getSensorStatus = (
+        sensorType: string,
+        value: number,
+      ): "ok" | "low" | "high" | "critical" => {
+        const ranges: Record<string, { min: number; max: number }> = {
+          moisture: { min: 40, max: 60 },
+          ph: { min: 6.0, max: 7.0 },
+          temperature: { min: 15, max: 25 },
+          nitrogen: { min: 80, max: 120 },
+          potassium: { min: 120, max: 180 },
+          phosphorus: { min: 40, max: 60 },
+        };
+
+        const range = ranges[sensorType] || { min: 0, max: 100 };
+        const span = range.max - range.min;
+        const criticalMargin = span * 0.2;
+
+        if (value < range.min - criticalMargin || value > range.max + criticalMargin) {
+          return "critical";
+        }
+        if (value < range.min) return "low";
+        if (value > range.max) return "high";
+        return "ok";
+      };
+
+      const requests = devices.flatMap((device) =>
+        readingTypes.map(async (readingType) => {
+          const cacheKey = `paddockExport:${paddockId}:${device.node_id}:${readingType}`;
+
+          let response: Awaited<ReturnType<typeof getDeviceData>> | null = null;
+
+          try {
+            const cachedRaw = sessionStorage.getItem(cacheKey);
+            if (cachedRaw) {
+              const cached = JSON.parse(cachedRaw) as {
+                fetchedAt: number;
+                response: Awaited<ReturnType<typeof getDeviceData>>;
+              };
+              if (
+                cached?.fetchedAt &&
+                Date.now() - cached.fetchedAt <= cacheTtlMs &&
+                cached?.response
+              ) {
+                response = cached.response;
+              }
+            }
+          } catch {
+            // Ignore cache parsing issues and continue with live fetch.
+          }
+
+          if (!response) {
+            response = await getDeviceData(
+              { nodeId: device.node_id, readingType },
+              token,
+            );
+
+            try {
+              if (response.success) {
+                sessionStorage.setItem(
+                  cacheKey,
+                  JSON.stringify({ fetchedAt: Date.now(), response }),
+                );
+              }
+            } catch {
+              // Ignore cache write issues.
+            }
+          }
+
+          if (!response?.success || !response.node?.readings?.length) {
+            return [] as Array<{
+              zone_name: string;
+              device_name: string;
+              sensor_type: string;
+              reading_value: string | number;
+              unit: string;
+              timestamp_local: string;
+              status: "ok" | "low" | "high" | "critical";
+              timestamp_ms: number;
+            }>;
+          }
+
+          return response.node.readings.map((reading) => {
+            const parsedDate = new Date(reading.timestamp);
+            const readingValue = Number(reading.reading_val);
+            const timestampMs = parsedDate.getTime();
+
+            return {
+              zone_name: paddockName || `Zone ${paddockId}`,
+              device_name: response.node?.node_name || device.node_name || device.node_id,
+              sensor_type: readingType,
+              reading_value: reading.reading_val,
+              unit: getSensorUnit(readingType),
+              timestamp_local: Number.isNaN(timestampMs)
+                ? reading.timestamp
+                : parsedDate.toLocaleString(),
+              status: Number.isFinite(readingValue)
+                ? getSensorStatus(readingType, readingValue)
+                : "ok",
+              timestamp_ms: Number.isNaN(timestampMs) ? Number.MAX_SAFE_INTEGER : timestampMs,
+            };
+          });
+        }),
+      );
+
+      const responses = await Promise.allSettled(requests);
+      const rows = responses.flatMap((result) =>
+        result.status === "fulfilled" ? result.value : [],
+      );
+
+      if (!rows.length) {
+        toast.error("No sensor readings found to export for this zone");
+        return;
+      }
+
+      rows.sort(
+        (a, b) => a.timestamp_ms - b.timestamp_ms,
+      );
+
+      const escapeCsv = (value: string | number | null | undefined) =>
+        `"${String(value ?? "").replace(/"/g, '""')}"`;
+
+      const headers = [
+        "zone_name",
+        "device_name",
+        "sensor_type",
+        "reading_value",
+        "unit",
+        "timestamp_local",
+        "status",
+      ];
+
+      const csvBody = rows.map((row) =>
+        [
+          escapeCsv(row.zone_name),
+          escapeCsv(row.device_name),
+          escapeCsv(row.sensor_type),
+          escapeCsv(row.reading_value),
+          escapeCsv(row.unit),
+          escapeCsv(row.timestamp_local),
+          escapeCsv(row.status),
+        ].join(","),
+      );
+
+      const csv = `\uFEFF${headers.join(",")}\n${csvBody.join("\n")}`;
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      const safePaddockId = String(paddockId).replace(/[^a-zA-Z0-9-_]/g, "_");
+      const safeZoneName = (paddockName || `Zone_${paddockId}`).replace(/[^a-zA-Z0-9-_]/g, "_");
+      const dateStamp = new Date().toISOString().slice(0, 10);
+      link.download = `${safeZoneName}_${safePaddockId}_all_sensors_v2_${dateStamp}.csv`;
+      link.click();
+      window.URL.revokeObjectURL(url);
+
+      toast.success("Zone data exported successfully");
+    } catch (err) {
+      console.error("Failed to export paddock data:", err);
+      toast.error("Failed to export zone data");
+    } finally {
+      setExportLoading(false);
+    }
+  };
+
   const daysSincePlanting = getDaysSincePlanting(plantDate);
 
   return (
@@ -427,6 +636,24 @@ export default function Page() {
                   </div>
 
                   <div className="flex items-center gap-2">
+                    <button
+                      onClick={handleExportPaddockCsv}
+                      disabled={exportLoading || devices.length === 0}
+                      className="p-2.5 text-white/80 hover:text-[#00be64] border border-white/20 hover:border-[#00be64]/50 hover:bg-white/5 rounded-lg transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:text-white/80 disabled:hover:border-white/20 disabled:hover:bg-transparent"
+                      title="Export zone CSV"
+                    >
+                      {exportLoading ? (
+                        <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                        </svg>
+                      ) : (
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 16V4m0 12l-4-4m4 4l4-4M4 20h16" />
+                        </svg>
+                      )}
+                    </button>
+
                     <button
                       onClick={() => setIsEditModalOpen(true)}
                       className="p-2.5 text-white/80 hover:text-[#00be64] border border-white/20 hover:border-[#00be64]/50 hover:bg-white/5 rounded-lg transition-all duration-200 active:scale-95 group"
