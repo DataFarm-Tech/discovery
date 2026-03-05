@@ -7,6 +7,8 @@ import {
   getDeviceData,
   DeviceDataResponse,
   editDeviceName,
+  getDeviceInsights,
+  DeviceInsightsResponse,
 } from "@/lib/device";
 import InfoPopup from "@/components/InfoPopup";
 import { MdDelete, MdEdit, MdArrowBack } from "react-icons/md";
@@ -17,6 +19,32 @@ import DeleteDeviceModal from "@/components/modals/DeleteDeviceModal";
 
 // Hard-coded battery level
 const BATTERY_PERCENT = 87;
+const CROP_TYPE_OPTIONS = [
+  { value: "default", label: "Default", description: "Balanced baseline profile for general use." },
+  { value: "grains", label: "Grains", description: "Cereal crops like wheat, barley, oats, and rye." },
+  { value: "legumes", label: "Legumes", description: "Nitrogen-fixing crops like beans, peas, and lentils." },
+  { value: "fruit", label: "Fruit", description: "Fruit-bearing crops and orchards." },
+  { value: "oil seeds", label: "Oil Seeds", description: "Oil-producing crops like canola, sunflower, and soybean." },
+  { value: "root crops", label: "Root Crops", description: "Underground-storage crops like potato, carrot, and beet." },
+  { value: "tropical", label: "Tropical", description: "Warm-climate crops requiring higher moisture and temperature." },
+  { value: "other", label: "Other", description: "Custom crop profile when none of the standard groups fit." },
+];
+const SOIL_TYPE_OPTIONS = [
+  { value: "default", label: "Default", description: "Generic soil behavior with no texture-specific bias." },
+  { value: "sandy", label: "Sandy", description: "Fast drainage, lower nutrient retention, dries quickly." },
+  { value: "clay", label: "Clay", description: "High water retention, denser structure, slower drainage." },
+  { value: "loam", label: "Loam", description: "Balanced texture with good drainage and nutrient holding." },
+  { value: "silty", label: "Silty", description: "Fine particles, moderate retention, compacts more easily." },
+  { value: "peaty", label: "Peaty", description: "Organic-rich soil, tends to be acidic and moisture-retentive." },
+  { value: "chalky", label: "Chalky", description: "Alkaline soil, often lower phosphorus availability." },
+];
+type SensorType =
+  | "moisture"
+  | "ph"
+  | "temperature"
+  | "nitrogen"
+  | "potassium"
+  | "phosphorus";
 
 function DeviceViewContent() {
   const searchParams = useSearchParams();
@@ -42,6 +70,7 @@ function DeviceViewContent() {
   const [selectedGraph, setSelectedGraph] = useState<
     "moisture" | "ph" | "temperature" | "nitrogen" | "potassium" | "phosphorus"
   >("moisture");
+  const [showOptimalLine, setShowOptimalLine] = useState(true);
   const [timePeriod, setTimePeriod] = useState<
     "week" | "month" | "6months" | "year" | "all"
   >("all");
@@ -49,7 +78,12 @@ function DeviceViewContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [cropType, setcropType] = useState<string>("default");
+  const [soilType, setSoilType] = useState<string>("default");
   const [paddockId, setPaddockId] = useState<number | null>(null);
+  const [paddockAreaHa, setPaddockAreaHa] = useState<number | null>(null);
+  const [plantationDate, setPlantationDate] = useState<string | null>(null);
+  const [deviceInsights, setDeviceInsights] =
+    useState<DeviceInsightsResponse | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [devices, setDevices] = useState<any[]>([]);
@@ -161,16 +195,195 @@ function DeviceViewContent() {
     };
   }
 
-  // Get optimal sensor value based on crop type
-  function getOptimalValue(
-    sensorType:
-      | "moisture"
-      | "ph"
-      | "temperature"
-      | "nitrogen"
-      | "potassium"
-      | "phosphorus",
-  ): number {
+  function normalizeCropType(value: string | null | undefined): string {
+    const raw = (value || "").trim().toLowerCase();
+    if (!raw) return "default";
+
+    const aliases: Record<string, string> = {
+      grains: "grains",
+      legumes: "legumes",
+      fruit: "fruit",
+      "oil seeds": "oil seeds",
+      "root crops": "root crops",
+      tropical: "tropical",
+      other: "other",
+    };
+
+    return aliases[raw] || raw;
+  }
+
+  function normalizeSoilType(value: string | null | undefined): string {
+    const raw = (value || "").trim().toLowerCase();
+    if (!raw) return "default";
+
+    if (raw.includes("sandy")) return "sandy";
+    if (raw.includes("clay")) return "clay";
+    if (raw.includes("loam")) return "loam";
+    if (raw.includes("silt")) return "silty";
+    if (raw.includes("peat")) return "peaty";
+    if (raw.includes("chalk")) return "chalky";
+    return "default";
+  }
+
+  function toTitleCaseWords(value: string | null | undefined): string {
+    const text = (value || "default").trim();
+    if (!text) return "Default";
+
+    return text
+      .split(" ")
+      .filter(Boolean)
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(" ");
+  }
+
+  function getPlantAgeDays(): number | null {
+    if (!plantationDate) return null;
+
+    const plantedAt = new Date(plantationDate);
+    if (Number.isNaN(plantedAt.getTime())) return null;
+
+    const diffMs = Date.now() - plantedAt.getTime();
+    return Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
+  }
+
+  const selectedCropOption =
+    CROP_TYPE_OPTIONS.find((option) => option.value === cropType) ||
+    CROP_TYPE_OPTIONS[0];
+  const selectedSoilOption =
+    SOIL_TYPE_OPTIONS.find((option) => option.value === soilType) ||
+    SOIL_TYPE_OPTIONS[0];
+
+  const applyProfileOverride = async (
+    overrideCropType: string,
+    overrideSoilType: string,
+  ) => {
+    if (!nodeId) return;
+
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    const insights = await getDeviceInsights(nodeId, token, {
+      cropType: overrideCropType,
+      soilType: overrideSoilType,
+    });
+
+    if (!insights.success) {
+      return;
+    }
+
+    setDeviceInsights(insights);
+    setcropType(normalizeCropType(insights.profile?.crop_type || overrideCropType));
+    setSoilType(normalizeSoilType(insights.profile?.soil_type || overrideSoilType));
+    setPaddockAreaHa(
+      typeof insights.profile?.area_hectares === "number"
+        ? insights.profile.area_hectares
+        : null,
+    );
+    setPlantationDate(insights.profile?.plant_date || null);
+  };
+
+  function getDynamicAlertRange(sensorType: SensorType): { min: number; max: number } {
+    const baseRange = getOptimalRange(sensorType);
+    let center = (baseRange.min + baseRange.max) / 2;
+    let span = baseRange.max - baseRange.min;
+
+    const soilKey = normalizeSoilType(soilType);
+    const soilAdjustments: Record<
+      string,
+      Partial<Record<SensorType, { centerShift: number; spanFactor: number }>>
+    > = {
+      default: {},
+      sandy: {
+        moisture: { centerShift: -3, spanFactor: 1.12 },
+        nitrogen: { centerShift: -8, spanFactor: 1.1 },
+        potassium: { centerShift: -6, spanFactor: 1.08 },
+      },
+      clay: {
+        moisture: { centerShift: 4, spanFactor: 0.92 },
+        temperature: { centerShift: -1, spanFactor: 0.9 },
+        phosphorus: { centerShift: 6, spanFactor: 0.9 },
+      },
+      loam: {
+        moisture: { centerShift: 0, spanFactor: 0.95 },
+      },
+      silty: {
+        moisture: { centerShift: 2, spanFactor: 1.0 },
+        phosphorus: { centerShift: 3, spanFactor: 0.95 },
+      },
+      peaty: {
+        ph: { centerShift: -0.2, spanFactor: 1.05 },
+        potassium: { centerShift: -5, spanFactor: 1.1 },
+      },
+      chalky: {
+        ph: { centerShift: 0.2, spanFactor: 1.05 },
+        phosphorus: { centerShift: -4, spanFactor: 1.08 },
+      },
+    };
+
+    const soilRule = soilAdjustments[soilKey]?.[sensorType];
+    if (soilRule) {
+      center += soilRule.centerShift;
+      span *= soilRule.spanFactor;
+    }
+
+    const ageDays = getPlantAgeDays();
+    if (ageDays !== null) {
+      const growthStage = ageDays < 45 ? "early" : ageDays < 140 ? "mid" : "late";
+      const stageAdjustments: Record<
+        string,
+        Partial<Record<SensorType, { centerShift: number; spanFactor: number }>>
+      > = {
+        early: {
+          moisture: { centerShift: 4, spanFactor: 0.9 },
+          phosphorus: { centerShift: 5, spanFactor: 0.92 },
+          temperature: { centerShift: 1, spanFactor: 0.95 },
+        },
+        mid: {
+          nitrogen: { centerShift: 6, spanFactor: 0.9 },
+          potassium: { centerShift: 3, spanFactor: 0.95 },
+        },
+        late: {
+          moisture: { centerShift: -3, spanFactor: 1.05 },
+          nitrogen: { centerShift: -8, spanFactor: 1.08 },
+          potassium: { centerShift: 5, spanFactor: 1.0 },
+        },
+      };
+
+      const stageRule = stageAdjustments[growthStage]?.[sensorType];
+      if (stageRule) {
+        center += stageRule.centerShift;
+        span *= stageRule.spanFactor;
+      }
+    }
+
+    if (paddockAreaHa !== null && paddockAreaHa > 0) {
+      const areaSpanFactor = paddockAreaHa > 100 ? 1.12 : paddockAreaHa < 10 ? 0.92 : 1.0;
+      span *= areaSpanFactor;
+    }
+
+    const min = center - span / 2;
+    const max = center + span / 2;
+
+    if (sensorType === "ph" || sensorType === "temperature") {
+      return {
+        min: Number(min.toFixed(1)),
+        max: Number(max.toFixed(1)),
+      };
+    }
+
+    return {
+      min: Math.round(min),
+      max: Math.round(max),
+    };
+  }
+
+  // Get optimal sensor value based on crop type + soil type
+  function getOptimalValue(sensorType: SensorType): number {
+    const backendOptimal = deviceInsights?.optimal_values?.[sensorType];
+    if (typeof backendOptimal === "number") {
+      return backendOptimal;
+    }
+
     const optimalValues: Record<string, Record<string, number>> = {
       default: {
         moisture: 50,
@@ -180,7 +393,7 @@ function DeviceViewContent() {
         potassium: 30,
         phosphorus: 50,
       },
-      wheat: {
+      grains: {
         moisture: 45,
         ph: 6.5,
         temperature: 18,
@@ -188,13 +401,13 @@ function DeviceViewContent() {
         potassium: 30,
         phosphorus: 60,
       },
-      barley: {
-        moisture: 45,
-        ph: 6.5,
-        temperature: 18,
-        nitrogen: 110,
+      legumes: {
+        moisture: 50,
+        ph: 6.6,
+        temperature: 20,
+        nitrogen: 95,
         potassium: 30,
-        phosphorus: 55,
+        phosphorus: 58,
       },
       fruit: {
         moisture: 55,
@@ -204,13 +417,29 @@ function DeviceViewContent() {
         potassium: 30,
         phosphorus: 70,
       },
-      wine: {
-        moisture: 40,
-        ph: 7.0,
-        temperature: 20,
-        nitrogen: 80,
+      "oil seeds": {
+        moisture: 43,
+        ph: 6.6,
+        temperature: 19,
+        nitrogen: 105,
         potassium: 30,
-        phosphorus: 45,
+        phosphorus: 52,
+      },
+      "root crops": {
+        moisture: 58,
+        ph: 6.4,
+        temperature: 19,
+        nitrogen: 110,
+        potassium: 30,
+        phosphorus: 62,
+      },
+      tropical: {
+        moisture: 60,
+        ph: 6.7,
+        temperature: 20,
+        nitrogen: 95,
+        potassium: 30,
+        phosphorus: 68,
       },
       other: {
         moisture: 50,
@@ -222,8 +451,47 @@ function DeviceViewContent() {
       },
     };
 
-    const cropOptimal = optimalValues[cropType] || optimalValues["default"];
-    return cropOptimal[sensorType] || 50;
+    const soilAdjustments: Record<string, Partial<Record<SensorType, number>>> = {
+      default: {},
+      sandy: {
+        moisture: 0.9,
+        nitrogen: 0.9,
+        potassium: 0.95,
+      },
+      clay: {
+        moisture: 1.1,
+        temperature: 0.95,
+        phosphorus: 1.1,
+      },
+      loam: {
+        moisture: 1.0,
+      },
+      silty: {
+        moisture: 1.05,
+        phosphorus: 1.05,
+      },
+      peaty: {
+        ph: 0.95,
+        potassium: 0.95,
+      },
+      chalky: {
+        ph: 1.05,
+        phosphorus: 0.95,
+      },
+    };
+
+    const cropKey = normalizeCropType(cropType);
+    const soilKey = normalizeSoilType(soilType);
+    const cropOptimal = optimalValues[cropKey] || optimalValues["default"];
+    const baseValue = cropOptimal[sensorType] || 50;
+    const factor = soilAdjustments[soilKey]?.[sensorType] ?? 1;
+    const adjustedValue = baseValue * factor;
+
+    if (sensorType === "ph" || sensorType === "temperature") {
+      return Number(adjustedValue.toFixed(1));
+    }
+
+    return Math.round(adjustedValue);
   }
 
   // Get optimal ranges for sensor alerts
@@ -236,6 +504,15 @@ function DeviceViewContent() {
       | "potassium"
       | "phosphorus",
   ): { min: number; max: number } {
+    const backendRange = deviceInsights?.dynamic_ranges?.[sensorType];
+    if (
+      backendRange &&
+      typeof backendRange.min === "number" &&
+      typeof backendRange.max === "number"
+    ) {
+      return backendRange;
+    }
+
     const ranges: Record<
       string,
       Record<string, { min: number; max: number }>
@@ -248,7 +525,7 @@ function DeviceViewContent() {
         potassium: { min: 120, max: 180 },
         phosphorus: { min: 40, max: 60 },
       },
-      wheat: {
+      grains: {
         moisture: { min: 35, max: 55 },
         ph: { min: 6.0, max: 7.0 },
         temperature: { min: 15, max: 22 },
@@ -256,13 +533,13 @@ function DeviceViewContent() {
         potassium: { min: 150, max: 210 },
         phosphorus: { min: 50, max: 70 },
       },
-      barley: {
-        moisture: { min: 35, max: 55 },
-        ph: { min: 6.0, max: 7.0 },
-        temperature: { min: 15, max: 22 },
-        nitrogen: { min: 90, max: 130 },
+      legumes: {
+        moisture: { min: 40, max: 60 },
+        ph: { min: 6.1, max: 7.1 },
+        temperature: { min: 16, max: 24 },
+        nitrogen: { min: 80, max: 120 },
         potassium: { min: 140, max: 200 },
-        phosphorus: { min: 45, max: 65 },
+        phosphorus: { min: 48, max: 68 },
       },
       fruit: {
         moisture: { min: 50, max: 70 },
@@ -272,13 +549,29 @@ function DeviceViewContent() {
         potassium: { min: 170, max: 230 },
         phosphorus: { min: 60, max: 80 },
       },
-      wine: {
-        moisture: { min: 30, max: 50 },
-        ph: { min: 6.5, max: 7.5 },
-        temperature: { min: 15, max: 25 },
-        nitrogen: { min: 60, max: 100 },
-        potassium: { min: 130, max: 190 },
-        phosphorus: { min: 35, max: 55 },
+      "oil seeds": {
+        moisture: { min: 35, max: 55 },
+        ph: { min: 6.0, max: 7.0 },
+        temperature: { min: 15, max: 23 },
+        nitrogen: { min: 90, max: 130 },
+        potassium: { min: 140, max: 200 },
+        phosphorus: { min: 45, max: 65 },
+      },
+      "root crops": {
+        moisture: { min: 45, max: 70 },
+        ph: { min: 5.8, max: 6.8 },
+        temperature: { min: 14, max: 23 },
+        nitrogen: { min: 90, max: 140 },
+        potassium: { min: 160, max: 230 },
+        phosphorus: { min: 50, max: 75 },
+      },
+      tropical: {
+        moisture: { min: 50, max: 75 },
+        ph: { min: 6.2, max: 7.2 },
+        temperature: { min: 20, max: 30 },
+        nitrogen: { min: 75, max: 125 },
+        potassium: { min: 170, max: 240 },
+        phosphorus: { min: 55, max: 80 },
       },
       other: {
         moisture: { min: 40, max: 60 },
@@ -290,7 +583,8 @@ function DeviceViewContent() {
       },
     };
 
-    const cropRange = ranges[cropType] || ranges["default"];
+    const cropKey = normalizeCropType(cropType);
+    const cropRange = ranges[cropKey] || ranges["default"];
     return cropRange[sensorType] || { min: 0, max: 100 };
   }
 
@@ -299,11 +593,22 @@ function DeviceViewContent() {
     type: string;
     message: string;
     severity: "warning" | "critical";
+    recommendation?: string;
   }> {
+    if (deviceInsights?.alerts && deviceInsights.alerts.length > 0) {
+      return deviceInsights.alerts.map((alert) => ({
+        type: alert.type,
+        message: alert.message,
+        severity: alert.severity,
+        recommendation: alert.recommendation,
+      }));
+    }
+
     const alerts: Array<{
       type: string;
       message: string;
       severity: "warning" | "critical";
+      recommendation?: string;
     }> = [];
 
     // Convert recent values to numbers
@@ -316,7 +621,7 @@ function DeviceViewContent() {
 
     // Moisture alerts
     if (moisture !== null) {
-      const moistureRange = getOptimalRange("moisture");
+      const moistureRange = getDynamicAlertRange("moisture");
       if (moisture < moistureRange.min) {
         alerts.push({
           type: "Moisture",
@@ -334,7 +639,7 @@ function DeviceViewContent() {
 
     // Temperature alerts
     if (temperature !== null) {
-      const tempRange = getOptimalRange("temperature");
+      const tempRange = getDynamicAlertRange("temperature");
       if (temperature < tempRange.min) {
         alerts.push({
           type: "Temperature",
@@ -352,7 +657,7 @@ function DeviceViewContent() {
 
     // pH alerts
     if (ph !== null) {
-      const phRange = getOptimalRange("ph");
+      const phRange = getDynamicAlertRange("ph");
       if (ph < phRange.min) {
         alerts.push({
           type: "pH Level",
@@ -370,7 +675,7 @@ function DeviceViewContent() {
 
     // Nitrogen alerts
     if (nitrogen !== null) {
-      const nitrogenRange = getOptimalRange("nitrogen");
+      const nitrogenRange = getDynamicAlertRange("nitrogen");
       if (nitrogen < nitrogenRange.min) {
         alerts.push({
           type: "Nitrogen",
@@ -388,7 +693,7 @@ function DeviceViewContent() {
 
     // Potassium alerts
     if (potassium !== null) {
-      const potassiumRange = getOptimalRange("potassium");
+      const potassiumRange = getDynamicAlertRange("potassium");
       if (potassium < potassiumRange.min) {
         alerts.push({
           type: "Potassium",
@@ -408,7 +713,7 @@ function DeviceViewContent() {
 
     // Phosphorus alerts
     if (phosphorus !== null) {
-      const phosphorusRange = getOptimalRange("phosphorus");
+      const phosphorusRange = getDynamicAlertRange("phosphorus");
       if (phosphorus < phosphorusRange.min) {
         alerts.push({
           type: "Phosphorus",
@@ -488,6 +793,7 @@ function DeviceViewContent() {
         { nodeId, readingType: "phosphorus" },
         token,
       );
+      const insights = await getDeviceInsights(nodeId, token);
 
       if (moisture.success && moisture.node) {
         setMoistureData(moisture.node);
@@ -521,6 +827,34 @@ function DeviceViewContent() {
         !nitrogen.success
       )
         throw new Error("Failed to load readings.");
+
+      const detectedPaddockId =
+        moisture.node?.paddock_id ||
+        ph.node?.paddock_id ||
+        temperature.node?.paddock_id ||
+        nitrogen.node?.paddock_id ||
+        potassium.node?.paddock_id ||
+        phosphorus.node?.paddock_id ||
+        null;
+
+      setPaddockId(detectedPaddockId);
+
+      setPaddockAreaHa(null);
+      setPlantationDate(null);
+
+      if (insights.success) {
+        setDeviceInsights(insights);
+        setcropType(normalizeCropType(insights.profile?.crop_type || "default"));
+        setSoilType(normalizeSoilType(insights.profile?.soil_type || "default"));
+        setPaddockAreaHa(
+          typeof insights.profile?.area_hectares === "number"
+            ? insights.profile.area_hectares
+            : null,
+        );
+        setPlantationDate(insights.profile?.plant_date || null);
+      } else {
+        setDeviceInsights(null);
+      }
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -802,7 +1136,7 @@ function DeviceViewContent() {
   }
 
   return (
-    <main className="h-screen overflow-hidden bg-[#0c1220] px-6 py-6 text-white relative flex flex-col">
+    <main className="h-screen overflow-hidden bg-gradient-to-b from-[#0c1220] via-[#0c1220] to-[#101828] px-4 py-4 sm:px-6 sm:py-6 text-white relative flex flex-col">
       <DashboardHeader
         userName="Lucas"
         menuOpen={menuOpen}
@@ -812,23 +1146,23 @@ function DeviceViewContent() {
       <Sidebar menuOpen={menuOpen} setMenuOpen={setMenuOpen} />
 
       <div className="flex-1 overflow-y-auto scrollbar-hide">
-  <div className="mx-auto w-full max-w-6xl space-y-8 pt-6 pb-6">
+        <div className="mx-auto w-full max-w-7xl space-y-6 pt-4 pb-8">
 
           <button
             onClick={() => router.back()}
-            className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors group text-lg"
+            className="inline-flex items-center gap-2 text-gray-300 hover:text-white transition-colors group text-sm border border-white/10 hover:border-white/20 bg-white/5 hover:bg-white/10 rounded-full px-4 py-2"
           >
             <MdArrowBack
-              size={24}
+              size={18}
               className="group-hover:-translate-x-1 transition-transform"
             />
             <span>Back</span>
           </button>
 
-          <section className="bg-[#121829] border border-[#00be64]/30 rounded-2xl shadow-xl p-6">
-            <div className="flex items-center justify-between">
+          <section className="bg-[#121829]/95 border border-[#00be64]/30 rounded-2xl shadow-xl p-6 sm:p-7">
+            <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
               <div>
-                <h1 className="text-3xl font-bold text-white">
+                <h1 className="text-2xl sm:text-3xl font-bold text-white leading-tight">
                   {moistureData?.node_name || phData?.node_name || "Device"}
                 </h1>
                 <p className="text-gray-400 text-sm mt-1">
@@ -837,12 +1171,26 @@ function DeviceViewContent() {
                     {moistureData?.node_id || phData?.node_id || nodeId}
                   </span>
                 </p>
+                <div className="mt-4 flex flex-wrap items-center gap-2.5 text-xs">
+                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border ${status.online ? "bg-green-500/10 border-green-500/40 text-green-300" : "bg-red-500/10 border-red-500/40 text-red-300"}`}>
+                    <span className={`w-2 h-2 rounded-full ${status.online ? "bg-green-400" : "bg-red-500"}`}></span>
+                    {status.label}
+                  </span>
+                  <span className="inline-flex items-center px-2.5 py-1 rounded-full border border-[#00be64]/40 bg-[#00be64]/10 text-[#00be64] font-semibold">
+                    Battery {BATTERY_PERCENT}%
+                  </span>
+                  {lastUpdated && (
+                    <span className="inline-flex items-center px-2.5 py-1 rounded-full border border-white/10 bg-white/5 text-gray-300">
+                      Updated {timeAgo(lastUpdated)}
+                    </span>
+                  )}
+                </div>
               </div>
 
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => setIsEditModalOpen(true)}
-                  className="p-2.5 bg-[#00be64]/20 hover:bg-[#00be64]/30 rounded-lg transition-all group"
+                  className="p-2.5 bg-[#00be64]/20 hover:bg-[#00be64]/30 border border-[#00be64]/30 rounded-lg transition-all group"
                   title="Edit device"
                 >
                   <MdEdit
@@ -854,7 +1202,7 @@ function DeviceViewContent() {
 
                 <button
                   onClick={() => setIsDeleteModalOpen(true)}
-                  className="p-2.5 bg-red-500/20 hover:bg-red-500/30 rounded-lg transition-all group"
+                  className="p-2.5 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 rounded-lg transition-all group"
                   title="Remove device"
                 >
                   <MdDelete
@@ -866,13 +1214,13 @@ function DeviceViewContent() {
               </div>
             </div>
           </section>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
             {/* LEFT COLUMN - Main Content */}
             <div className="lg:col-span-2 space-y-6">
               {/* CRITICAL ALERTS SECTION */}
               <div className="bg-gradient-to-br from-[#121829] to-[#0f1318] border border-green-500/30 rounded-2xl p-6 shadow-lg">
                 <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-                  <span className="w-1 h-6 green-500 rounded-full"></span>
+                  <span className="w-1 h-6 bg-green-500 rounded-full"></span>
                   <span className="text-green-300">Alerts</span>
                 </h2>
                 {getCriticalAlerts().length > 0 ? (
@@ -905,6 +1253,11 @@ function DeviceViewContent() {
                           <p className="text-xs text-gray-300 mt-1">
                             {alert.message}
                           </p>
+                          {alert.recommendation && (
+                            <p className="text-xs text-gray-400 mt-1.5">
+                              Recommendation: {alert.recommendation}
+                            </p>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -918,7 +1271,7 @@ function DeviceViewContent() {
                       </p>
                       <p className="text-xs text-gray-400 mt-1">
                         All sensor readings are within optimal ranges for{" "}
-                        {cropType || "default"} crop.
+                        {toTitleCaseWords(cropType)} crop.
                       </p>
                     </div>
                   </div>
@@ -936,7 +1289,7 @@ function DeviceViewContent() {
                   />
                 </h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <div className="bg-[#0c1220]/50 border border-[#00be64]/40 rounded-xl p-5 text-center hover:border-[#00be64] transition-colors">
+                  <div className="bg-[#0c1220]/50 border border-[#00be64]/40 rounded-xl p-5 text-center hover:border-[#00be64] transition-all hover:-translate-y-0.5">
                     <p className="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wide">
                       Moisture
                     </p>
@@ -962,7 +1315,7 @@ function DeviceViewContent() {
                     </div>
                     <p className="text-xs text-gray-500 mt-1">%</p>
                   </div>
-                  <div className="bg-[#0c1220]/50 border border-[#00be64]/40 rounded-xl p-5 text-center hover:border-[#00be64] transition-colors">
+                  <div className="bg-[#0c1220]/50 border border-[#00be64]/40 rounded-xl p-5 text-center hover:border-[#00be64] transition-all hover:-translate-y-0.5">
                     <p className="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wide">
                       Temperature
                     </p>
@@ -988,7 +1341,7 @@ function DeviceViewContent() {
                     </div>
                     <p className="text-xs text-gray-500 mt-1">°C</p>
                   </div>
-                  <div className="bg-[#0c1220]/50 border border-[#00be64]/40 rounded-xl p-5 text-center hover:border-[#00be64] transition-colors">
+                  <div className="bg-[#0c1220]/50 border border-[#00be64]/40 rounded-xl p-5 text-center hover:border-[#00be64] transition-all hover:-translate-y-0.5">
                     <p className="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wide">
                       Nitrogen
                     </p>
@@ -1014,7 +1367,7 @@ function DeviceViewContent() {
                     </div>
                     <p className="text-xs text-gray-500 mt-1">ppm</p>
                   </div>
-                  <div className="bg-[#0c1220]/50 border border-[#00be64]/40 rounded-xl p-5 text-center hover:border-[#00be64] transition-colors">
+                  <div className="bg-[#0c1220]/50 border border-[#00be64]/40 rounded-xl p-5 text-center hover:border-[#00be64] transition-all hover:-translate-y-0.5">
                     <p className="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wide">
                       pH Level
                     </p>
@@ -1040,7 +1393,7 @@ function DeviceViewContent() {
                     </div>
                     <p className="text-xs text-gray-500 mt-1">pH</p>
                   </div>
-                  <div className="bg-[#0c1220]/50 border border-[#00be64]/40 rounded-xl p-5 text-center hover:border-[#00be64] transition-colors">
+                  <div className="bg-[#0c1220]/50 border border-[#00be64]/40 rounded-xl p-5 text-center hover:border-[#00be64] transition-all hover:-translate-y-0.5">
                     <p className="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wide">
                       Potassium
                     </p>
@@ -1066,7 +1419,7 @@ function DeviceViewContent() {
                     </div>
                     <p className="text-xs text-gray-500 mt-1">ppm</p>
                   </div>
-                  <div className="bg-[#0c1220]/50 border border-[#00be64]/40 rounded-xl p-5 text-center hover:border-[#00be64] transition-colors">
+                  <div className="bg-[#0c1220]/50 border border-[#00be64]/40 rounded-xl p-5 text-center hover:border-[#00be64] transition-all hover:-translate-y-0.5">
                     <p className="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wide">
                       Phosphorus
                     </p>
@@ -1102,9 +1455,26 @@ function DeviceViewContent() {
                     <span className="w-1 h-6 bg-[#00be64] rounded-full"></span>
                     {graphTitle}
                   </h2>
+                  <div className="mb-4 inline-flex flex-wrap items-center gap-2 rounded-lg border border-[#00be64]/40 bg-[#00be64]/10 px-3 py-2 text-sm">
+                    <span className="font-semibold text-[#00be64]">Optimal Profile</span>
+                    <span className="text-white/90">
+                      {toTitleCaseWords(cropType)} crop • {toTitleCaseWords(soilType)} soil
+                      {paddockId ? ` • Zone ${paddockId}` : ""}
+                    </span>
+                  </div>
+                  <div className="mb-2 space-y-1 text-xs text-gray-300">
+                    <p>
+                      <span className="text-[#00be64] font-semibold">{selectedCropOption.label}:</span>{" "}
+                      {selectedCropOption.description}
+                    </p>
+                    <p>
+                      <span className="text-[#00be64] font-semibold">{selectedSoilOption.label}:</span>{" "}
+                      {selectedSoilOption.description}
+                    </p>
+                  </div>
 
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                    <div className="flex items-center gap-2">
+                  <div className="flex flex-col xl:flex-row xl:justify-between xl:items-center gap-4">
+                    <div className="flex flex-wrap items-center gap-2.5">
                       <label className="text-sm text-gray-400">
                         Time Period:
                       </label>
@@ -1123,7 +1493,7 @@ function DeviceViewContent() {
                       </select>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2.5">
                       <label className="text-sm text-gray-400">
                         Graph Type:
                       </label>
@@ -1143,6 +1513,15 @@ function DeviceViewContent() {
                         <option value="potassium">Potassium</option>
                         <option value="phosphorus">Phosphorus</option>
                       </select>
+                      <label className="flex items-center gap-2 px-2 py-1 rounded-md border border-white/10 bg-white/5 text-xs text-gray-300">
+                        <input
+                          type="checkbox"
+                          checked={showOptimalLine}
+                          onChange={(e) => setShowOptimalLine(e.target.checked)}
+                          className="h-3.5 w-3.5 accent-[#00be64]"
+                        />
+                        Show Optimal Line
+                      </label>
                       <button
                         onClick={exportToCSV}
                         disabled={exportableData.length === 0}
@@ -1161,7 +1540,7 @@ function DeviceViewContent() {
                     title={graphTitle}
                     data={graphData}
                     timePeriod={timePeriod}
-                    optimalValue={getOptimalValue(selectedGraph)}
+                    optimalValue={showOptimalLine ? getOptimalValue(selectedGraph) : undefined}
                   />
                 </div>
               </section>

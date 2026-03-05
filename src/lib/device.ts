@@ -69,6 +69,34 @@ export interface DeviceDataResponse {
   };
 }
 
+export interface DeviceInsightsResponse {
+  success: boolean;
+  message?: string;
+  node_id?: string;
+  paddock_id?: number | null;
+  profile?: {
+    crop_type?: string | null;
+    soil_type?: string | null;
+    crop_key?: string;
+    soil_key?: string;
+    area_hectares?: number | null;
+    plant_date?: string | null;
+    plant_age_days?: number | null;
+  };
+  latest_values?: Partial<Record<"moisture" | "ph" | "temperature" | "nitrogen" | "potassium" | "phosphorus", number | null>>;
+  dynamic_ranges?: Partial<Record<"moisture" | "ph" | "temperature" | "nitrogen" | "potassium" | "phosphorus", { min: number; max: number }>>;
+  optimal_values?: Partial<Record<"moisture" | "ph" | "temperature" | "nitrogen" | "potassium" | "phosphorus", number>>;
+  alerts?: Array<{
+    type: string;
+    severity: "warning" | "critical";
+    message: string;
+    recommendation?: string;
+    value?: number;
+    range?: { min: number; max: number };
+    direction?: "low" | "high";
+  }>;
+}
+
 /**
  * Fetches sensor readings for a specific device and reading type.
  *
@@ -117,6 +145,63 @@ export async function getDeviceData(
     };
   } catch (error) {
     console.error("Error fetching device data:", error);
+    return {
+      success: false,
+      message: "An error occurred. Please try again.",
+    };
+  }
+}
+
+export async function getDeviceInsights(
+  nodeId: string,
+  token: string,
+  profileOverride?: {
+    cropType?: string;
+    soilType?: string;
+  }
+): Promise<DeviceInsightsResponse> {
+  try {
+    const query = new URLSearchParams();
+    if (profileOverride?.cropType) {
+      query.set("crop_type", profileOverride.cropType);
+    }
+    if (profileOverride?.soilType) {
+      query.set("soil_type", profileOverride.soilType);
+    }
+
+    const response = await fetch(
+      `${API_BASE_URL}/device/insights/${nodeId}${query.toString() ? `?${query.toString()}` : ""}`,
+      {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return {
+        success: false,
+        message: data.message || data.detail || "Failed to fetch device insights",
+      };
+    }
+
+    return {
+      success: true,
+      message: "Device insights fetched successfully",
+      node_id: data.node_id,
+      paddock_id: data.paddock_id,
+      profile: data.profile,
+      latest_values: data.latest_values,
+      dynamic_ranges: data.dynamic_ranges,
+      optimal_values: data.optimal_values,
+      alerts: data.alerts || [],
+    };
+  } catch (error) {
+    console.error("Error fetching device insights:", error);
     return {
       success: false,
       message: "An error occurred. Please try again.",
