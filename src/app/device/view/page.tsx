@@ -52,6 +52,9 @@ function DeviceViewContent() {
   const [selectedGraph, setSelectedGraph] = useState<
     "moisture" | "ph" | "temperature" | "nitrogen" | "potassium" | "phosphorus"
   >("moisture");
+  const [activeDevicePage, setActiveDevicePage] = useState<
+    "overview" | "graph" | "device"
+  >("overview");
   const [showOptimalLine, setShowOptimalLine] = useState(true);
   const [timePeriod, setTimePeriod] = useState<
     "week" | "month" | "6months" | "year" | "all"
@@ -228,7 +231,7 @@ function DeviceViewContent() {
     if (Number.isNaN(plantedAt.getTime())) return null;
 
     const diffMs = Date.now() - plantedAt.getTime();
-    return Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
+    return Math.floor(diffMs / (1000 * 60 * 60 * 24));
   }
 
   function getDynamicAlertRange(sensorType: SensorType): { min: number; max: number } {
@@ -276,7 +279,7 @@ function DeviceViewContent() {
     }
 
     const ageDays = getPlantAgeDays();
-    if (ageDays !== null) {
+    if (ageDays !== null && ageDays >= 0) {
       const growthStage = ageDays < 45 ? "early" : ageDays < 140 ? "mid" : "late";
       const stageAdjustments: Record<
         string,
@@ -830,6 +833,8 @@ function DeviceViewContent() {
     phosphorusData ||
     null;
 
+  const firmwareVersion = currentNode?.fw_ver || "--";
+
   const exportPaddockId = currentNode?.paddock_id
     ? String(currentNode.paddock_id)
     : "";
@@ -1174,12 +1179,6 @@ function DeviceViewContent() {
                 <h1 className="text-2xl sm:text-3xl font-bold text-white leading-tight">
                   {moistureData?.node_name || phData?.node_name || "Device"}
                 </h1>
-                <p className="text-gray-400 text-sm mt-1">
-                  Node ID:{" "}
-                  <span className="font-mono text-[#00be64]">
-                    {moistureData?.node_id || phData?.node_id || nodeId}
-                  </span>
-                </p>
                 <div className="mt-4 flex flex-wrap items-center gap-2.5 text-xs">
                   <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border ${status.online ? "bg-green-500/10 border-green-500/40 text-green-300" : "bg-red-500/10 border-red-500/40 text-red-300"}`}>
                     <span className={`w-2 h-2 rounded-full ${status.online ? "bg-green-400" : "bg-red-500"}`}></span>
@@ -1223,10 +1222,47 @@ function DeviceViewContent() {
               </div>
             </div>
           </section>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setActiveDevicePage("overview")}
+              className={`px-3.5 py-1.5 rounded-full text-sm border transition ${
+                activeDevicePage === "overview"
+                  ? "border-[#00be64]/60 bg-[#00be64]/15 text-[#00be64]"
+                  : "border-white/15 bg-white/5 text-gray-300 hover:text-white"
+              }`}
+            >
+              Alerts & Readings
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveDevicePage("graph")}
+              className={`px-3.5 py-1.5 rounded-full text-sm border transition ${
+                activeDevicePage === "graph"
+                  ? "border-[#00be64]/60 bg-[#00be64]/15 text-[#00be64]"
+                  : "border-white/15 bg-white/5 text-gray-300 hover:text-white"
+              }`}
+            >
+              Graph View
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveDevicePage("device")}
+              className={`px-3.5 py-1.5 rounded-full text-sm border transition ${
+                activeDevicePage === "device"
+                  ? "border-[#00be64]/60 bg-[#00be64]/15 text-[#00be64]"
+                  : "border-white/15 bg-white/5 text-gray-300 hover:text-white"
+              }`}
+            >
+              Device Info
+            </button>
+          </div>
+
+          <div className="space-y-6">
             {/* LEFT COLUMN - Main Content */}
-            <div className="lg:col-span-2 space-y-6">
+            <div className="space-y-6">
               {/* CRITICAL ALERTS SECTION */}
+              {activeDevicePage === "overview" && (
               <div className="bg-gradient-to-br from-[#121829] to-[#0f1318] border border-green-500/30 rounded-2xl p-6 shadow-lg">
                 <button
                   type="button"
@@ -1300,8 +1336,10 @@ function DeviceViewContent() {
                   )
                 )}
               </div>
+              )}
 
               {/* LATEST READINGS */}
+              {activeDevicePage === "overview" && (
               <div className="bg-gradient-to-br from-[#121829] to-[#0f1318] border border-[#00be64]/30 rounded-2xl p-6 shadow-lg">
                 <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
                   <span className="w-1 h-6 bg-[#00be64] rounded-full"></span>
@@ -1470,8 +1508,10 @@ function DeviceViewContent() {
                   </div>
                 </div>
               </div>
+              )}
 
               {/* GRAPH SECTION */}
+              {activeDevicePage === "graph" && (
               <section className="bg-gradient-to-br from-[#121829] to-[#0f1318] border border-[#00be64]/30 rounded-2xl shadow-lg p-6">
                 <div className="mb-6">
                   <h2 className="text-xl font-bold flex items-center gap-2 mb-4">
@@ -1500,12 +1540,14 @@ function DeviceViewContent() {
                     )}
                     {getPlantAgeDays() !== null && (
                       <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-gray-300">
-                        {getPlantAgeDays()} days since planting
+                        {getPlantAgeDays()! >= 0
+                          ? `${getPlantAgeDays()} days since planting`
+                          : `Planting starts in ${Math.abs(getPlantAgeDays()!)} days`}
                       </span>
                     )}
                   </div>
 
-                  <div className="rounded-xl border border-white/10 bg-[#0c1220]/40 p-3">
+                  <div className="w-full rounded-xl border border-white/10 bg-[#0c1220]/40 p-3">
                     <div className="flex flex-col xl:flex-row xl:items-end xl:justify-between gap-3">
                       <div className="flex flex-wrap items-center gap-2.5">
                         <label className="text-sm text-gray-400">
@@ -1565,6 +1607,18 @@ function DeviceViewContent() {
                         </label>
                       </div>
 
+                      <div className="flex xl:justify-end">
+                        <button
+                          onClick={exportToCSV}
+                          disabled={exportableData.length === 0}
+                          className="px-4 py-1.5 text-sm text-white/80 hover:text-[#00be64] border border-white/20 hover:border-[#00be64]/50 hover:bg-white/5 rounded-full transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:text-white/80 disabled:hover:border-white/20 disabled:hover:bg-transparent"
+                        >
+                          {exportableData.length > 0
+                            ? `Export CSV (${exportableData.length})`
+                            : "Export CSV"}
+                        </button>
+                      </div>
+
                     </div>
                   </div>
                 </div>
@@ -1578,22 +1632,12 @@ function DeviceViewContent() {
                     optimalValue={showOptimalLine ? getOptimalValue(selectedGraph) : undefined}
                   />
                 </div>
-
-                <div className="mt-4 flex justify-end">
-                  <button
-                    onClick={exportToCSV}
-                    disabled={exportableData.length === 0}
-                    className="px-4 py-1.5 text-sm text-white/80 hover:text-[#00be64] border border-white/20 hover:border-[#00be64]/50 hover:bg-white/5 rounded-full transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:text-white/80 disabled:hover:border-white/20 disabled:hover:bg-transparent"
-                  >
-                    {exportableData.length > 0
-                      ? `Export CSV (${exportableData.length})`
-                      : "Export CSV"}
-                  </button>
-                </div>
               </section>
+              )}
             </div>
 
             {/* RIGHT COLUMN - Summary Info */}
+            {activeDevicePage === "device" && (
             <div className="space-y-6">
               <div className="bg-gradient-to-br from-[#121829] to-[#0f1318] border border-[#00be64]/30 rounded-2xl p-6 shadow-lg">
                 <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-4">
@@ -1610,6 +1654,12 @@ function DeviceViewContent() {
                     <p className="text-xs text-gray-500 mb-1">Zone ID</p>
                     <p className="font-mono text-sm text-[#00be64]">
                       {moistureData?.paddock_id || phData?.paddock_id}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Firmware Version</p>
+                    <p className="font-mono text-sm text-[#00be64] break-all">
+                      {firmwareVersion}
                     </p>
                   </div>
                 </div>
@@ -1674,6 +1724,7 @@ function DeviceViewContent() {
                 </div>
               </div>
             </div>
+            )}
           </div>
         </div>
       </div>

@@ -49,6 +49,16 @@ export default function Graph({ title, data, forecastData = [], timePeriod = "al
       ? [data[data.length - 1], ...forecastData]
       : forecastData;
 
+  const optimalLineData =
+    optimalValue !== undefined
+      ? Array.from(
+          new Set([
+            ...data.map((point) => point.x),
+            ...connectedForecastData.map((point) => point.x),
+          ]),
+        ).map((x) => ({ x, y: optimalValue }))
+      : [];
+
   const gradientBg = (ctx: any) => {
     const gradient = ctx.chart.ctx.createLinearGradient(0, 0, 0, 300);
     gradient.addColorStop(0, "rgba(255, 179, 71, 0.45)");
@@ -173,7 +183,7 @@ export default function Graph({ title, data, forecastData = [], timePeriod = "al
       ...(optimalValue !== undefined ? [
         {
           label: "Optimal",
-          data: data.map((point) => ({ x: point.x, y: optimalValue })),
+          data: optimalLineData,
           borderColor: "#00be64",
           borderWidth: 2,
           borderDash: [5, 5],
@@ -191,7 +201,8 @@ export default function Graph({ title, data, forecastData = [], timePeriod = "al
             borderColor: "#60a5fa",
             borderWidth: 2,
             borderDash: [8, 4],
-            fill: false,
+            fill: "origin" as const,
+            backgroundColor: "rgba(96, 165, 250, 0.22)",
             tension: 0.25,
             pointRadius: 3,
             pointHoverRadius: 5,
@@ -205,9 +216,15 @@ export default function Graph({ title, data, forecastData = [], timePeriod = "al
   const options = {
     responsive: true,
     maintainAspectRatio: false,
+    layout: {
+      padding: {
+        top: 14,
+      },
+    },
 
     plugins: {
       legend: {
+        display: false,
         labels: {
           color: "white",
           padding: 20,
@@ -262,7 +279,7 @@ export default function Graph({ title, data, forecastData = [], timePeriod = "al
   } as const;
 
   return (
-    <div className="w-full max-w-4xl mx-auto h-80 p-4">
+    <div className="w-full h-full p-4 pl-0">
       <Line data={chartData} options={options} />
     </div>
   );

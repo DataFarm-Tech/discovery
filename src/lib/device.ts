@@ -65,6 +65,7 @@ export interface DeviceDataResponse {
     node_id: string;
     node_name: string;
     paddock_id: number;
+    fw_ver?: string | null;
     readings: {
       reading_type: string;
       reading_val: number | string;
@@ -165,6 +166,7 @@ export async function getDeviceData(
         node_id: data.node_id,
         node_name: data.node_name || "",
         paddock_id: data.paddock_id,
+        fw_ver: data.fw_ver ?? null,
         readings: data.readings || [],
       },
     };
