@@ -37,12 +37,18 @@ interface DataPoint {
 interface GraphProps {
   title: string;
   data: DataPoint[];
+  forecastData?: DataPoint[];
   timePeriod?: "week" | "month" | "6months" | "year" | "all";
   optimalValue?: number;
 }
 
 // Component displays sensor data with optional optimal value line
-export default function Graph({ title, data, timePeriod = "all", optimalValue }: GraphProps) {
+export default function Graph({ title, data, forecastData = [], timePeriod = "all", optimalValue }: GraphProps) {
+  const connectedForecastData =
+    forecastData.length > 0 && data.length > 0
+      ? [data[data.length - 1], ...forecastData]
+      : forecastData;
+
   const gradientBg = (ctx: any) => {
     const gradient = ctx.chart.ctx.createLinearGradient(0, 0, 0, 300);
     gradient.addColorStop(0, "rgba(255, 179, 71, 0.45)");
@@ -177,6 +183,22 @@ export default function Graph({ title, data, timePeriod = "all", optimalValue }:
           pointHoverRadius: 0,
         },
       ] : []),
+      ...(connectedForecastData.length > 0
+        ? [
+          {
+            label: "Forecast",
+            data: connectedForecastData,
+            borderColor: "#60a5fa",
+            borderWidth: 2,
+            borderDash: [8, 4],
+            fill: false,
+            tension: 0.25,
+            pointRadius: 3,
+            pointHoverRadius: 5,
+            pointBackgroundColor: "#60a5fa",
+          },
+        ]
+        : []),
     ],
   };
 
@@ -188,6 +210,7 @@ export default function Graph({ title, data, timePeriod = "all", optimalValue }:
       legend: {
         labels: {
           color: "white",
+          padding: 20,
           font: {
             size: 16,
             weight: "bold" as const,

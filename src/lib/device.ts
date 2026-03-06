@@ -10,6 +10,10 @@ const API_BASE_URL = (
   (process.env.NODE_ENV === "development" ? "http://localhost:8000" : "/api")
 ).replace(/\/+$/, "");
 
+const FORECAST_API_BASE_URL = (
+  process.env.NEXT_PUBLIC_FORECAST_API_URL || "http://localhost:8080"
+).replace(/\/+$/, "");
+
 /**
  * Request payload for updating/registering a device.
  */
@@ -94,6 +98,27 @@ export interface DeviceInsightsResponse {
     value?: number;
     range?: { min: number; max: number };
     direction?: "low" | "high";
+  }>;
+}
+
+export interface ForecastReadingPoint {
+  timestamp: string;
+  value: number;
+}
+
+export interface ForecastRequest {
+  sensor_type: string;
+  horizons_months: number[];
+  readings: ForecastReadingPoint[];
+}
+
+export interface ForecastResponse {
+  sensor_type: string;
+  model_name: string;
+  monthly_predictions: Array<{
+    month_ahead: number;
+    predicted_timestamp: string;
+    predicted_value: number;
   }>;
 }
 
@@ -205,6 +230,40 @@ export async function getDeviceInsights(
     return {
       success: false,
       message: "An error occurred. Please try again.",
+    };
+  }
+}
+
+export async function getForecast(
+  payload: ForecastRequest
+): Promise<{ success: true; data: ForecastResponse } | { success: false; message: string }> {
+  try {
+    const response = await fetch(`${FORECAST_API_BASE_URL}/forecast`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return {
+        success: false,
+        message: data.detail || data.message || "Failed to fetch forecast",
+      };
+    }
+
+    return {
+      success: true,
+      data,
+    };
+  } catch (error) {
+    console.error("Error fetching forecast:", error);
+    return {
+      success: false,
+      message: "Forecast service unavailable",
     };
   }
 }

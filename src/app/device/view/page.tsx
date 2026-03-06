@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Graph from "@/components/Graph";
 import {
@@ -9,6 +9,7 @@ import {
   editDeviceName,
   getDeviceInsights,
   DeviceInsightsResponse,
+  getForecast,
 } from "@/lib/device";
 import InfoPopup from "@/components/InfoPopup";
 import { MdDelete, MdEdit, MdArrowBack } from "react-icons/md";
@@ -19,25 +20,6 @@ import DeleteDeviceModal from "@/components/modals/DeleteDeviceModal";
 
 // Hard-coded battery level
 const BATTERY_PERCENT = 87;
-const CROP_TYPE_OPTIONS = [
-  { value: "default", label: "Default", description: "Balanced baseline profile for general use." },
-  { value: "grains", label: "Grains", description: "Cereal crops like wheat, barley, oats, and rye." },
-  { value: "legumes", label: "Legumes", description: "Nitrogen-fixing crops like beans, peas, and lentils." },
-  { value: "fruit", label: "Fruit", description: "Fruit-bearing crops and orchards." },
-  { value: "oil seeds", label: "Oil Seeds", description: "Oil-producing crops like canola, sunflower, and soybean." },
-  { value: "root crops", label: "Root Crops", description: "Underground-storage crops like potato, carrot, and beet." },
-  { value: "tropical", label: "Tropical", description: "Warm-climate crops requiring higher moisture and temperature." },
-  { value: "other", label: "Other", description: "Custom crop profile when none of the standard groups fit." },
-];
-const SOIL_TYPE_OPTIONS = [
-  { value: "default", label: "Default", description: "Generic soil behavior with no texture-specific bias." },
-  { value: "sandy", label: "Sandy", description: "Fast drainage, lower nutrient retention, dries quickly." },
-  { value: "clay", label: "Clay", description: "High water retention, denser structure, slower drainage." },
-  { value: "loam", label: "Loam", description: "Balanced texture with good drainage and nutrient holding." },
-  { value: "silty", label: "Silty", description: "Fine particles, moderate retention, compacts more easily." },
-  { value: "peaty", label: "Peaty", description: "Organic-rich soil, tends to be acidic and moisture-retentive." },
-  { value: "chalky", label: "Chalky", description: "Alkaline soil, often lower phosphorus availability." },
-];
 type SensorType =
   | "moisture"
   | "ph"
@@ -74,6 +56,8 @@ function DeviceViewContent() {
   const [timePeriod, setTimePeriod] = useState<
     "week" | "month" | "6months" | "year" | "all"
   >("all");
+  const [showForecastLine, setShowForecastLine] = useState(true);
+  const [forecastData, setForecastData] = useState<Array<{ x: string; y: number }>>([]);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -85,6 +69,7 @@ function DeviceViewContent() {
   const [deviceInsights, setDeviceInsights] =
     useState<DeviceInsightsResponse | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [isAlertsOpen, setIsAlertsOpen] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [devices, setDevices] = useState<any[]>([]);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -245,42 +230,6 @@ function DeviceViewContent() {
     const diffMs = Date.now() - plantedAt.getTime();
     return Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
   }
-
-  const selectedCropOption =
-    CROP_TYPE_OPTIONS.find((option) => option.value === cropType) ||
-    CROP_TYPE_OPTIONS[0];
-  const selectedSoilOption =
-    SOIL_TYPE_OPTIONS.find((option) => option.value === soilType) ||
-    SOIL_TYPE_OPTIONS[0];
-
-  const applyProfileOverride = async (
-    overrideCropType: string,
-    overrideSoilType: string,
-  ) => {
-    if (!nodeId) return;
-
-    const token = localStorage.getItem("token");
-    if (!token) return;
-
-    const insights = await getDeviceInsights(nodeId, token, {
-      cropType: overrideCropType,
-      soilType: overrideSoilType,
-    });
-
-    if (!insights.success) {
-      return;
-    }
-
-    setDeviceInsights(insights);
-    setcropType(normalizeCropType(insights.profile?.crop_type || overrideCropType));
-    setSoilType(normalizeSoilType(insights.profile?.soil_type || overrideSoilType));
-    setPaddockAreaHa(
-      typeof insights.profile?.area_hectares === "number"
-        ? insights.profile.area_hectares
-        : null,
-    );
-    setPlantationDate(insights.profile?.plant_date || null);
-  };
 
   function getDynamicAlertRange(sensorType: SensorType): { min: number; max: number } {
     const baseRange = getOptimalRange(sensorType);
@@ -914,18 +863,29 @@ function DeviceViewContent() {
     return readings.filter((r) => new Date(r.timestamp) >= cutoffDate);
   };
 
-  const selectedReadings =
-    selectedGraph === "moisture"
-      ? moistureData?.readings || []
-      : selectedGraph === "ph"
-        ? phData?.readings || []
-        : selectedGraph === "temperature"
-          ? temperatureData?.readings || []
-          : selectedGraph === "nitrogen"
-            ? nitrogenData?.readings || []
-            : selectedGraph === "potassium"
-              ? potassiumData?.readings || []
-              : phosphorusData?.readings || [];
+  const selectedReadings = useMemo(
+    () =>
+      selectedGraph === "moisture"
+        ? moistureData?.readings || []
+        : selectedGraph === "ph"
+          ? phData?.readings || []
+          : selectedGraph === "temperature"
+            ? temperatureData?.readings || []
+            : selectedGraph === "nitrogen"
+              ? nitrogenData?.readings || []
+              : selectedGraph === "potassium"
+                ? potassiumData?.readings || []
+                : phosphorusData?.readings || [],
+    [
+      selectedGraph,
+      moistureData?.readings,
+      phData?.readings,
+      temperatureData?.readings,
+      nitrogenData?.readings,
+      potassiumData?.readings,
+      phosphorusData?.readings,
+    ],
+  );
 
   const exportableData = filterDataByTimePeriod(selectedReadings);
 
@@ -933,6 +893,53 @@ function DeviceViewContent() {
     x: r.timestamp,
     y: Number(r.reading_val),
   }));
+
+  useEffect(() => {
+    const runForecast = async () => {
+      if (!showForecastLine) {
+        setForecastData([]);
+        return;
+      }
+
+      const history = selectedReadings
+        .map((reading) => ({
+          timestamp: reading.timestamp,
+          value: Number(reading.reading_val),
+        }))
+        .filter((reading) => Number.isFinite(reading.value));
+
+      if (history.length < 2) {
+        setForecastData([]);
+        return;
+      }
+
+      const forecastResult = await getForecast({
+        sensor_type: selectedGraph,
+        horizons_months: [1, 3, 5],
+        readings: history,
+      });
+
+      if (!forecastResult.success) {
+        setForecastData([]);
+        return;
+      }
+
+      const nextForecastData = forecastResult.data.monthly_predictions.map(
+        (point) => ({
+          x: point.predicted_timestamp,
+          y: Number(point.predicted_value),
+        }),
+      );
+
+      setForecastData(nextForecastData);
+    };
+
+    void runForecast();
+  }, [
+    showForecastLine,
+    selectedGraph,
+    selectedReadings,
+  ]);
 
   const graphTitle =
     selectedGraph === "moisture"
@@ -1119,6 +1126,8 @@ function DeviceViewContent() {
     ).toFixed(1)
     : null;
 
+  const criticalAlerts = getCriticalAlerts();
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-screen bg-[#0c1220] text-white">
@@ -1219,62 +1228,76 @@ function DeviceViewContent() {
             <div className="lg:col-span-2 space-y-6">
               {/* CRITICAL ALERTS SECTION */}
               <div className="bg-gradient-to-br from-[#121829] to-[#0f1318] border border-green-500/30 rounded-2xl p-6 shadow-lg">
-                <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-                  <span className="w-1 h-6 bg-green-500 rounded-full"></span>
-                  <span className="text-green-300">Alerts</span>
-                </h2>
-                {getCriticalAlerts().length > 0 ? (
-                  <div className="space-y-3">
-                    {getCriticalAlerts().map((alert, index) => (
-                      <div
-                        key={index}
-                        className={`p-4 rounded-lg border-l-4 flex items-start gap-3 ${alert.severity === "critical"
-                            ? "bg-red-950/30 border-l-red-500 border border-red-500/20"
-                            : "bg-orange-950/30 border-l-orange-500 border border-orange-500/20"
-                          }`}
-                      >
+                <button
+                  type="button"
+                  onClick={() => setIsAlertsOpen((prev) => !prev)}
+                  className="w-full flex items-center justify-between mb-4"
+                >
+                  <h2 className="text-xl font-bold flex items-center gap-2">
+                    <span className="w-1 h-6 bg-green-500 rounded-full"></span>
+                    <span className="text-green-300">Alerts</span>
+                    <span className="inline-flex items-center justify-center min-w-6 h-6 px-2 rounded-full bg-[#00be64]/15 border border-[#00be64]/40 text-[#00be64] text-xs font-semibold">
+                      {criticalAlerts.length}
+                    </span>
+                  </h2>
+                  <span className="text-sm text-gray-300">
+                    {isAlertsOpen ? "Hide" : "Show"} {isAlertsOpen ? "▲" : "▼"}
+                  </span>
+                </button>
+                {isAlertsOpen && (
+                  criticalAlerts.length > 0 ? (
+                    <div className="space-y-3">
+                      {criticalAlerts.map((alert, index) => (
                         <div
-                          className={`mt-0.5 text-lg font-bold flex-shrink-0 ${alert.severity === "critical"
-                              ? "text-red-400"
-                              : "text-orange-400"
+                          key={index}
+                          className={`p-4 rounded-lg border-l-4 flex items-start gap-3 ${alert.severity === "critical"
+                              ? "bg-red-950/30 border-l-red-500 border border-red-500/20"
+                              : "bg-orange-950/30 border-l-orange-500 border border-orange-500/20"
                             }`}
                         >
-                          ⚠
-                        </div>
-                        <div className="flex-grow">
-                          <p
-                            className={`text-sm font-bold ${alert.severity === "critical"
-                                ? "text-red-300"
-                                : "text-orange-300"
+                          <div
+                            className={`mt-0.5 text-lg font-bold flex-shrink-0 ${alert.severity === "critical"
+                                ? "text-red-400"
+                                : "text-orange-400"
                               }`}
                           >
-                            {alert.type}
-                          </p>
-                          <p className="text-xs text-gray-300 mt-1">
-                            {alert.message}
-                          </p>
-                          {alert.recommendation && (
-                            <p className="text-xs text-gray-400 mt-1.5">
-                              Recommendation: {alert.recommendation}
+                            ⚠
+                          </div>
+                          <div className="flex-grow">
+                            <p
+                              className={`text-sm font-bold ${alert.severity === "critical"
+                                  ? "text-red-300"
+                                  : "text-orange-300"
+                                }`}
+                            >
+                              {alert.type}
                             </p>
-                          )}
+                            <p className="text-xs text-gray-300 mt-1">
+                              {alert.message}
+                            </p>
+                            {alert.recommendation && (
+                              <p className="text-xs text-gray-400 mt-1.5">
+                                Recommendation: {alert.recommendation}
+                              </p>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-3 p-4 bg-green-950/20 border border-green-500/20 rounded-lg">
-                    <div className="text-lg font-bold text-green-400">✓</div>
-                    <div>
-                      <p className="text-sm font-bold text-green-300">
-                        All Systems Normal
-                      </p>
-                      <p className="text-xs text-gray-400 mt-1">
-                        All sensor readings are within optimal ranges for{" "}
-                        {toTitleCaseWords(cropType)} crop.
-                      </p>
+                      ))}
                     </div>
-                  </div>
+                  ) : (
+                    <div className="flex items-center gap-3 p-4 bg-green-950/20 border border-green-500/20 rounded-lg">
+                      <div className="text-lg font-bold text-green-400">✓</div>
+                      <div>
+                        <p className="text-sm font-bold text-green-300">
+                          All Systems Normal
+                        </p>
+                        <p className="text-xs text-gray-400 mt-1">
+                          All sensor readings are within optimal ranges for{" "}
+                          {toTitleCaseWords(cropType)} crop.
+                        </p>
+                      </div>
+                    </div>
+                  )
                 )}
               </div>
 
@@ -1455,82 +1478,93 @@ function DeviceViewContent() {
                     <span className="w-1 h-6 bg-[#00be64] rounded-full"></span>
                     {graphTitle}
                   </h2>
-                  <div className="mb-4 inline-flex flex-wrap items-center gap-2 rounded-lg border border-[#00be64]/40 bg-[#00be64]/10 px-3 py-2 text-sm">
-                    <span className="font-semibold text-[#00be64]">Optimal Profile</span>
-                    <span className="text-white/90">
-                      {toTitleCaseWords(cropType)} crop • {toTitleCaseWords(soilType)} soil
-                      {paddockId ? ` • Zone ${paddockId}` : ""}
+                  <div className="mb-4 flex flex-wrap items-center gap-2 text-xs">
+                    <span className="rounded-full border border-[#00be64]/40 bg-[#00be64]/10 px-2.5 py-1 text-[#00be64] font-semibold">
+                      Optimal Profile
                     </span>
-                  </div>
-                  <div className="mb-2 space-y-1 text-xs text-gray-300">
-                    <p>
-                      <span className="text-[#00be64] font-semibold">{selectedCropOption.label}:</span>{" "}
-                      {selectedCropOption.description}
-                    </p>
-                    <p>
-                      <span className="text-[#00be64] font-semibold">{selectedSoilOption.label}:</span>{" "}
-                      {selectedSoilOption.description}
-                    </p>
+                    <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-gray-300">
+                      Crop: {toTitleCaseWords(cropType)}
+                    </span>
+                    <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-gray-300">
+                      Soil: {toTitleCaseWords(soilType)}
+                    </span>
+                    {paddockId && (
+                      <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-gray-300">
+                        Zone {paddockId}
+                      </span>
+                    )}
+                    {paddockAreaHa && (
+                      <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-gray-300">
+                        {paddockAreaHa} ha
+                      </span>
+                    )}
+                    {getPlantAgeDays() !== null && (
+                      <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-gray-300">
+                        {getPlantAgeDays()} days since planting
+                      </span>
+                    )}
                   </div>
 
-                  <div className="flex flex-col xl:flex-row xl:justify-between xl:items-center gap-4">
-                    <div className="flex flex-wrap items-center gap-2.5">
-                      <label className="text-sm text-gray-400">
+                  <div className="rounded-xl border border-white/10 bg-[#0c1220]/40 p-3">
+                    <div className="flex flex-col xl:flex-row xl:items-end xl:justify-between gap-3">
+                      <div className="flex flex-wrap items-center gap-2.5">
+                        <label className="text-sm text-gray-400">
                         Time Period:
-                      </label>
-                      <select
-                        value={timePeriod}
-                        onChange={(e) =>
-                          setTimePeriod(e.target.value as typeof timePeriod)
-                        }
-                        className="px-3 py-2 text-sm bg-[#0c1220] border border-[#00be64]/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-[#00be64] cursor-pointer hover:border-[#00be64] transition [&>option]:bg-[#0c1220] [&>option]:text-white"
-                      >
-                        <option value="week">Past Week</option>
-                        <option value="month">Past Month</option>
-                        <option value="6months">Past 6 Months</option>
-                        <option value="year">Past Year</option>
-                        <option value="all">All Time</option>
-                      </select>
-                    </div>
+                        </label>
+                        <select
+                          value={timePeriod}
+                          onChange={(e) =>
+                            setTimePeriod(e.target.value as typeof timePeriod)
+                          }
+                          className="px-3 py-2 text-sm bg-[#0c1220] border border-[#00be64]/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-[#00be64] cursor-pointer hover:border-[#00be64] transition [&>option]:bg-[#0c1220] [&>option]:text-white"
+                        >
+                          <option value="week">Past Week</option>
+                          <option value="month">Past Month</option>
+                          <option value="6months">Past 6 Months</option>
+                          <option value="year">Past Year</option>
+                          <option value="all">All Time</option>
+                        </select>
 
-                    <div className="flex flex-wrap items-center gap-2.5">
-                      <label className="text-sm text-gray-400">
-                        Graph Type:
-                      </label>
-                      <select
-                        value={selectedGraph}
-                        onChange={(e) =>
-                          setSelectedGraph(
-                            e.target.value as typeof selectedGraph,
-                          )
-                        }
-                        className="px-3 py-2 text-sm bg-[#0c1220] border border-[#00be64]/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-[#00be64] cursor-pointer hover:border-[#00be64] transition [&>option]:bg-[#0c1220] [&>option]:text-white"
-                      >
-                        <option value="moisture">Moisture</option>
-                        <option value="temperature">Temperature</option>
-                        <option value="nitrogen">Nitrogen</option>
-                        <option value="ph">pH</option>
-                        <option value="potassium">Potassium</option>
-                        <option value="phosphorus">Phosphorus</option>
-                      </select>
-                      <label className="flex items-center gap-2 px-2 py-1 rounded-md border border-white/10 bg-white/5 text-xs text-gray-300">
-                        <input
-                          type="checkbox"
-                          checked={showOptimalLine}
-                          onChange={(e) => setShowOptimalLine(e.target.checked)}
-                          className="h-3.5 w-3.5 accent-[#00be64]"
-                        />
-                        Show Optimal Line
-                      </label>
-                      <button
-                        onClick={exportToCSV}
-                        disabled={exportableData.length === 0}
-                        className="px-4 py-1.5 text-sm text-white/80 hover:text-[#00be64] border border-white/20 hover:border-[#00be64]/50 hover:bg-white/5 rounded-full transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:text-white/80 disabled:hover:border-white/20 disabled:hover:bg-transparent"
-                      >
-                        {exportableData.length > 0
-                          ? `Export CSV (${exportableData.length})`
-                          : "Export CSV"}
-                      </button>
+                        <label className="text-sm text-gray-400">
+                          Graph Type:
+                        </label>
+                        <select
+                          value={selectedGraph}
+                          onChange={(e) =>
+                            setSelectedGraph(
+                              e.target.value as typeof selectedGraph,
+                            )
+                          }
+                          className="px-3 py-2 text-sm bg-[#0c1220] border border-[#00be64]/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-[#00be64] cursor-pointer hover:border-[#00be64] transition [&>option]:bg-[#0c1220] [&>option]:text-white"
+                        >
+                          <option value="moisture">Moisture</option>
+                          <option value="temperature">Temperature</option>
+                          <option value="nitrogen">Nitrogen</option>
+                          <option value="ph">pH</option>
+                          <option value="potassium">Potassium</option>
+                          <option value="phosphorus">Phosphorus</option>
+                        </select>
+
+                        <label className="flex items-center gap-2 px-2 py-1 rounded-md border border-white/10 bg-white/5 text-xs text-gray-300">
+                          <input
+                            type="checkbox"
+                            checked={showOptimalLine}
+                            onChange={(e) => setShowOptimalLine(e.target.checked)}
+                            className="h-3.5 w-3.5 accent-[#00be64]"
+                          />
+                          Optimal
+                        </label>
+                        <label className="flex items-center gap-2 px-2 py-1 rounded-md border border-white/10 bg-white/5 text-xs text-gray-300">
+                          <input
+                            type="checkbox"
+                            checked={showForecastLine}
+                            onChange={(e) => setShowForecastLine(e.target.checked)}
+                            className="h-3.5 w-3.5 accent-[#60a5fa]"
+                          />
+                          Forecast (1/3/5m)
+                        </label>
+                      </div>
+
                     </div>
                   </div>
                 </div>
@@ -1539,9 +1573,22 @@ function DeviceViewContent() {
                   <Graph
                     title={graphTitle}
                     data={graphData}
+                    forecastData={forecastData}
                     timePeriod={timePeriod}
                     optimalValue={showOptimalLine ? getOptimalValue(selectedGraph) : undefined}
                   />
+                </div>
+
+                <div className="mt-4 flex justify-end">
+                  <button
+                    onClick={exportToCSV}
+                    disabled={exportableData.length === 0}
+                    className="px-4 py-1.5 text-sm text-white/80 hover:text-[#00be64] border border-white/20 hover:border-[#00be64]/50 hover:bg-white/5 rounded-full transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:text-white/80 disabled:hover:border-white/20 disabled:hover:bg-transparent"
+                  >
+                    {exportableData.length > 0
+                      ? `Export CSV (${exportableData.length})`
+                      : "Export CSV"}
+                  </button>
                 </div>
               </section>
             </div>
