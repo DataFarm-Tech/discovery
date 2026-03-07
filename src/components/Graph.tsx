@@ -37,12 +37,28 @@ interface DataPoint {
 interface GraphProps {
   title: string;
   data: DataPoint[];
+  forecastData?: DataPoint[];
   timePeriod?: "week" | "month" | "6months" | "year" | "all";
   optimalValue?: number;
 }
 
 // Component displays sensor data with optional optimal value line
-export default function Graph({ title, data, timePeriod = "all", optimalValue }: GraphProps) {
+export default function Graph({ title, data, forecastData = [], timePeriod = "all", optimalValue }: GraphProps) {
+  const connectedForecastData =
+    forecastData.length > 0 && data.length > 0
+      ? [data[data.length - 1], ...forecastData]
+      : forecastData;
+
+  const optimalLineData =
+    optimalValue !== undefined
+      ? Array.from(
+          new Set([
+            ...data.map((point) => point.x),
+            ...connectedForecastData.map((point) => point.x),
+          ]),
+        ).map((x) => ({ x, y: optimalValue }))
+      : [];
+
   const gradientBg = (ctx: any) => {
     const gradient = ctx.chart.ctx.createLinearGradient(0, 0, 0, 300);
     gradient.addColorStop(0, "rgba(255, 179, 71, 0.45)");
@@ -167,7 +183,7 @@ export default function Graph({ title, data, timePeriod = "all", optimalValue }:
       ...(optimalValue !== undefined ? [
         {
           label: "Optimal",
-          data: data.map((point) => ({ x: point.x, y: optimalValue })),
+          data: optimalLineData,
           borderColor: "#00be64",
           borderWidth: 2,
           borderDash: [5, 5],
@@ -177,17 +193,41 @@ export default function Graph({ title, data, timePeriod = "all", optimalValue }:
           pointHoverRadius: 0,
         },
       ] : []),
+      ...(connectedForecastData.length > 0
+        ? [
+          {
+            label: "Forecast",
+            data: connectedForecastData,
+            borderColor: "#60a5fa",
+            borderWidth: 2,
+            borderDash: [8, 4],
+            fill: "origin" as const,
+            backgroundColor: "rgba(96, 165, 250, 0.22)",
+            tension: 0.25,
+            pointRadius: 3,
+            pointHoverRadius: 5,
+            pointBackgroundColor: "#60a5fa",
+          },
+        ]
+        : []),
     ],
   };
 
   const options = {
     responsive: true,
     maintainAspectRatio: false,
+    layout: {
+      padding: {
+        top: 14,
+      },
+    },
 
     plugins: {
       legend: {
+        display: false,
         labels: {
           color: "white",
+          padding: 20,
           font: {
             size: 16,
             weight: "bold" as const,
@@ -239,7 +279,7 @@ export default function Graph({ title, data, timePeriod = "all", optimalValue }:
   } as const;
 
   return (
-    <div className="w-full max-w-4xl mx-auto h-80 p-4">
+    <div className="w-full h-full p-4 pl-0">
       <Line data={chartData} options={options} />
     </div>
   );
