@@ -110,6 +110,7 @@ export interface ForecastReadingPoint {
 export interface ForecastRequest {
   sensor_type: string;
   horizons_months: number[];
+  prediction_interval_hours?: number;
   readings: ForecastReadingPoint[];
 }
 
@@ -117,6 +118,11 @@ export interface ForecastResponse {
   sensor_type: string;
   model_name: string;
   monthly_predictions: Array<{
+    month_ahead: number;
+    predicted_timestamp: string;
+    predicted_value: number;
+  }>;
+  forecast_points?: Array<{
     month_ahead: number;
     predicted_timestamp: string;
     predicted_value: number;

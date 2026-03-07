@@ -9,7 +9,7 @@ import {
   editDeviceName,
   getDeviceInsights,
   DeviceInsightsResponse,
-  getForecast,
+  // getForecast,
 } from "@/lib/device";
 import InfoPopup from "@/components/InfoPopup";
 import { MdDelete, MdEdit, MdArrowBack } from "react-icons/md";
@@ -17,6 +17,17 @@ import DashboardHeader from "@/components/DashboardHeader";
 import Sidebar from "@/components/Sidebar";
 import EditDeviceNameModal from "@/components/modals/EditDeviceNameModal";
 import DeleteDeviceModal from "@/components/modals/DeleteDeviceModal";
+import {
+  calculateTrend,
+  deviceStatus,
+  filterReadingsByTimePeriod,
+  formatTimestamp,
+  getPlantAgeDays,
+  normalizeCropType,
+  normalizeSoilType,
+  timeAgo,
+  toTitleCaseWords,
+} from "./deviceView.logic";
 
 // Hard-coded battery level
 const BATTERY_PERCENT = 87;
@@ -59,8 +70,9 @@ function DeviceViewContent() {
   const [timePeriod, setTimePeriod] = useState<
     "week" | "month" | "6months" | "year" | "all"
   >("all");
-  const [showForecastLine, setShowForecastLine] = useState(true);
-  const [forecastData, setForecastData] = useState<Array<{ x: string; y: number }>>([]);
+  // const [showForecastLine, setShowForecastLine] = useState(true);
+  // const [forecastHorizonMonths, setForecastHorizonMonths] = useState<1 | 3 | 5>(3);
+  // const [forecastData, setForecastData] = useState<Array<{ x: string; y: number }>>([]);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -102,137 +114,6 @@ function DeviceViewContent() {
     trend: "up" | "down" | "stable" | "no-data";
     percentChange: number;
   }>({ trend: "no-data", percentChange: 0 });
-
-  function formatTimestamp(ts: string) {
-    return new Date(ts).toLocaleString(undefined, {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-    });
-  }
-
-  function timeAgo(ts: string) {
-    const now = Date.now();
-    const then = new Date(ts).getTime();
-    const diff = (now - then) / 1000;
-
-    if (diff < 60) return `${Math.floor(diff)}s ago`;
-    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-    return `${Math.floor(diff / 86400)}d ago`;
-  }
-
-  function deviceStatus(ts: string | null) {
-    if (!ts) return { label: "Unknown", color: "gray", online: false };
-
-    const now = Date.now();
-    const then = new Date(ts).getTime();
-    const hours = (now - then) / 1000 / 3600;
-
-    if (hours > 12) {
-      return { label: "Offline", color: "red", online: false };
-    }
-    return { label: "Online", color: "green", online: true };
-  }
-
-  // Calculate trend by comparing recent readings to previous period
-  function calculateTrend(readings: any[] | undefined): {
-    trend: "up" | "down" | "stable" | "no-data";
-    percentChange: number;
-  } {
-    if (!readings || readings.length < 2)
-      return { trend: "no-data", percentChange: 0 };
-
-    // Get average of last 3 readings (or less if not available)
-    const recentCount = Math.min(3, readings.length);
-    const recentReadings = readings
-      .slice(-recentCount)
-      .map((r: any) => Number(r.reading_val));
-    const recentAvg =
-      recentReadings.reduce((a: number, b: number) => a + b, 0) /
-      recentReadings.length;
-
-    // Get average of readings before that (previous 3-6 readings)
-    const previousStart = Math.max(0, readings.length - 6);
-    const previousEnd = Math.max(0, readings.length - 3);
-    if (previousStart === previousEnd)
-      return { trend: "no-data", percentChange: 0 };
-
-    const previousReadings = readings
-      .slice(previousStart, previousEnd)
-      .map((r: any) => Number(r.reading_val));
-    if (previousReadings.length === 0)
-      return { trend: "no-data", percentChange: 0 };
-
-    const previousAvg =
-      previousReadings.reduce((a: number, b: number) => a + b, 0) /
-      previousReadings.length;
-
-    // Calculate percent change
-    const percentChange = ((recentAvg - previousAvg) / previousAvg) * 100;
-    const absPercentChange = Math.abs(percentChange);
-
-    // Compare with threshold (0.5% difference)
-    if (absPercentChange < 0.5) return { trend: "stable", percentChange: 0 };
-    return {
-      trend: recentAvg > previousAvg ? "up" : "down",
-      percentChange: parseFloat(percentChange.toFixed(1)),
-    };
-  }
-
-  function normalizeCropType(value: string | null | undefined): string {
-    const raw = (value || "").trim().toLowerCase();
-    if (!raw) return "default";
-
-    const aliases: Record<string, string> = {
-      grains: "grains",
-      legumes: "legumes",
-      fruit: "fruit",
-      "oil seeds": "oil seeds",
-      "root crops": "root crops",
-      tropical: "tropical",
-      other: "other",
-    };
-
-    return aliases[raw] || raw;
-  }
-
-  function normalizeSoilType(value: string | null | undefined): string {
-    const raw = (value || "").trim().toLowerCase();
-    if (!raw) return "default";
-
-    if (raw.includes("sandy")) return "sandy";
-    if (raw.includes("clay")) return "clay";
-    if (raw.includes("loam")) return "loam";
-    if (raw.includes("silt")) return "silty";
-    if (raw.includes("peat")) return "peaty";
-    if (raw.includes("chalk")) return "chalky";
-    return "default";
-  }
-
-  function toTitleCaseWords(value: string | null | undefined): string {
-    const text = (value || "default").trim();
-    if (!text) return "Default";
-
-    return text
-      .split(" ")
-      .filter(Boolean)
-      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-      .join(" ");
-  }
-
-  function getPlantAgeDays(): number | null {
-    if (!plantationDate) return null;
-
-    const plantedAt = new Date(plantationDate);
-    if (Number.isNaN(plantedAt.getTime())) return null;
-
-    const diffMs = Date.now() - plantedAt.getTime();
-    return Math.floor(diffMs / (1000 * 60 * 60 * 24));
-  }
 
   function getDynamicAlertRange(sensorType: SensorType): { min: number; max: number } {
     const baseRange = getOptimalRange(sensorType);
@@ -278,7 +159,7 @@ function DeviceViewContent() {
       span *= soilRule.spanFactor;
     }
 
-    const ageDays = getPlantAgeDays();
+    const ageDays = getPlantAgeDays(plantationDate);
     if (ageDays !== null && ageDays >= 0) {
       const growthStage = ageDays < 45 ? "early" : ageDays < 140 ? "mid" : "late";
       const stageAdjustments: Record<
@@ -834,39 +715,12 @@ function DeviceViewContent() {
     null;
 
   const firmwareVersion = currentNode?.fw_ver || "--";
+  const plantAgeDays = getPlantAgeDays(plantationDate);
 
   const exportPaddockId = currentNode?.paddock_id
     ? String(currentNode.paddock_id)
     : "";
   const exportZoneName = exportPaddockId ? `Zone ${exportPaddockId}` : "Zone";
-
-  const filterDataByTimePeriod = (readings: any[] | undefined) => {
-    if (!readings || readings.length === 0) return [];
-
-    if (timePeriod === "all") return readings;
-
-    const now = new Date();
-    let cutoffDate: Date;
-
-    switch (timePeriod) {
-      case "week":
-        cutoffDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-        break;
-      case "month":
-        cutoffDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-        break;
-      case "6months":
-        cutoffDate = new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000);
-        break;
-      case "year":
-        cutoffDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
-        break;
-      default:
-        return readings;
-    }
-
-    return readings.filter((r) => new Date(r.timestamp) >= cutoffDate);
-  };
 
   const selectedReadings = useMemo(
     () =>
@@ -892,59 +746,79 @@ function DeviceViewContent() {
     ],
   );
 
-  const exportableData = filterDataByTimePeriod(selectedReadings);
+  const exportableData = filterReadingsByTimePeriod(selectedReadings, timePeriod);
 
-  const graphData = filterDataByTimePeriod(selectedReadings).map((r) => ({
+  // const forecastHistory = useMemo(
+  //   () =>
+  //     selectedReadings
+  //       .map((reading) => ({
+  //         timestamp: reading.timestamp,
+  //         value: Number(reading.reading_val),
+  //       }))
+  //       .filter((reading) => Number.isFinite(reading.value)),
+  //   [selectedReadings],
+  // );
+
+  // const hasEnoughDataForForecast = forecastHistory.length >= 2;
+
+  // useEffect(() => {
+  //   if (!hasEnoughDataForForecast && showForecastLine) {
+  //     setShowForecastLine(false);
+  //   }
+  // }, [hasEnoughDataForForecast, showForecastLine]);
+
+  const graphData = filterReadingsByTimePeriod(selectedReadings, timePeriod).map((r) => ({
     x: r.timestamp,
     y: Number(r.reading_val),
   }));
 
-  useEffect(() => {
-    const runForecast = async () => {
-      if (!showForecastLine) {
-        setForecastData([]);
-        return;
-      }
+  // useEffect(() => {
+  //   const runForecast = async () => {
+  //     if (!showForecastLine) {
+  //       setForecastData([]);
+  //       return;
+  //     }
 
-      const history = selectedReadings
-        .map((reading) => ({
-          timestamp: reading.timestamp,
-          value: Number(reading.reading_val),
-        }))
-        .filter((reading) => Number.isFinite(reading.value));
+  //     if (!hasEnoughDataForForecast) {
+  //       setForecastData([]);
+  //       return;
+  //     }
 
-      if (history.length < 2) {
-        setForecastData([]);
-        return;
-      }
+  //     const forecastResult = await getForecast({
+  //       sensor_type: selectedGraph,
+  //       horizons_months: [forecastHorizonMonths],
+  //       prediction_interval_hours: 6,
+  //       readings: forecastHistory,
+  //     });
 
-      const forecastResult = await getForecast({
-        sensor_type: selectedGraph,
-        horizons_months: [1, 3, 5],
-        readings: history,
-      });
+  //     if (!forecastResult.success) {
+  //       setForecastData([]);
+  //       return;
+  //     }
 
-      if (!forecastResult.success) {
-        setForecastData([]);
-        return;
-      }
+  //     const forecastSeries =
+  //       forecastResult.data.forecast_points?.length
+  //         ? forecastResult.data.forecast_points
+  //         : forecastResult.data.monthly_predictions;
 
-      const nextForecastData = forecastResult.data.monthly_predictions.map(
-        (point) => ({
-          x: point.predicted_timestamp,
-          y: Number(point.predicted_value),
-        }),
-      );
+  //     const nextForecastData = forecastSeries.map(
+  //       (point) => ({
+  //         x: point.predicted_timestamp,
+  //         y: Number(point.predicted_value),
+  //       }),
+  //     );
 
-      setForecastData(nextForecastData);
-    };
+  //     setForecastData(nextForecastData);
+  //   };
 
-    void runForecast();
-  }, [
-    showForecastLine,
-    selectedGraph,
-    selectedReadings,
-  ]);
+  //   void runForecast();
+  // }, [
+  //   showForecastLine,
+  //   forecastHorizonMonths,
+  //   hasEnoughDataForForecast,
+  //   forecastHistory,
+  //   selectedGraph,
+  // ]);
 
   const graphTitle =
     selectedGraph === "moisture"
@@ -961,7 +835,7 @@ function DeviceViewContent() {
 
   // CSV EXPORTER
   const exportToCSV = () => {
-    const data = filterDataByTimePeriod(selectedReadings);
+    const data = filterReadingsByTimePeriod(selectedReadings, timePeriod);
 
     if (!data.length) {
       alert(`No ${selectedGraph} data available for the selected time period.`);
@@ -1183,9 +1057,6 @@ function DeviceViewContent() {
                   <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border ${status.online ? "bg-green-500/10 border-green-500/40 text-green-300" : "bg-red-500/10 border-red-500/40 text-red-300"}`}>
                     <span className={`w-2 h-2 rounded-full ${status.online ? "bg-green-400" : "bg-red-500"}`}></span>
                     {status.label}
-                  </span>
-                  <span className="inline-flex items-center px-2.5 py-1 rounded-full border border-[#00be64]/40 bg-[#00be64]/10 text-[#00be64] font-semibold">
-                    Battery {BATTERY_PERCENT}%
                   </span>
                   {lastUpdated && (
                     <span className="inline-flex items-center px-2.5 py-1 rounded-full border border-white/10 bg-white/5 text-gray-300">
@@ -1538,11 +1409,11 @@ function DeviceViewContent() {
                         {paddockAreaHa} ha
                       </span>
                     )}
-                    {getPlantAgeDays() !== null && (
+                    {plantAgeDays !== null && (
                       <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-gray-300">
-                        {getPlantAgeDays()! >= 0
-                          ? `${getPlantAgeDays()} days since planting`
-                          : `Planting starts in ${Math.abs(getPlantAgeDays()!)} days`}
+                        {plantAgeDays >= 0
+                          ? `${plantAgeDays} days since planting`
+                          : `Planting starts in ${Math.abs(plantAgeDays)} days`}
                       </span>
                     )}
                   </div>
@@ -1596,15 +1467,38 @@ function DeviceViewContent() {
                           />
                           Optimal
                         </label>
-                        <label className="flex items-center gap-2 px-2 py-1 rounded-md border border-white/10 bg-white/5 text-xs text-gray-300">
+                        {/* <label
+                          title={hasEnoughDataForForecast ? "" : "Not enough data to predict"}
+                          className={`flex items-center gap-2 px-2 py-1 rounded-md border text-xs transition ${
+                            hasEnoughDataForForecast
+                              ? "border-white/10 bg-white/5 text-gray-300"
+                              : "border-white/10 bg-white/5 text-gray-500 cursor-not-allowed opacity-70"
+                          }`}
+                        >
                           <input
                             type="checkbox"
                             checked={showForecastLine}
                             onChange={(e) => setShowForecastLine(e.target.checked)}
+                            disabled={!hasEnoughDataForForecast}
                             className="h-3.5 w-3.5 accent-[#60a5fa]"
                           />
-                          Forecast (1/3/5m)
+                          Forecast
+                        </label> */}
+
+                        {/* <label className="text-sm text-gray-400">
+                          Forecast Horizon:
                         </label>
+                        <select
+                          value={forecastHorizonMonths}
+                          onChange={(e) =>
+                            setForecastHorizonMonths(Number(e.target.value) as 1 | 3 | 5)
+                          }
+                          className="px-3 py-2 text-sm bg-[#0c1220] border border-[#60a5fa]/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-[#60a5fa] cursor-pointer hover:border-[#60a5fa] transition [&>option]:bg-[#0c1220] [&>option]:text-white"
+                        >
+                          <option value={1}>1 Month</option>
+                          <option value={3}>3 Months</option>
+                          <option value={5}>5 Months</option>
+                        </select> */}
                       </div>
 
                       <div className="flex xl:justify-end">
@@ -1627,7 +1521,7 @@ function DeviceViewContent() {
                   <Graph
                     title={graphTitle}
                     data={graphData}
-                    forecastData={forecastData}
+                    // forecastData={forecastData}
                     timePeriod={timePeriod}
                     optimalValue={showOptimalLine ? getOptimalValue(selectedGraph) : undefined}
                   />
