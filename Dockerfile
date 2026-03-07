@@ -1,17 +1,16 @@
 # ----------------------------
 # Build stage
 # ----------------------------
-FROM node:20-alpine AS builder
+FROM oven/bun:1.2.21-alpine AS builder
 WORKDIR /app
 
 # Install dependencies
-COPY package*.json ./
-RUN npm ci
+COPY package.json bun.lock* ./
+RUN bun install
 
 # Copy app source and build
 COPY . .
-RUN npm run build
-# RUN npm run export   # for Next.js static export (creates /out)
+RUN bun run build
 
 # ----------------------------
 # Production stage

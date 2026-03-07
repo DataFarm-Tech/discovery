@@ -131,7 +131,7 @@ export default function DashboardPage() {
       />
 
       {/* Sidebar */}
-      {/* <Sidebar menuOpen={menuOpen} setMenuOpen={setMenuOpen} /> */}
+      <Sidebar menuOpen={menuOpen} setMenuOpen={setMenuOpen} />
 
       {/* Scrollable Main Content */}
       <div className="flex-1 overflow-y-auto overflow-x-visible scrollbar-hide">
