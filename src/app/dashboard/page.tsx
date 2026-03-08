@@ -94,7 +94,7 @@ export default function DashboardPage() {
           node_name: item.node_name || item.node_id,
         }),
       );
-      router.push(`/device/view?nodeId=${item.node_id}`);
+      router.push(`/device/view/?nodeId=${item.node_id}`);
       setSearchQuery(""); // Optional: clear search
       return;
     }
@@ -111,7 +111,7 @@ export default function DashboardPage() {
           paddockName,
         }),
       );
-      router.push("/paddock/view");
+      router.push("/paddock/view/");
       setSearchQuery(""); // Optional: clear search after selection
       return;
     }

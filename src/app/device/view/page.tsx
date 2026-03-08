@@ -84,7 +84,6 @@ function DeviceViewContent() {
   const [deviceInsights, setDeviceInsights] =
     useState<DeviceInsightsResponse | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [isAlertsOpen, setIsAlertsOpen] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [devices, setDevices] = useState<any[]>([]);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -419,152 +418,6 @@ function DeviceViewContent() {
     const cropKey = normalizeCropType(cropType);
     const cropRange = ranges[cropKey] || ranges["default"];
     return cropRange[sensorType] || { min: 0, max: 100 };
-  }
-
-  // Check for critical alerts
-  function getCriticalAlerts(): Array<{
-    type: string;
-    message: string;
-    severity: "warning" | "critical";
-    recommendation?: string;
-  }> {
-    if (deviceInsights?.alerts && deviceInsights.alerts.length > 0) {
-      return deviceInsights.alerts.map((alert) => ({
-        type: alert.type,
-        message: alert.message,
-        severity: alert.severity,
-        recommendation: alert.recommendation,
-      }));
-    }
-
-    const alerts: Array<{
-      type: string;
-      message: string;
-      severity: "warning" | "critical";
-      recommendation?: string;
-    }> = [];
-
-    // Convert recent values to numbers
-    const moisture = recentMoisture ? Number(recentMoisture) : null;
-    const temperature = recentTemperature ? Number(recentTemperature) : null;
-    const ph = recentPh ? Number(recentPh) : null;
-    const nitrogen = recentNitrogen ? Number(recentNitrogen) : null;
-    const potassium = recentPotassium ? Number(recentPotassium) : null;
-    const phosphorus = recentPhosphorus ? Number(recentPhosphorus) : null;
-
-    // Moisture alerts
-    if (moisture !== null) {
-      const moistureRange = getDynamicAlertRange("moisture");
-      if (moisture < moistureRange.min) {
-        alerts.push({
-          type: "Moisture",
-          message: `Soil moisture is critically low (${moisture}%). Irrigation needed.`,
-          severity: moisture < moistureRange.min * 0.8 ? "critical" : "warning",
-        });
-      } else if (moisture > moistureRange.max) {
-        alerts.push({
-          type: "Moisture",
-          message: `Soil moisture is too high (${moisture}%). Risk of waterlogging.`,
-          severity: moisture > moistureRange.max * 1.2 ? "critical" : "warning",
-        });
-      }
-    }
-
-    // Temperature alerts
-    if (temperature !== null) {
-      const tempRange = getDynamicAlertRange("temperature");
-      if (temperature < tempRange.min) {
-        alerts.push({
-          type: "Temperature",
-          message: `Temperature is below optimal (${temperature}°C).`,
-          severity: temperature < tempRange.min * 0.9 ? "critical" : "warning",
-        });
-      } else if (temperature > tempRange.max) {
-        alerts.push({
-          type: "Temperature",
-          message: `Temperature is above optimal (${temperature}°C). Heat stress risk.`,
-          severity: temperature > tempRange.max * 1.1 ? "critical" : "warning",
-        });
-      }
-    }
-
-    // pH alerts
-    if (ph !== null) {
-      const phRange = getDynamicAlertRange("ph");
-      if (ph < phRange.min) {
-        alerts.push({
-          type: "pH Level",
-          message: `Soil is too acidic (pH ${ph}). Consider liming.`,
-          severity: ph < phRange.min - 0.5 ? "critical" : "warning",
-        });
-      } else if (ph > phRange.max) {
-        alerts.push({
-          type: "pH Level",
-          message: `Soil is too alkaline (pH ${ph}). Consider acidification.`,
-          severity: ph > phRange.max + 0.5 ? "critical" : "warning",
-        });
-      }
-    }
-
-    // Nitrogen alerts
-    if (nitrogen !== null) {
-      const nitrogenRange = getDynamicAlertRange("nitrogen");
-      if (nitrogen < nitrogenRange.min) {
-        alerts.push({
-          type: "Nitrogen",
-          message: `Nitrogen levels are low (${nitrogen} ppm). Fertilizer recommended.`,
-          severity: nitrogen < nitrogenRange.min * 0.7 ? "critical" : "warning",
-        });
-      } else if (nitrogen > nitrogenRange.max) {
-        alerts.push({
-          type: "Nitrogen",
-          message: `Nitrogen levels are high (${nitrogen} ppm). Risk of nutrient runoff.`,
-          severity: nitrogen > nitrogenRange.max * 1.3 ? "critical" : "warning",
-        });
-      }
-    }
-
-    // Potassium alerts
-    if (potassium !== null) {
-      const potassiumRange = getDynamicAlertRange("potassium");
-      if (potassium < potassiumRange.min) {
-        alerts.push({
-          type: "Potassium",
-          message: `Potassium levels are low (${potassium} ppm). Supplement recommended.`,
-          severity:
-            potassium < potassiumRange.min * 0.7 ? "critical" : "warning",
-        });
-      } else if (potassium > potassiumRange.max) {
-        alerts.push({
-          type: "Potassium",
-          message: `Potassium levels are high (${potassium} ppm). May affect soil balance.`,
-          severity:
-            potassium > potassiumRange.max * 1.3 ? "critical" : "warning",
-        });
-      }
-    }
-
-    // Phosphorus alerts
-    if (phosphorus !== null) {
-      const phosphorusRange = getDynamicAlertRange("phosphorus");
-      if (phosphorus < phosphorusRange.min) {
-        alerts.push({
-          type: "Phosphorus",
-          message: `Phosphorus levels are low (${phosphorus} ppm). Consider phosphate fertilizer.`,
-          severity:
-            phosphorus < phosphorusRange.min * 0.7 ? "critical" : "warning",
-        });
-      } else if (phosphorus > phosphorusRange.max) {
-        alerts.push({
-          type: "Phosphorus",
-          message: `Phosphorus levels are high (${phosphorus} ppm). Risk of eutrophication.`,
-          severity:
-            phosphorus > phosphorusRange.max * 1.3 ? "critical" : "warning",
-        });
-      }
-    }
-
-    return alerts;
   }
 
   const handleSearchItemSelect = (item: any) => {
@@ -1005,8 +858,6 @@ function DeviceViewContent() {
     ).toFixed(1)
     : null;
 
-  const criticalAlerts = getCriticalAlerts();
-
   if (loading) {
     return (
       <div className="flex justify-center items-center h-screen bg-[#0c1220] text-white">
@@ -1103,7 +954,7 @@ function DeviceViewContent() {
                   : "border-white/15 bg-white/5 text-gray-300 hover:text-white"
               }`}
             >
-              Alerts & Readings
+              Readings
             </button>
             <button
               type="button"
@@ -1132,83 +983,6 @@ function DeviceViewContent() {
           <div className="space-y-6">
             {/* LEFT COLUMN - Main Content */}
             <div className="space-y-6">
-              {/* CRITICAL ALERTS SECTION */}
-              {activeDevicePage === "overview" && (
-              <div className="bg-gradient-to-br from-[#121829] to-[#0f1318] border border-green-500/30 rounded-2xl p-6 shadow-lg">
-                <button
-                  type="button"
-                  onClick={() => setIsAlertsOpen((prev) => !prev)}
-                  className="w-full flex items-center justify-between mb-4"
-                >
-                  <h2 className="text-xl font-bold flex items-center gap-2">
-                    <span className="w-1 h-6 bg-green-500 rounded-full"></span>
-                    <span className="text-green-300">Alerts</span>
-                    <span className="inline-flex items-center justify-center min-w-6 h-6 px-2 rounded-full bg-[#00be64]/15 border border-[#00be64]/40 text-[#00be64] text-xs font-semibold">
-                      {criticalAlerts.length}
-                    </span>
-                  </h2>
-                  <span className="text-sm text-gray-300">
-                    {isAlertsOpen ? "Hide" : "Show"} {isAlertsOpen ? "▲" : "▼"}
-                  </span>
-                </button>
-                {isAlertsOpen && (
-                  criticalAlerts.length > 0 ? (
-                    <div className="space-y-3">
-                      {criticalAlerts.map((alert, index) => (
-                        <div
-                          key={index}
-                          className={`p-4 rounded-lg border-l-4 flex items-start gap-3 ${alert.severity === "critical"
-                              ? "bg-red-950/30 border-l-red-500 border border-red-500/20"
-                              : "bg-orange-950/30 border-l-orange-500 border border-orange-500/20"
-                            }`}
-                        >
-                          <div
-                            className={`mt-0.5 text-lg font-bold flex-shrink-0 ${alert.severity === "critical"
-                                ? "text-red-400"
-                                : "text-orange-400"
-                              }`}
-                          >
-                            ⚠
-                          </div>
-                          <div className="flex-grow">
-                            <p
-                              className={`text-sm font-bold ${alert.severity === "critical"
-                                  ? "text-red-300"
-                                  : "text-orange-300"
-                                }`}
-                            >
-                              {alert.type}
-                            </p>
-                            <p className="text-xs text-gray-300 mt-1">
-                              {alert.message}
-                            </p>
-                            {alert.recommendation && (
-                              <p className="text-xs text-gray-400 mt-1.5">
-                                Recommendation: {alert.recommendation}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-3 p-4 bg-green-950/20 border border-green-500/20 rounded-lg">
-                      <div className="text-lg font-bold text-green-400">✓</div>
-                      <div>
-                        <p className="text-sm font-bold text-green-300">
-                          All Systems Normal
-                        </p>
-                        <p className="text-xs text-gray-400 mt-1">
-                          All sensor readings are within optimal ranges for{" "}
-                          {toTitleCaseWords(cropType)} crop.
-                        </p>
-                      </div>
-                    </div>
-                  )
-                )}
-              </div>
-              )}
-
               {/* LATEST READINGS */}
               {activeDevicePage === "overview" && (
               <div className="bg-gradient-to-br from-[#121829] to-[#0f1318] border border-[#00be64]/30 rounded-2xl p-6 shadow-lg">
