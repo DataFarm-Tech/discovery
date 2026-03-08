@@ -31,7 +31,7 @@ const Sidebar = ({ menuOpen, setMenuOpen }: SidebarProps) => {
           <nav className="flex-1 overflow-y-auto scrollbar-hide">
             <div className="space-y-2">
               <a 
-                href="/dashboard" 
+                href="/dashboard/" 
                 className="flex items-center gap-4 px-4 py-3.5 rounded-xl text-white/80 hover:text-white hover:bg-[#00be64]/10 transition-all duration-200 group"
               >
                 <FiHome size={22} className="group-hover:text-[#00be64] transition-colors" />
@@ -45,7 +45,7 @@ const Sidebar = ({ menuOpen, setMenuOpen }: SidebarProps) => {
             {/* Bottom Navigation */}
             <div className="space-y-2">
               <a 
-                href="/settings" 
+                href="/settings/" 
                 className="flex items-center gap-4 px-4 py-3.5 rounded-xl text-white/80 hover:text-white hover:bg-[#00be64]/10 transition-all duration-200 group"
               >
                 <FiSettings size={22} className="group-hover:text-[#00be64] transition-colors" />
