@@ -773,7 +773,7 @@ export default function Page() {
   const daysSincePlanting = getDaysSincePlanting(plantDate);
 
   return (
-    <main className="h-screen overflow-hidden bg-[#0c1220] px-6 py-6 text-white relative flex flex-col">
+    <main className="h-screen overflow-hidden bg-[#0c1220] px-4 sm:px-6 xl:px-8 py-6 text-white relative flex flex-col">
       <DashboardHeader
         userName="Lucas"
         menuOpen={menuOpen}
@@ -783,7 +783,7 @@ export default function Page() {
       <Sidebar menuOpen={menuOpen} setMenuOpen={setMenuOpen} />
 
       <div className="flex-1 overflow-y-auto scrollbar-hide">
-  <div className="mx-auto w-full max-w-6xl space-y-8 pb-6">
+        <div className="mx-auto w-full max-w-[96rem] space-y-8 pb-6">
 
         {paddockId ? (
           <div className="space-y-8 pb-6">

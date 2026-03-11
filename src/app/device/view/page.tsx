@@ -875,7 +875,7 @@ function DeviceViewContent() {
   }
 
   return (
-    <main className="h-screen overflow-hidden bg-gradient-to-b from-[#0c1220] via-[#0c1220] to-[#101828] px-4 py-4 sm:px-6 sm:py-6 text-white relative flex flex-col">
+    <main className="h-screen overflow-hidden bg-gradient-to-b from-[#0c1220] via-[#0c1220] to-[#101828] px-4 py-4 sm:px-6 sm:py-6 xl:px-8 text-white relative flex flex-col">
       <DashboardHeader
         userName="Lucas"
         menuOpen={menuOpen}
@@ -885,7 +885,7 @@ function DeviceViewContent() {
       <Sidebar menuOpen={menuOpen} setMenuOpen={setMenuOpen} />
 
       <div className="flex-1 overflow-y-auto scrollbar-hide">
-        <div className="mx-auto w-full max-w-7xl space-y-6 pt-4 pb-8">
+        <div className="mx-auto w-full max-w-[96rem] space-y-6 pt-4 pb-8">
 
           <button
             onClick={() => router.back()}
