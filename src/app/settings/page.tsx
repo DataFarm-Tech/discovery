@@ -6,6 +6,7 @@ import toast from "react-hot-toast";
 import DashboardHeader from "@/components/DashboardHeader";
 import Sidebar from "@/components/Sidebar";
 import { getUserSettings, updateUserSettings } from "@/lib/settings";
+import { requestPasswordReset } from "@/lib/auth/forgot-password";
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -14,6 +15,25 @@ export default function SettingsPage() {
   const [emailAlertsEnabled, setEmailAlertsEnabled] = useState(false);
   const [savedEmailAlertsEnabled, setSavedEmailAlertsEnabled] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [currentUserEmail, setCurrentUserEmail] = useState<string>("");
+  const [isSendingReset, setIsSendingReset] = useState(false);
+
+  const getEmailFromToken = (token: string): string => {
+    try {
+      const tokenParts = token.split(".");
+      if (tokenParts.length < 2) {
+        return "";
+      }
+
+      const base64 = tokenParts[1].replace(/-/g, "+").replace(/_/g, "/");
+      const padded = base64.padEnd(Math.ceil(base64.length / 4) * 4, "=");
+      const payload = JSON.parse(atob(padded));
+      return typeof payload?.sub === "string" ? payload.sub : "";
+    } catch (error) {
+      console.error("Failed to decode access token:", error);
+      return "";
+    }
+  };
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -23,6 +43,7 @@ export default function SettingsPage() {
       return;
     }
 
+    setCurrentUserEmail(getEmailFromToken(token));
     setUserName("Lucas");
 
     const fetchSettings = async () => {
@@ -70,8 +91,26 @@ export default function SettingsPage() {
 
   const hasChanges = emailAlertsEnabled !== savedEmailAlertsEnabled;
 
+  const handleResetPasswordRequest = async () => {
+    if (!currentUserEmail) {
+      toast.error("Unable to find your account email. Please log in again.");
+      return;
+    }
+
+    setIsSendingReset(true);
+    const result = await requestPasswordReset(currentUserEmail);
+    setIsSendingReset(false);
+
+    if (!result.success) {
+      toast.error(result.message);
+      return;
+    }
+
+    toast.success(result.message);
+  };
+
   return (
-    <main className="h-screen overflow-hidden bg-[#0c1220] px-6 py-6 text-white relative flex flex-col">
+    <main className="h-screen overflow-hidden bg-[#0c1220] px-4 sm:px-6 xl:px-8 py-6 text-white relative flex flex-col">
       <DashboardHeader
         userName={userName}
         menuOpen={menuOpen}
@@ -81,7 +120,7 @@ export default function SettingsPage() {
       <Sidebar menuOpen={menuOpen} setMenuOpen={setMenuOpen} />
 
       <div className="flex-1 overflow-y-auto scrollbar-hide">
-        <div className="mx-auto w-full max-w-4xl">
+        <div className="mx-auto w-full max-w-6xl">
           <section className="bg-gradient-to-br from-[#121829] to-[#0f1318] border border-[#00be64]/20 rounded-2xl p-8 hover:border-[#00be64]/40 transition-all duration-300">
             <div className="mb-6">
               <h2 className="text-2xl font-bold text-white">Settings</h2>
@@ -89,7 +128,6 @@ export default function SettingsPage() {
                 Manage your account preferences.
               </p>
             </div>
-
             <div className="rounded-xl border border-white/10 bg-[#0b1320]/60 p-5">
               <label className="flex items-center justify-between gap-4 cursor-pointer">
                 <div>
@@ -126,6 +164,30 @@ export default function SettingsPage() {
                   className="px-5 py-2 rounded-lg bg-[#00be64] text-[#0b1320] font-semibold transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isSaving ? "Applying..." : "Apply"}
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-6 rounded-xl border border-white/10 bg-[#0b1320]/60 p-5">
+              <div className="mb-4">
+                <p className="text-white font-medium">Reset password</p>
+                <p className="text-sm text-white/60 mt-1">
+                  Send a secure reset link to your logged-in account email.
+                </p>
+              </div>
+
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-sm text-white/75 break-all">
+                  Account email: {currentUserEmail || "Not available"}
+                </p>
+
+                <button
+                  type="button"
+                  disabled={isSendingReset || !currentUserEmail}
+                  onClick={handleResetPasswordRequest}
+                  className="px-5 py-2.5 rounded-lg bg-[#00be64] text-[#0b1320] font-semibold transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isSendingReset ? "Sending..." : "Send reset link"}
                 </button>
               </div>
             </div>
