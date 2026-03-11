@@ -94,7 +94,7 @@ export default function DashboardPage() {
           node_name: item.node_name || item.node_id,
         }),
       );
-      router.push(`/device/view?nodeId=${item.node_id}`);
+      router.push(`/device/view/?nodeId=${item.node_id}`);
       setSearchQuery(""); // Optional: clear search
       return;
     }
@@ -111,7 +111,7 @@ export default function DashboardPage() {
           paddockName,
         }),
       );
-      router.push("/paddock/view");
+      router.push("/paddock/view/");
       setSearchQuery(""); // Optional: clear search after selection
       return;
     }
@@ -131,7 +131,7 @@ export default function DashboardPage() {
       />
 
       {/* Sidebar */}
-      {/* <Sidebar menuOpen={menuOpen} setMenuOpen={setMenuOpen} /> */}
+      <Sidebar menuOpen={menuOpen} setMenuOpen={setMenuOpen} />
 
       {/* Scrollable Main Content */}
       <div className="flex-1 overflow-y-auto overflow-x-visible scrollbar-hide">

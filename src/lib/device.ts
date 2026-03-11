@@ -10,6 +10,10 @@ const API_BASE_URL = (
   (process.env.NODE_ENV === "development" ? "http://localhost:8000" : "/api")
 ).replace(/\/+$/, "");
 
+const FORECAST_API_BASE_URL = (
+  process.env.NEXT_PUBLIC_FORECAST_API_URL || "http://localhost:8080"
+).replace(/\/+$/, "");
+
 /**
  * Request payload for updating/registering a device.
  */
@@ -61,12 +65,68 @@ export interface DeviceDataResponse {
     node_id: string;
     node_name: string;
     paddock_id: number;
+    fw_ver?: string | null;
     readings: {
       reading_type: string;
       reading_val: number | string;
       timestamp: string;
     }[];
   };
+}
+
+export interface DeviceInsightsResponse {
+  success: boolean;
+  message?: string;
+  node_id?: string;
+  paddock_id?: number | null;
+  profile?: {
+    crop_type?: string | null;
+    soil_type?: string | null;
+    crop_key?: string;
+    soil_key?: string;
+    area_hectares?: number | null;
+    plant_date?: string | null;
+    plant_age_days?: number | null;
+  };
+  latest_values?: Partial<Record<"moisture" | "ph" | "temperature" | "nitrogen" | "potassium" | "phosphorus", number | null>>;
+  dynamic_ranges?: Partial<Record<"moisture" | "ph" | "temperature" | "nitrogen" | "potassium" | "phosphorus", { min: number; max: number }>>;
+  optimal_values?: Partial<Record<"moisture" | "ph" | "temperature" | "nitrogen" | "potassium" | "phosphorus", number>>;
+  alerts?: Array<{
+    type: string;
+    severity: "warning" | "critical";
+    message: string;
+    recommendation?: string;
+    value?: number;
+    range?: { min: number; max: number };
+    direction?: "low" | "high";
+  }>;
+}
+
+export interface ForecastReadingPoint {
+  timestamp: string;
+  value: number;
+}
+
+export interface ForecastRequest {
+  sensor_type: string;
+  horizons_months: number[];
+  prediction_interval_hours?: number;
+  readings: ForecastReadingPoint[];
+}
+
+export interface ForecastResponse {
+  sensor_type: string;
+  model_name: string;
+  monthly_predictions: Array<{
+    month_ahead: number;
+    predicted_timestamp: string;
+    predicted_value: number;
+  }>;
+  forecast_points?: Array<{
+    month_ahead: number;
+    predicted_timestamp: string;
+    predicted_value: number;
+  }>;
 }
 
 /**
@@ -112,6 +172,7 @@ export async function getDeviceData(
         node_id: data.node_id,
         node_name: data.node_name || "",
         paddock_id: data.paddock_id,
+        fw_ver: data.fw_ver ?? null,
         readings: data.readings || [],
       },
     };
@@ -120,6 +181,97 @@ export async function getDeviceData(
     return {
       success: false,
       message: "An error occurred. Please try again.",
+    };
+  }
+}
+
+export async function getDeviceInsights(
+  nodeId: string,
+  token: string,
+  profileOverride?: {
+    cropType?: string;
+    soilType?: string;
+  }
+): Promise<DeviceInsightsResponse> {
+  try {
+    const query = new URLSearchParams();
+    if (profileOverride?.cropType) {
+      query.set("crop_type", profileOverride.cropType);
+    }
+    if (profileOverride?.soilType) {
+      query.set("soil_type", profileOverride.soilType);
+    }
+
+    const response = await fetch(
+      `${API_BASE_URL}/device/insights/${nodeId}${query.toString() ? `?${query.toString()}` : ""}`,
+      {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return {
+        success: false,
+        message: data.message || data.detail || "Failed to fetch device insights",
+      };
+    }
+
+    return {
+      success: true,
+      message: "Device insights fetched successfully",
+      node_id: data.node_id,
+      paddock_id: data.paddock_id,
+      profile: data.profile,
+      latest_values: data.latest_values,
+      dynamic_ranges: data.dynamic_ranges,
+      optimal_values: data.optimal_values,
+      alerts: data.alerts || [],
+    };
+  } catch (error) {
+    console.error("Error fetching device insights:", error);
+    return {
+      success: false,
+      message: "An error occurred. Please try again.",
+    };
+  }
+}
+
+export async function getForecast(
+  payload: ForecastRequest
+): Promise<{ success: true; data: ForecastResponse } | { success: false; message: string }> {
+  try {
+    const response = await fetch(`${FORECAST_API_BASE_URL}/forecast`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return {
+        success: false,
+        message: data.detail || data.message || "Failed to fetch forecast",
+      };
+    }
+
+    return {
+      success: true,
+      data,
+    };
+  } catch (error) {
+    console.error("Error fetching forecast:", error);
+    return {
+      success: false,
+      message: "Forecast service unavailable",
     };
   }
 }

@@ -14,11 +14,14 @@ import {
   cropType,
   getPaddockSensorAverages,
 } from "@/lib/paddock";
-import { getDevices } from "@/lib/device";
+import { editDeviceName, getDeviceInsights, getDevices } from "@/lib/device";
+import { getDeviceData } from "@/lib/device";
 import toast from "react-hot-toast";
 import RegisterDeviceModal from "@/components/modals/RegisterDeviceModal";
 import EditPaddockModal from "@/components/modals/EditPaddockModal";
 import DeletePaddockModal from "@/components/modals/DeletePaddockModal";
+import EditDeviceNameModal from "@/components/modals/EditDeviceNameModal";
+import DeleteDeviceModal from "@/components/modals/DeleteDeviceModal";
 import RecentAverages from "@/components/RecentAverages";
 
 // Lazy-load map component
@@ -27,6 +30,15 @@ const DeviceMap = dynamic(() => import("@/components/DeviceMap"), {
 });
 
 export default function Page() {
+  type ZoneAlert = {
+    node_id: string;
+    node_name: string;
+    type: string;
+    message: string;
+    severity: "warning" | "critical";
+    recommendation?: string;
+  };
+
   const [menuOpen, setMenuOpen] = useState(false);
   const [devices, setDevices] = useState<Device[]>([]);
   const [nodeLocations, setNodeLocations] = useState<Array<{ node_id: string; node_name: string; lat: number; lon: number }>>([]);
@@ -46,6 +58,15 @@ export default function Page() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [exportLoading, setExportLoading] = useState(false);
+  const [activePaddockPage, setActivePaddockPage] = useState<
+    "recent-averages" | "alerts" | "devices-map" | "settings"
+  >("recent-averages");
+  const [isEditDeviceModalOpen, setIsEditDeviceModalOpen] = useState(false);
+  const [isDeleteDeviceModalOpen, setIsDeleteDeviceModalOpen] = useState(false);
+  const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
+  const [zoneAlerts, setZoneAlerts] = useState<ZoneAlert[]>([]);
+  const [alertsLoading, setAlertsLoading] = useState(false);
 
   const router = useRouter();
 
@@ -342,8 +363,174 @@ export default function Page() {
   };
 
   const handleDeviceClick = (device: Device) => {
-    router.push(`/device/view?nodeId=${device.node_id}`);
+    router.push(`/device/view/?nodeId=${device.node_id}`);
   };
+
+  const handleEditDevice = (device: Device) => {
+    setSelectedDevice(device);
+    setIsEditDeviceModalOpen(true);
+  };
+
+  const handleDeleteDevice = (device: Device) => {
+    setSelectedDevice(device);
+    setIsDeleteDeviceModalOpen(true);
+  };
+
+  const handleEditDeviceSubmit = async (newName: string) => {
+    if (!selectedDevice) throw new Error("No device selected");
+
+    const token = localStorage.getItem("token") || "";
+    if (!token) throw new Error("You must be logged in");
+
+    const result = await editDeviceName(
+      {
+        node_id: selectedDevice.node_id,
+        node_name: newName,
+      },
+      token,
+    );
+
+    if (!result.success) {
+      throw new Error(result.message || "Failed to update device name");
+    }
+
+    setDevices((prev) =>
+      prev.map((device) =>
+        device.node_id === selectedDevice.node_id
+          ? { ...device, node_name: newName }
+          : device,
+      ),
+    );
+
+    setNodeLocations((prev) =>
+      prev.map((location) =>
+        location.node_id === selectedDevice.node_id
+          ? { ...location, node_name: newName }
+          : location,
+      ),
+    );
+
+    try {
+      const stored = sessionStorage.getItem("deviceList");
+      if (stored) {
+        const parsed = JSON.parse(stored) as StoredDevice[];
+        const updated = parsed.map((device) =>
+          device.node_id === selectedDevice.node_id
+            ? { ...device, node_name: newName }
+            : device,
+        );
+        sessionStorage.setItem("deviceList", JSON.stringify(updated));
+      }
+    } catch (err) {
+      console.error("Failed to update stored device list:", err);
+    }
+
+    toast.success("Device name updated successfully");
+  };
+
+  const handleDeviceUnlinked = () => {
+    if (!selectedDevice) return;
+
+    setDevices((prev) =>
+      prev.filter((device) => device.node_id !== selectedDevice.node_id),
+    );
+
+    setNodeLocations((prev) =>
+      prev.filter((location) => location.node_id !== selectedDevice.node_id),
+    );
+
+    try {
+      const stored = sessionStorage.getItem("deviceList");
+      if (stored) {
+        const parsed = JSON.parse(stored) as StoredDevice[];
+        const updated = parsed.filter(
+          (device) => device.node_id !== selectedDevice.node_id,
+        );
+        sessionStorage.setItem("deviceList", JSON.stringify(updated));
+      }
+    } catch (err) {
+      console.error("Failed to update stored device list:", err);
+    }
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchZoneAlerts = async () => {
+      if (devices.length === 0) {
+        setZoneAlerts([]);
+        setAlertsLoading(false);
+        return;
+      }
+
+      const token = localStorage.getItem("token") || "";
+      if (!token) {
+        setZoneAlerts([]);
+        setAlertsLoading(false);
+        return;
+      }
+
+      setAlertsLoading(true);
+
+      try {
+        const settled = await Promise.allSettled(
+          devices.map((device) =>
+            getDeviceInsights(device.node_id, token, {
+              cropType,
+            }),
+          ),
+        );
+
+        const collectedAlerts: ZoneAlert[] = [];
+
+        settled.forEach((result, index) => {
+          if (result.status !== "fulfilled" || !result.value.success) {
+            return;
+          }
+
+          const sourceDevice = devices[index];
+          if (!sourceDevice || !result.value.alerts?.length) {
+            return;
+          }
+
+          result.value.alerts.forEach((alert) => {
+            collectedAlerts.push({
+              node_id: sourceDevice.node_id,
+              node_name: sourceDevice.node_name || sourceDevice.node_id,
+              type: alert.type,
+              message: alert.message,
+              severity: alert.severity,
+              recommendation: alert.recommendation,
+            });
+          });
+        });
+
+        const ordered = collectedAlerts.sort((a, b) => {
+          if (a.severity === b.severity) return 0;
+          return a.severity === "critical" ? -1 : 1;
+        });
+
+        if (!cancelled) {
+          setZoneAlerts(ordered);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setZoneAlerts([]);
+        }
+        console.error("Failed to load zone alerts:", err);
+      } finally {
+        if (!cancelled) {
+          setAlertsLoading(false);
+        }
+      }
+    };
+
+    fetchZoneAlerts();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [devices, cropType]);
 
   const handleDeletePaddock = async () => {
     if (!paddockId) return;
@@ -357,7 +544,7 @@ export default function Page() {
         toast.success(result.message);
         sessionStorage.removeItem("paddockData");
         setIsDeleteModalOpen(false);
-        router.push("/dashboard");
+        router.push("/dashboard/");
       } else {
         toast.error(result.message);
       }
@@ -372,7 +559,214 @@ export default function Page() {
   const handleSearchItemSelect = (item: any) => {
     console.log("Selected item:", item);
     if (item.node_id) {
-      router.push(`/device/view?nodeId=${item.node_id}`);
+      router.push(`/device/view/?nodeId=${item.node_id}`);
+    }
+  };
+
+  const handleExportPaddockCsv = async () => {
+    if (!paddockId) {
+      toast.error("No zone selected");
+      return;
+    }
+
+    if (!devices.length) {
+      toast.error("No devices available in this zone");
+      return;
+    }
+
+    setExportLoading(true);
+
+    try {
+      const token = localStorage.getItem("token") || "";
+      if (!token) {
+        toast.error("You must be logged in to export data");
+        return;
+      }
+
+      const readingTypes = [
+        "moisture",
+        "ph",
+        "temperature",
+        "nitrogen",
+        "potassium",
+        "phosphorus",
+      ] as const;
+
+      const cacheTtlMs = 5 * 60 * 1000;
+
+      const getSensorUnit = (sensorType: string): string => {
+        const units: Record<string, string> = {
+          moisture: "%",
+          ph: "pH",
+          temperature: "°C",
+          nitrogen: "ppm",
+          potassium: "ppm",
+          phosphorus: "ppm",
+        };
+        return units[sensorType] || "";
+      };
+
+      const getSensorStatus = (
+        sensorType: string,
+        value: number,
+      ): "ok" | "low" | "high" | "critical" => {
+        const ranges: Record<string, { min: number; max: number }> = {
+          moisture: { min: 40, max: 60 },
+          ph: { min: 6.0, max: 7.0 },
+          temperature: { min: 15, max: 25 },
+          nitrogen: { min: 80, max: 120 },
+          potassium: { min: 120, max: 180 },
+          phosphorus: { min: 40, max: 60 },
+        };
+
+        const range = ranges[sensorType] || { min: 0, max: 100 };
+        const span = range.max - range.min;
+        const criticalMargin = span * 0.2;
+
+        if (value < range.min - criticalMargin || value > range.max + criticalMargin) {
+          return "critical";
+        }
+        if (value < range.min) return "low";
+        if (value > range.max) return "high";
+        return "ok";
+      };
+
+      const requests = devices.flatMap((device) =>
+        readingTypes.map(async (readingType) => {
+          const cacheKey = `paddockExport:${paddockId}:${device.node_id}:${readingType}`;
+
+          let response: Awaited<ReturnType<typeof getDeviceData>> | null = null;
+
+          try {
+            const cachedRaw = sessionStorage.getItem(cacheKey);
+            if (cachedRaw) {
+              const cached = JSON.parse(cachedRaw) as {
+                fetchedAt: number;
+                response: Awaited<ReturnType<typeof getDeviceData>>;
+              };
+              if (
+                cached?.fetchedAt &&
+                Date.now() - cached.fetchedAt <= cacheTtlMs &&
+                cached?.response
+              ) {
+                response = cached.response;
+              }
+            }
+          } catch {
+            // Ignore cache parsing issues and continue with live fetch.
+          }
+
+          if (!response) {
+            response = await getDeviceData(
+              { nodeId: device.node_id, readingType },
+              token,
+            );
+
+            try {
+              if (response.success) {
+                sessionStorage.setItem(
+                  cacheKey,
+                  JSON.stringify({ fetchedAt: Date.now(), response }),
+                );
+              }
+            } catch {
+              // Ignore cache write issues.
+            }
+          }
+
+          if (!response?.success || !response.node?.readings?.length) {
+            return [] as Array<{
+              zone_name: string;
+              device_name: string;
+              sensor_type: string;
+              reading_value: string | number;
+              unit: string;
+              timestamp_local: string;
+              status: "ok" | "low" | "high" | "critical";
+              timestamp_ms: number;
+            }>;
+          }
+
+          return response.node.readings.map((reading) => {
+            const parsedDate = new Date(reading.timestamp);
+            const readingValue = Number(reading.reading_val);
+            const timestampMs = parsedDate.getTime();
+
+            return {
+              zone_name: paddockName || `Zone ${paddockId}`,
+              device_name: response.node?.node_name || device.node_name || device.node_id,
+              sensor_type: readingType,
+              reading_value: reading.reading_val,
+              unit: getSensorUnit(readingType),
+              timestamp_local: Number.isNaN(timestampMs)
+                ? reading.timestamp
+                : parsedDate.toLocaleString(),
+              status: Number.isFinite(readingValue)
+                ? getSensorStatus(readingType, readingValue)
+                : "ok",
+              timestamp_ms: Number.isNaN(timestampMs) ? Number.MAX_SAFE_INTEGER : timestampMs,
+            };
+          });
+        }),
+      );
+
+      const responses = await Promise.allSettled(requests);
+      const rows = responses.flatMap((result) =>
+        result.status === "fulfilled" ? result.value : [],
+      );
+
+      if (!rows.length) {
+        toast.error("No sensor readings found to export for this zone");
+        return;
+      }
+
+      rows.sort(
+        (a, b) => a.timestamp_ms - b.timestamp_ms,
+      );
+
+      const escapeCsv = (value: string | number | null | undefined) =>
+        `"${String(value ?? "").replace(/"/g, '""')}"`;
+
+      const headers = [
+        "zone_name",
+        "device_name",
+        "sensor_type",
+        "reading_value",
+        "unit",
+        "timestamp_local",
+        "status",
+      ];
+
+      const csvBody = rows.map((row) =>
+        [
+          escapeCsv(row.zone_name),
+          escapeCsv(row.device_name),
+          escapeCsv(row.sensor_type),
+          escapeCsv(row.reading_value),
+          escapeCsv(row.unit),
+          escapeCsv(row.timestamp_local),
+          escapeCsv(row.status),
+        ].join(","),
+      );
+
+      const csv = `\uFEFF${headers.join(",")}\n${csvBody.join("\n")}`;
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      const safePaddockId = String(paddockId).replace(/[^a-zA-Z0-9-_]/g, "_");
+      const safeZoneName = (paddockName || `Zone_${paddockId}`).replace(/[^a-zA-Z0-9-_]/g, "_");
+      const dateStamp = new Date().toISOString().slice(0, 10);
+      link.download = `${safeZoneName}_${safePaddockId}_all_sensors_v2_${dateStamp}.csv`;
+      link.click();
+      window.URL.revokeObjectURL(url);
+
+      toast.success("Zone data exported successfully");
+    } catch (err) {
+      console.error("Failed to export paddock data:", err);
+      toast.error("Failed to export zone data");
+    } finally {
+      setExportLoading(false);
     }
   };
 
@@ -427,6 +821,24 @@ export default function Page() {
                   </div>
 
                   <div className="flex items-center gap-2">
+                    <button
+                      onClick={handleExportPaddockCsv}
+                      disabled={exportLoading || devices.length === 0}
+                      className="p-2.5 text-white/80 hover:text-[#00be64] border border-white/20 hover:border-[#00be64]/50 hover:bg-white/5 rounded-lg transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:text-white/80 disabled:hover:border-white/20 disabled:hover:bg-transparent"
+                      title="Export zone CSV"
+                    >
+                      {exportLoading ? (
+                        <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                        </svg>
+                      ) : (
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 16V4m0 12l-4-4m4 4l4-4M4 20h16" />
+                        </svg>
+                      )}
+                    </button>
+
                     <button
                       onClick={() => setIsEditModalOpen(true)}
                       className="p-2.5 text-white/80 hover:text-[#00be64] border border-white/20 hover:border-[#00be64]/50 hover:bg-white/5 rounded-lg transition-all duration-200 active:scale-95 group"
@@ -522,115 +934,225 @@ export default function Page() {
               </div>
             </section> */}
 
-            {/* Recent Averages */}
-            <RecentAverages paddockId={paddockId} />
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setActivePaddockPage("recent-averages")}
+                className={`px-3.5 py-1.5 rounded-full text-sm border transition ${
+                  activePaddockPage === "recent-averages"
+                    ? "border-[#00be64]/60 bg-[#00be64]/15 text-[#00be64]"
+                    : "border-white/15 bg-white/5 text-gray-300 hover:text-white"
+                }`}
+              >
+                Recent Averages
+              </button>
+              <button
+                type="button"
+                onClick={() => setActivePaddockPage("alerts")}
+                className={`px-3.5 py-1.5 rounded-full text-sm border transition ${
+                  activePaddockPage === "alerts"
+                    ? "border-[#00be64]/60 bg-[#00be64]/15 text-[#00be64]"
+                    : "border-white/15 bg-white/5 text-gray-300 hover:text-white"
+                }`}
+              >
+                Alerts
+              </button>
+              <button
+                type="button"
+                onClick={() => setActivePaddockPage("devices-map")}
+                className={`px-3.5 py-1.5 rounded-full text-sm border transition ${
+                  activePaddockPage === "devices-map"
+                    ? "border-[#00be64]/60 bg-[#00be64]/15 text-[#00be64]"
+                    : "border-white/15 bg-white/5 text-gray-300 hover:text-white"
+                }`}
+              >
+                Devices & Map
+              </button>
+              <button
+                type="button"
+                onClick={() => setActivePaddockPage("settings")}
+                className={`px-3.5 py-1.5 rounded-full text-sm border transition ${
+                  activePaddockPage === "settings"
+                    ? "border-[#00be64]/60 bg-[#00be64]/15 text-[#00be64]"
+                    : "border-white/15 bg-white/5 text-gray-300 hover:text-white"
+                }`}
+              >
+                Settings
+              </button>
+            </div>
 
-            {/* Loading/Error States */}
-            {loading && (
-              <div className="bg-gradient-to-br from-[#121829] to-[#0f1318] border border-[#00be64]/20 rounded-2xl p-8">
-                <div className="flex items-center justify-center gap-3">
-                  <div className="w-2 h-2 bg-[#00be64] rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                  <div className="w-2 h-2 bg-[#00be64] rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                  <div className="w-2 h-2 bg-[#00be64] rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                  <p className="text-white ml-2">Loading devices...</p>
-                </div>
-              </div>
+            {activePaddockPage === "recent-averages" && (
+              <RecentAverages paddockId={paddockId} />
             )}
-            
-            {error && (
-              <div className="bg-gradient-to-br from-[#121829] to-[#0f1318] border border-red-500/20 rounded-2xl p-8">
-                <p className="text-red-400 text-center">{error}</p>
-              </div>
+
+            {activePaddockPage === "alerts" && (
+              <section className="bg-gradient-to-br from-[#121829] to-[#0f1318] border border-green-500/30 rounded-2xl p-6 shadow-lg">
+                <h2 className="text-xl font-bold flex items-center gap-2 mb-4">
+                  <span className="w-1 h-6 bg-green-500 rounded-full"></span>
+                  <span className="text-green-300">Alerts</span>
+                  <span className="inline-flex items-center justify-center min-w-6 h-6 px-2 rounded-full bg-[#00be64]/15 border border-[#00be64]/40 text-[#00be64] text-xs font-semibold">
+                    {zoneAlerts.length}
+                  </span>
+                </h2>
+
+                {alertsLoading ? (
+                  <div className="text-sm text-gray-300">Loading alerts...</div>
+                ) : zoneAlerts.length > 0 ? (
+                  <div className="space-y-3">
+                    {zoneAlerts.map((alert, index) => (
+                      <div
+                        key={`${alert.node_id}-${alert.type}-${index}`}
+                        className={`p-4 rounded-lg border-l-4 flex items-start gap-3 ${
+                          alert.severity === "critical"
+                            ? "bg-red-950/30 border-l-red-500 border border-red-500/20"
+                            : "bg-orange-950/30 border-l-orange-500 border border-orange-500/20"
+                        }`}
+                      >
+                        <div
+                          className={`mt-0.5 text-lg font-bold flex-shrink-0 ${
+                            alert.severity === "critical"
+                              ? "text-red-400"
+                              : "text-orange-400"
+                          }`}
+                        >
+                          ⚠
+                        </div>
+                        <div className="flex-grow">
+                          <p
+                            className={`text-sm font-bold ${
+                              alert.severity === "critical"
+                                ? "text-red-300"
+                                : "text-orange-300"
+                            }`}
+                          >
+                            {alert.type} • {alert.node_name}
+                          </p>
+                          <p className="text-xs text-gray-300 mt-1">{alert.message}</p>
+                          {alert.recommendation && (
+                            <p className="text-xs text-gray-400 mt-1.5">
+                              Recommendation: {alert.recommendation}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-3 p-4 bg-green-950/20 border border-green-500/20 rounded-lg">
+                    <div className="text-lg font-bold text-green-400">✓</div>
+                    <div>
+                      <p className="text-sm font-bold text-green-300">All Systems Normal</p>
+                      <p className="text-xs text-gray-400 mt-1">
+                        No active alerts across devices in this zone.
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </section>
             )}
 
-            {/* Devices and Map */}
-            {!loading && !error && (
-  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-    {/* Device Table */}
-    <DeviceTable
-      devices={devices}
-      onAddDevice={handleAddDevice}
-      onDeviceClick={handleDeviceClick}
-    />
+            {activePaddockPage === "devices-map" && (
+              <>
+                {loading && (
+                  <div className="bg-gradient-to-br from-[#121829] to-[#0f1318] border border-[#00be64]/20 rounded-2xl p-8">
+                    <div className="flex items-center justify-center gap-3">
+                      <div className="w-2 h-2 bg-[#00be64] rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                      <div className="w-2 h-2 bg-[#00be64] rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                      <div className="w-2 h-2 bg-[#00be64] rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                      <p className="text-white ml-2">Loading devices...</p>
+                    </div>
+                  </div>
+                )}
 
-    {/* Map or Placeholder */}
-    <section className="bg-gradient-to-br from-[#121829] to-[#0f1318] border border-[#00be64]/20 rounded-2xl p-8 relative overflow-hidden hover:border-[#00be64]/40 transition-all duration-300">
-      <div className="absolute top-0 left-0 w-64 h-64 bg-[#00be64]/5 rounded-full blur-3xl -translate-y-32 -translate-x-32" />
+                {error && (
+                  <div className="bg-gradient-to-br from-[#121829] to-[#0f1318] border border-red-500/20 rounded-2xl p-8">
+                    <p className="text-red-400 text-center">{error}</p>
+                  </div>
+                )}
 
-      <div className="relative z-10 h-[500px] flex flex-col">
-  {/* Header aligned top-left */}
-  <div className="flex items-center gap-3 mb-4">
-    <div className="w-10 h-10 bg-[#00be64]/10 rounded-xl flex items-center justify-center">
-      <svg
-        className="w-5 h-5 text-[#00be64]"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-        />
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-        />
-      </svg>
-    </div>
-    <div>
-      <h2 className="text-xl font-bold text-white">Device Locations</h2>
-      <p className="text-gray-400 text-sm">View all devices on the map</p>
-    </div>
-  </div>
+                {!loading && !error && (
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+                      <DeviceTable
+                        devices={devices}
+                        onAddDevice={handleAddDevice}
+                        onDeviceClick={handleDeviceClick}
+                        onEditDevice={handleEditDevice}
+                        onDeleteDevice={handleDeleteDevice}
+                      />
 
-  {/* Map */}
-  {/* Map */}
-<div className="flex-1 rounded-xl overflow-hidden border border-white/5 relative">
-  {nodeLocations.length > 0 ? (
-    <DeviceMap nodes={nodeLocations} />
-  ) : (
-    <div className="flex flex-col items-center justify-center h-full w-full border border-white/10 rounded-xl bg-[#0f1318] text-gray-400 text-center p-4 relative">
-      <svg
-        className="w-12 h-12 mb-4 text-[#00be64]/50"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-        />
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-        />
-      </svg>
-      <p className="text-gray-400 mb-4">No map data available</p>
+                      <section className="bg-gradient-to-br from-[#121829] to-[#0f1318] border border-[#00be64]/20 rounded-2xl p-8 relative overflow-hidden hover:border-[#00be64]/40 transition-all duration-300">
+                        <div className="absolute top-0 left-0 w-64 h-64 bg-[#00be64]/5 rounded-full blur-3xl -translate-y-32 -translate-x-32" />
 
-      {/* Add Device Button (copied from DeviceTable) */}
-      <button
-        onClick={handleAddDevice}
-        className="flex items-center gap-2 px-4 py-1.5 text-sm text-white/80 hover:text-[#00be64] border border-white/20 hover:border-[#00be64]/50 hover:bg-white/5 rounded-full transition-all duration-200 active:scale-95"
-      >
-        + Add Device
-      </button>
-    </div>
-  )}
-</div>
+                        <div className="relative z-10 h-[360px] md:h-[420px] xl:h-[500px] flex flex-col">
+                          <div className="flex items-center gap-3 mb-4">
+                            <div className="w-10 h-10 bg-[#00be64]/10 rounded-xl flex items-center justify-center">
+                              <svg
+                                className="w-5 h-5 text-[#00be64]"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                                />
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                                />
+                              </svg>
+                            </div>
+                            <div>
+                              <h2 className="text-xl font-bold text-white">Device Locations</h2>
+                              <p className="text-gray-400 text-sm">View all devices on the map</p>
+                            </div>
+                          </div>
 
-</div>
+                          <div className="flex-1 rounded-xl overflow-hidden border border-white/5 relative">
+                            {nodeLocations.length > 0 ? (
+                              <DeviceMap nodes={nodeLocations} />
+                            ) : (
+                              <div className="flex flex-col items-center justify-center h-full w-full border border-white/10 rounded-xl bg-[#0f1318] text-gray-400 text-center p-4 relative">
+                                <svg
+                                  className="w-12 h-12 mb-4 text-[#00be64]/50"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                                  />
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                                  />
+                                </svg>
+                                <p className="text-gray-400 mb-4">No map data available</p>
 
-    </section>
-  </div>
-)}
+                                <button
+                                  onClick={handleAddDevice}
+                                  className="flex items-center gap-2 px-4 py-1.5 text-sm text-white/80 hover:text-[#00be64] border border-white/20 hover:border-[#00be64]/50 hover:bg-white/5 rounded-full transition-all duration-200 active:scale-95"
+                                >
+                                  + Add Device
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </section>
+                    </div>
+                )}
+              </>
+            )}
 
           </div>
         ) : (
@@ -666,6 +1188,27 @@ export default function Page() {
         paddockId={paddockId || ""}
         onDelete={handleDeletePaddock}
         loading={deleteLoading}
+      />
+
+      <EditDeviceNameModal
+        isOpen={isEditDeviceModalOpen}
+        onClose={() => {
+          setIsEditDeviceModalOpen(false);
+          setSelectedDevice(null);
+        }}
+        currentName={selectedDevice?.node_name || ""}
+        onSubmit={handleEditDeviceSubmit}
+      />
+
+      <DeleteDeviceModal
+        isOpen={isDeleteDeviceModalOpen}
+        onClose={() => {
+          setIsDeleteDeviceModalOpen(false);
+          setSelectedDevice(null);
+        }}
+        nodeId={selectedDevice?.node_id || ""}
+        nodeName={selectedDevice?.node_name || selectedDevice?.node_id || ""}
+        onSuccess={handleDeviceUnlinked}
       />
 
       </div>

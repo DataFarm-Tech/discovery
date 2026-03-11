@@ -40,7 +40,7 @@ export default function LoginPage() {
       toast.success('Login successful! Redirecting...');
 
       setTimeout(() => {
-        router.push('/dashboard');
+        router.push('/dashboard/');
         router.refresh();
       }, 1500);
     } catch (error) {
@@ -120,6 +120,11 @@ export default function LoginPage() {
                     <Eye className="w-5 h-5" />
                   )}
                 </button>
+              </div>
+              <div className="mt-2 text-right">
+                <Link href="/forgot-password" className="text-sm text-[#00be64] hover:text-[#00d470] transition-colors">
+                  Forgot password?
+                </Link>
               </div>
             </div>
 
