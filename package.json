@@ -11,6 +11,10 @@
     "export": "next export"
   },
   "dependencies": {
+    "@capacitor/android": "^8.2.0",
+    "@capacitor/cli": "^8.2.0",
+    "@capacitor/core": "^8.2.0",
+    "@capacitor/ios": "^8.2.0",
     "@types/react-slick": "^0.23.13",
     "chart.js": "^4.5.1",
     "chartjs-adapter-date-fns": "^3.0.0",
