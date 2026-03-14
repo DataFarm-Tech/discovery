@@ -1,14 +1,6 @@
 // api/device.ts
 
-/**
- * Base URL for API requests.
- * Pulled from NEXT_PUBLIC_API_URL.
- * Defaults to local backend in development and same-origin /api in production.
- */
-const API_BASE_URL = (
-  process.env.NEXT_PUBLIC_API_URL ||
-  (process.env.NODE_ENV === "development" ? "http://localhost:8000" : "/api")
-).replace(/\/+$/, "");
+import { API_BASE_URL } from "./auth/config";
 
 const FORECAST_API_BASE_URL = (
   process.env.NEXT_PUBLIC_FORECAST_API_URL || "http://localhost:8080"

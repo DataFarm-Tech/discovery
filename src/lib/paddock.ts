@@ -1,7 +1,4 @@
-const API_BASE_URL = (
-  process.env.NEXT_PUBLIC_API_URL ||
-  (process.env.NODE_ENV === 'development' ? 'http://localhost:8000' : '/api')
-).replace(/\/+$/, '');
+import { API_BASE_URL } from './auth/config';
 
 export type cropType = 'default' | 'Grains' | 'Legumes' | 'Fruit' |'Oil Seeds' |'Root Crops' | 'Tropical'| 'Other';
 

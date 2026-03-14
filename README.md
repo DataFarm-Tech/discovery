@@ -14,6 +14,17 @@ Run the development server:
 bun dev
 ```
 
+If you need the frontend to call a non-local backend, set `NEXT_PUBLIC_API_URL` before starting the dev server or running a production build.
+
+For a static export served from `out/`, this value is baked into the generated files at build time. A plain static server such as `npx serve@latest out` cannot proxy `/api`, so production builds must be created with the production backend URL already set:
+
+```bash
+NEXT_PUBLIC_API_URL=https://your-backend.example.com npm run build
+npx serve@latest out
+```
+
+If `NEXT_PUBLIC_API_URL` is omitted for production builds, the app falls back to `/api`, which only works behind the provided nginx proxy configuration.
+
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
